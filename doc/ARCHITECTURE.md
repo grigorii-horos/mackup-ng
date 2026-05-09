@@ -76,9 +76,7 @@ name = Application Name
 [configuration_files]
 .config_file
 folder/
-
-[xdg_configuration_files]
-app/config
+@CONFIG@/app/config
 ```
 
 ### 4. Application Handler (`application.py`)
@@ -183,7 +181,7 @@ Future syncs remove the same path on other machines
 
 - **Standards compliance**: Respects XDG Base Directory Specification
 - **Flexibility**: Handles non-standard `$XDG_CONFIG_HOME`
-- **Separate section**: `[xdg_configuration_files]` in app configs
+- **Config entries**: Use `@CONFIG@/...` in `[configuration_files]`
 
 ## File Structure
 
@@ -216,9 +214,7 @@ name = My Application
 [configuration_files]
 .myapprc
 .myapp/
-
-[xdg_configuration_files]
-myapp/config.yml
+@CONFIG@/myapp/config.yml
 ```
 
 Submit PR with the new config file.

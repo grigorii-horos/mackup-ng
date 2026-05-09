@@ -306,11 +306,10 @@ environment variable.
 
 See <https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html>
 
-Mackup supports this mechanism and provides a dedicated `xdg_configuration_files`
-section for those applications.
+This fork supports this mechanism with the `@CONFIG@` built-in variable in
+the `[configuration_files]` section.
 
-If any path starts with `.config`, remove the `.config` part and move the path
-to a dedicated `xdg_configuration_files` section.
+If any path starts with `.config`, replace that prefix with `@CONFIG@`.
 
 Instead of:
 
@@ -320,22 +319,7 @@ name = Git
 
 [configuration_files]
 .gitconfig
-.config/git/config
-.config/git/ignore
-.config/git/attributes
-```
-
-Use this:
-
-```ini
-[application]
-name = Git
-
-[configuration_files]
-.gitconfig
-
-[xdg_configuration_files]
-git/config
-git/ignore
-git/attributes
+@CONFIG@/git/config
+@CONFIG@/git/ignore
+@CONFIG@/git/attributes
 ```

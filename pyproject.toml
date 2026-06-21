@@ -33,6 +33,7 @@ classifiers = [
 ]
 
 [project.scripts]
+mackup = "mackup_ng.main:main"
 mackup-ng = "mackup_ng.main:main"
 
 [project.urls]

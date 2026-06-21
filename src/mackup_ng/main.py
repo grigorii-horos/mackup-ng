@@ -119,19 +119,33 @@ def main() -> None:
             return
         print(utils.colorize_message(f"{action} {pretty_name}"))
 
+    def escapes_home(rel_path: str) -> bool:
+        """Whether a relative path points outside the home folder."""
+        return (
+            rel_path == ".."
+            or rel_path.startswith("../")
+            or rel_path.startswith("..\\")
+            or rel_path.startswith("/")
+        )
+
     def get_requested_path_candidates(path: str) -> list[str]:
         candidates = [ApplicationProfile.normalize_relative_path(path)]
         if not os.path.isabs(os.path.expanduser(path)):
             absolute_path = os.path.abspath(path)
             home = os.path.abspath(os.environ["HOME"])
             try:
-                candidates.append(
-                    ApplicationProfile.normalize_relative_path(
-                        os.path.relpath(absolute_path, home),
-                    ),
+                cwd_relative = ApplicationProfile.normalize_relative_path(
+                    os.path.relpath(absolute_path, home),
                 )
             except ValueError:
-                pass
+                cwd_relative = None
+            # The current-directory interpretation is only a convenience for
+            # running rm from inside a managed folder. When the current
+            # directory is outside home it escapes and must be dropped, or it
+            # would wrongly trip the unmanaged-path guard even though the
+            # literal candidate is a valid managed home-relative path.
+            if cwd_relative is not None and not escapes_home(cwd_relative):
+                candidates.append(cwd_relative)
         return list(dict.fromkeys(candidates))
 
     def is_managed_directory(local_filename: str, backup_filename: str) -> bool:
@@ -236,13 +250,7 @@ def main() -> None:
 
         for requested_arg in args["<path>"]:
             requested_paths = get_requested_path_candidates(requested_arg)
-            if any(
-                path == ".."
-                or path.startswith("../")
-                or path.startswith("..\\")
-                or path.startswith("/")
-                for path in requested_paths
-            ):
+            if any(escapes_home(path) for path in requested_paths):
                 sys.exit(f"Refusing to remove unmanaged path: {requested_arg}")
 
             match = next(

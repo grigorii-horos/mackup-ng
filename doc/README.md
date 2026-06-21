@@ -28,7 +28,7 @@ You can also specify a custom config file location using the `--config-file`
 command-line option:
 
 ```bash
-mackup --config-file ~/.mackup-custom.cfg sync
+mackup-ng --config-file ~/.mackup-custom.cfg sync
 ```
 
 The path can be absolute or relative to your home directory. Note that the
@@ -138,10 +138,10 @@ directory = .config/mackup
 If you ever change your mind and switch storage solutions after Mackup is
 already setup (ex: from `dropbox` to `icloud`), complete the following steps.
 
-1. Run `mackup uninstall` on all computers
+1. Run `mackup-ng sync` on all computers so the storage folder is up to date
 2. Copy your Mackup files to the new storage location
 3. Change the storage provider details in your `.mackup.cfg` file (see above)
-4. Run `mackup sync` on each computer
+4. Run `mackup-ng sync` on each computer
 
 ## Applications
 
@@ -157,14 +157,14 @@ ssh
 adium
 ```
 
-Use `mackup list` to get a list of valid application names. Don't use fancy
+Use `mackup-ng list` to get a list of valid application names. Don't use fancy
 names (with spaces) here.
 
 A [sample](.mackup.cfg) of this file is available in this folder. Just copy it
 to your home folder:
 
 ```bash
-cp mackup/doc/.mackup.cfg ~/
+cp mackup-ng/doc/.mackup.cfg ~/
 ```
 
 ### Don't sync an application
@@ -179,24 +179,24 @@ ssh
 adium
 ```
 
-Use `mackup list` to get a list of valid application names. Don't use fancy
+Use `mackup-ng list` to get a list of valid application names. Don't use fancy
 names (with spaces) here.
 
 A [sample](.mackup.cfg) of this file is available in this folder. Just copy it
 to your home folder:
 
 ```bash
-cp mackup/doc/.mackup.cfg ~/
+cp mackup-ng/doc/.mackup.cfg ~/
 ```
 
 ### Get official support for an application
 
-Open a [new issue](https://github.com/lra/mackup/issues) and ask for it, or
+Open a [new issue](https://github.com/grigorii-horos/mackup-ng/issues) and ask for it, or
 fork Mackup and open a
 [Pull Request](https://help.github.com/articles/using-pull-requests).
-The stock application configs are in the `mackup/applications` directory.
+The stock application configs are in the `mackup_ng/applications` directory.
 
-Remember to follow the guidelines in [CONTRIBUTING.md](https://github.com/lra/mackup/blob/master/.github/CONTRIBUTING.md)
+Remember to follow the guidelines in [CONTRIBUTING.md](https://github.com/grigorii-horos/mackup-ng/blob/master/.github/CONTRIBUTING.md)
 to get your Pull Request merged faster.
 
 ### Add support for an application or (almost) any file or directory
@@ -264,7 +264,7 @@ directory.
 You can run mackup to see if they are listed:
 
 ```bash
-$ mackup list
+$ mackup-ng list
 Supported applications:
 [...]
  - my-files
@@ -275,7 +275,7 @@ Supported applications:
 All good, you can now sync your newly configured files:
 
 ```bash
-mackup sync
+mackup-ng sync
 ```
 
 If you override an application config that is already supported by Mackup, your
@@ -289,10 +289,10 @@ You can add and test an application by following these steps:
 
 - fork this project
 - create a branch _(usually containing the name of the application)_
-- add the appropriate application config file in the `mackup/applications` folder
+- add the appropriate application config file in the `mackup_ng/applications` folder
 - from the top-most folder _(mackup)_ run `make develop` that replaces the
   currently installed mackup with the local modified one
-- simply run `mackup sync` to test if everything is ok
+- simply run `mackup-ng sync` to test if everything is ok
 - if everything works as expected:
   - run `make undevelop` to revert to the official version
   - commit and push the change to your fork and then create the Pulls Request

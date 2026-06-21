@@ -21,9 +21,9 @@ Mackup has one main operation mode:
 
 Sync mode is used for synchronizing files:
 
-- **`mackup sync`**: Synchronizes configuration files between your home
+- **`mackup-ng sync`**: Synchronizes configuration files between your home
   directory and the Mackup folder
-- **`mackup rm <path>`**: Removes a managed configuration path locally and from
+- **`mackup-ng rm <path>`**: Removes a managed configuration path locally and from
   the Mackup folder, and records the deletion for other machines
 
 This is used when setting up a new machine and for ongoing synchronization.
@@ -64,7 +64,7 @@ Manages the database of supported applications and their configuration files.
 
 **Sources:**
 
-- Built-in application configs (`mackup/applications/*.cfg`)
+- Built-in application configs (`mackup_ng/applications/*.cfg`)
 - User-defined custom configs (`~/.mackup/*.cfg`)
 
 **Application Config Format:**
@@ -118,7 +118,7 @@ Common utility functions used throughout the codebase:
 ### Sync Flow
 
 ```text
-User runs: mackup sync
+User runs: mackup-ng sync
     ↓
 main.py parses command
     ↓
@@ -139,7 +139,7 @@ Files now in: ~/Dropbox/Mackup/ (or chosen storage)
 ### Remove Flow
 
 ```text
-User runs: mackup rm <path>
+User runs: mackup-ng rm <path>
     ↓
 main.py parses command
     ↓
@@ -161,12 +161,12 @@ Future syncs remove the same path on other machines
 ### 1. Sync Mode
 
 - Sync mode is more reliable across platforms
-- Explicit removals are propagated with `mackup rm <path>`
+- Explicit removals are propagated with `mackup-ng rm <path>`
 
 ### 2. Application Database
 
 - **Centralized definitions**: All supported apps in
-  `mackup/applications/`
+  `mackup_ng/applications/`
 - **User extensibility**: Custom apps via `~/.mackup/*.cfg`
 - **Simple format**: INI-style configuration files
 - **Override capability**: User configs override built-in ones
@@ -205,7 +205,7 @@ mackup/
 
 ### Adding a New Application
 
-Create `mackup/applications/myapp.cfg`:
+Create `mackup_ng/applications/myapp.cfg`:
 
 ```ini
 [application]

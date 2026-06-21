@@ -6,7 +6,7 @@ Mackup. Name, files, ...
 """
 
 import os
-from typing import Union
+from typing import cast
 
 from . import utils
 from .mackup import Mackup
@@ -20,7 +20,7 @@ class ApplicationProfile:
     def __init__(
         self,
         mackup: Mackup,
-        files: Union[set[str], set[tuple[str, str]]],
+        files: set[str] | set[tuple[str, str]],
         dry_run: bool,
         verbose: bool,
     ) -> None:
@@ -37,13 +37,16 @@ class ApplicationProfile:
         self.mackup: Mackup = mackup
         self.file_entries: list[tuple[str, str]]
         if all(isinstance(item, str) for item in files):
-            raw_files = files
-            assert all(isinstance(item, str) for item in raw_files)
+            raw_files = cast("set[str]", files)
             self.files = sorted(raw_files)
             self.file_entries = [(path, path) for path in self.files]
         else:
-            raw_mappings = files
-            assert all(isinstance(item, tuple) and len(item) == 2 for item in raw_mappings)
+            raw_mappings = cast("set[tuple[str, str]]", files)
+            pair_len = 2
+            assert all(
+                isinstance(item, tuple) and len(item) == pair_len
+                for item in raw_mappings
+            )
             mappings = {(str(local), str(backup)) for (local, backup) in raw_mappings}
             self.file_entries = sorted(mappings)
             self.files = [local for (local, _backup) in self.file_entries]
@@ -55,7 +58,11 @@ class ApplicationProfile:
         """Print a user-facing message with terminal color highlighting."""
         print(utils.colorize_message(message))
 
-    def get_filepaths(self, local_filename: str, backup_filename: str | None = None) -> tuple[str, str]:
+    def get_filepaths(
+        self,
+        local_filename: str,
+        backup_filename: str | None = None,
+    ) -> tuple[str, str]:
         """
         Get home and mackup filepaths for given file
 
@@ -109,8 +116,7 @@ class ApplicationProfile:
         deletions_filepath = self.get_deletions_filepath()
         os.makedirs(os.path.dirname(deletions_filepath), exist_ok=True)
         with open(deletions_filepath, "w", encoding="utf-8") as f:
-            for path in sorted(deleted_files):
-                f.write(f"{path}\n")
+            f.writelines(f"{path}\n" for path in sorted(deleted_files))
 
     def record_deleted_file(self, local_filename: str) -> None:
         """Persist an explicit deletion tombstone for a managed path."""
@@ -203,8 +209,7 @@ class ApplicationProfile:
             for root, dirs, files in os.walk(path):
                 for name in dirs + files:
                     entry_mtime = os.path.getmtime(os.path.join(root, name))
-                    if entry_mtime > latest_mtime:
-                        latest_mtime = entry_mtime
+                    latest_mtime = max(latest_mtime, entry_mtime)
 
         return latest_mtime
 
@@ -282,7 +287,10 @@ class ApplicationProfile:
                 if source_wins and source_mtime > destination_mtime:
                     if not dry_run:
                         if source_is_dir:
-                            if os.path.lexists(destination_entry) and not destination_is_dir:
+                            if (
+                                os.path.lexists(destination_entry)
+                                and not destination_is_dir
+                            ):
                                 utils.delete(destination_entry)
                             self.ensure_directory(destination_entry, source_entry)
                         else:
@@ -407,11 +415,14 @@ class ApplicationProfile:
             if self.normalize_relative_path(local_filename) in deleted_files:
                 continue
 
-            (home_filepath, mackup_filepath) = self.get_filepaths(local_filename, backup_filename)
+            (home_filepath, mackup_filepath) = self.get_filepaths(
+                local_filename,
+                backup_filename,
+            )
 
             home_exists = os.path.isfile(home_filepath) or os.path.isdir(home_filepath)
             backup_exists = os.path.isfile(mackup_filepath) or os.path.isdir(
-                mackup_filepath
+                mackup_filepath,
             )
 
             action: str | None = None
@@ -430,16 +441,23 @@ class ApplicationProfile:
                 if os.path.isdir(home_filepath) and os.path.isdir(mackup_filepath):
                     if self.dry_run:
                         home_to_backup_changes = self.sync_directory_entries_one_way(
-                            home_filepath, mackup_filepath, source_wins=True, dry_run=True,
+                            home_filepath,
+                            mackup_filepath,
+                            source_wins=True,
+                            dry_run=True,
                         )
                         backup_to_home_changes = self.sync_directory_entries_one_way(
-                            mackup_filepath, home_filepath, source_wins=True, dry_run=True,
+                            mackup_filepath,
+                            home_filepath,
+                            source_wins=True,
+                            dry_run=True,
                         )
                         dir_changed = home_to_backup_changes or backup_to_home_changes
                         if self.verbose:
                             if dir_changed:
                                 self._print(
-                                    f"Synchronizing\n  {home_filepath}\n  with\n  {mackup_filepath} ...",
+                                    f"Synchronizing\n  {home_filepath}\n"
+                                    f"  with\n  {mackup_filepath} ...",
                                 )
                             else:
                                 self._print(
@@ -453,11 +471,15 @@ class ApplicationProfile:
                         continue
 
                     try:
-                        dir_changed = self.sync_directory_entries(home_filepath, mackup_filepath)
+                        dir_changed = self.sync_directory_entries(
+                            home_filepath,
+                            mackup_filepath,
+                        )
                         if dir_changed:
                             if self.verbose:
                                 self._print(
-                                    f"Synchronizing\n  {home_filepath}\n  with\n  {mackup_filepath} ...",
+                                    f"Synchronizing\n  {home_filepath}\n"
+                                    f"  with\n  {mackup_filepath} ...",
                                 )
                             stats["synchronized"] += 1
                         else:
@@ -470,7 +492,8 @@ class ApplicationProfile:
                     except PermissionError as e:
                         self._print(
                             "Error: Unable to sync directory entries between "
-                            f"{home_filepath} and {mackup_filepath} due to permission issue: {e}",
+                            f"{home_filepath} and {mackup_filepath} "
+                            f"due to permission issue: {e}",
                         )
                         stats["errors"] += 1
                     continue

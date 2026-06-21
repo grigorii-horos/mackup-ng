@@ -147,9 +147,17 @@ select = [
 ]
 ignore = [
     "C901", # mccabe complexity - too complex functions
+    "PLR0911", # too many return statements
     "PLR0912", # too many branches
+    "PLR0915", # too many statements
     "PTH", # use pathlib - os.path is fine for this codebase
 ]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests legitimately reach into internals, assert against literal values,
+# keep long fixture/mock lines, and open scratch files without a context
+# manager.
+"tests/**" = ["SLF001", "PLR2004", "E501", "SIM115"]
 
 # https://github.com/rvben/rumdl
 [tool.rumdl]

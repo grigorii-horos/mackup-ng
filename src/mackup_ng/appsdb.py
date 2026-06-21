@@ -8,6 +8,7 @@ data from the Mackup Database (files).
 import configparser
 import os
 import platform
+from typing import ClassVar
 
 from . import constants
 from .constants import APPS_DIR, CUSTOM_APPS_DIR, CUSTOM_APPS_DIR_XDG
@@ -16,8 +17,8 @@ from .constants import APPS_DIR, CUSTOM_APPS_DIR, CUSTOM_APPS_DIR_XDG
 class ApplicationsDatabase:
     """Database containing all the configured applications."""
 
-    _PATH_SECTIONS = {"configuration_files"}
-    _CROSS_PLATFORM_PATH_VARS = {
+    _PATH_SECTIONS: ClassVar[set[str]] = {"configuration_files"}
+    _CROSS_PLATFORM_PATH_VARS: ClassVar[dict[str, dict[str, str]]] = {
         "@CONFIG@": {
             "linux": ".config",
             "mac": "Library/Application Support",
@@ -146,7 +147,10 @@ class ApplicationsDatabase:
 
         local_path = join_parts(local_replacement)
         backup_path = join_parts(backup_replacement)
-        return cls._resolve_platform_selectors_with_backup(local_path)[0], cls._resolve_platform_selectors_with_backup(backup_path)[1]
+        return (
+            cls._resolve_platform_selectors_with_backup(local_path)[0],
+            cls._resolve_platform_selectors_with_backup(backup_path)[1],
+        )
 
     @staticmethod
     def _current_platform_alias() -> str:
@@ -159,7 +163,11 @@ class ApplicationsDatabase:
         return "linux"
 
     @classmethod
-    def _read_path_entries_from_section(cls, config_file: str, section: str) -> list[str]:
+    def _read_path_entries_from_section(
+        cls,
+        config_file: str,
+        section: str,
+    ) -> list[str]:
         """
         Read raw path entries from a cfg section.
 
@@ -171,7 +179,7 @@ class ApplicationsDatabase:
         with open(config_file, encoding="utf-8") as f:
             for raw_line in f:
                 stripped = raw_line.strip()
-                if not stripped or stripped.startswith("#") or stripped.startswith(";"):
+                if not stripped or stripped.startswith(("#", ";")):
                     continue
 
                 if stripped.startswith("[") and stripped.endswith("]"):
@@ -329,7 +337,7 @@ class ApplicationsDatabase:
         if len(local_expanded) == 1 and len(backup_expanded) == 1:
             return {(local_expanded[0], backup_expanded[0])}
         if len(local_expanded) == len(backup_expanded):
-            return set(zip(local_expanded, backup_expanded))
+            return set(zip(local_expanded, backup_expanded, strict=True))
         if len(backup_expanded) == 1:
             return {(local_path, backup_expanded[0]) for local_path in local_expanded}
         if len(local_expanded) == 1:
@@ -355,7 +363,8 @@ class ApplicationsDatabase:
             config.optionxform = str  # type: ignore
 
             config_text = self._read_sanitized_config_text_for_parser(config_file)
-            if config.read_string(config_text, source=config_file) is None:
+            config.read_string(config_text, source=config_file)
+            if config.has_section("application"):
                 # Get the filename without the directory name
                 filename: str = os.path.basename(config_file)
                 # The app name is the cfg filename with the extension
@@ -377,9 +386,10 @@ class ApplicationsDatabase:
                     for path in self._read_path_entries_from_section(
                         config_file, "configuration_files",
                     ):
-                        local_expr, backup_expr = self._resolve_platform_selectors_with_backup(
-                            path,
-                        )
+                        (
+                            local_expr,
+                            backup_expr,
+                        ) = self._resolve_platform_selectors_with_backup(path)
                         local_expr = self._expand_builtin_path_vars(local_expr)
                         backup_expr = self._expand_builtin_path_vars(
                             backup_expr, for_backup=True,
@@ -387,7 +397,10 @@ class ApplicationsDatabase:
                         for local_path, backup_path in self._expand_brace_mappings(
                             local_expr, backup_expr,
                         ):
-                            if local_path.startswith("/") or backup_path.startswith("/"):
+                            if any(
+                                p.startswith("/")
+                                for p in (local_path, backup_path)
+                            ):
                                 raise ValueError(
                                     "Unsupported absolute path in mapping: "
                                     f"{local_path!r} -> {backup_path!r}",

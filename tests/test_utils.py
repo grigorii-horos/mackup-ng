@@ -462,7 +462,7 @@ class TestMackup(unittest.TestCase):
 
         # Force the Windows test using mock
         with patch.object(
-            utils.platform, "system", return_value=utils.constants.PLATFORM_WINDOWS
+            utils.platform, "system", return_value=utils.constants.PLATFORM_WINDOWS,
         ):
             path = "some/file"
             assert utils.can_file_be_synced_on_current_platform(path)
@@ -477,7 +477,7 @@ class TestMackup(unittest.TestCase):
 
         # AppData should not be syncable on macOS
         with patch.object(
-            utils.platform, "system", return_value=utils.constants.PLATFORM_DARWIN
+            utils.platform, "system", return_value=utils.constants.PLATFORM_DARWIN,
         ):
             path = os.path.join(os.environ["HOME"], "AppData/")
             assert not utils.can_file_be_synced_on_current_platform(path)

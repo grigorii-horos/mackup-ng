@@ -37,7 +37,7 @@ See https://github.com/grigorii-horos/mackup-ng/tree/master/doc for more informa
 
 import os
 import sys
-from typing import Any, Optional
+from typing import Any
 
 from docopt import docopt
 
@@ -62,7 +62,7 @@ def bold(text: str) -> str:
     return ColorFormatCodes.BOLD + text + ColorFormatCodes.NORMAL
 
 
-def get_action_label(stats: dict[str, int]) -> Optional[str]:
+def get_action_label(stats: dict[str, int]) -> str | None:
     """Return a past-tense action label describing what happened."""
     if not any(stats.values()):
         return None
@@ -104,7 +104,7 @@ def main() -> None:
     if args["--force"] and args["--force-no"]:
         sys.exit("Options --force and --force-no are mutually exclusive.")
 
-    config_file: Optional[str] = args.get("--config-file")
+    config_file: str | None = args.get("--config-file")
     mckp: Mackup = Mackup(config_file)
     app_db: ApplicationsDatabase = ApplicationsDatabase()
 
@@ -113,7 +113,11 @@ def main() -> None:
             header_str = header("---")
             print(f"\n{header_str} {bold(f'{app_name}: {pretty_name}')} {header_str}")
 
-    def print_app_result(stats: dict[str, int], app_name: str, pretty_name: str) -> None:
+    def print_app_result(
+        stats: dict[str, int],
+        app_name: str,
+        pretty_name: str,
+    ) -> None:
         action = get_action_label(stats)
         if action is None:
             return
@@ -121,12 +125,7 @@ def main() -> None:
 
     def escapes_home(rel_path: str) -> bool:
         """Whether a relative path points outside the home folder."""
-        return (
-            rel_path == ".."
-            or rel_path.startswith("../")
-            or rel_path.startswith("..\\")
-            or rel_path.startswith("/")
-        )
+        return rel_path == ".." or rel_path.startswith(("../", "..\\", "/"))
 
     def get_requested_path_candidates(path: str) -> list[str]:
         candidates = [ApplicationProfile.normalize_relative_path(path)]
@@ -159,7 +158,7 @@ def main() -> None:
         requested_path: str,
         local_filename: str,
         backup_filename: str,
-    ) -> Optional[tuple[str, str]]:
+    ) -> tuple[str, str] | None:
         local_root = ApplicationProfile.normalize_relative_path(local_filename)
         try:
             relative_path = os.path.relpath(requested_path, local_root)
@@ -229,7 +228,12 @@ def main() -> None:
         # one pass per file: decide direction by mtime and do one action.
         for app_name in sorted(mckp.get_apps_to_backup()):
             pretty_name = app_db.get_name(app_name)
-            app = ApplicationProfile(mckp, app_db.get_file_mappings(app_name), dry_run, verbose)
+            app = ApplicationProfile(
+                mckp,
+                app_db.get_file_mappings(app_name),
+                dry_run,
+                verbose,
+            )
             print_app_header(app_name, pretty_name)
             stats = app.sync_files()
             print_app_result(stats, app_name, pretty_name)

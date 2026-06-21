@@ -1,17 +1,22 @@
-# Mackup™
+# mackup-ng
 
-[![Tests](https://github.com/lra/mackup/actions/workflows/test.yaml/badge.svg)](https://github.com/lra/mackup/actions/workflows/test.yaml)
-[![PyPI version](https://badge.fury.io/py/mackup.svg)](https://badge.fury.io/py/mackup)
-[![Python Versions](https://img.shields.io/pypi/pyversions/mackup.svg)](https://pypi.org/project/mackup/)
+[![Tests](https://github.com/grigorii-horos/mackup-ng/actions/workflows/test.yaml/badge.svg)](https://github.com/grigorii-horos/mackup-ng/actions/workflows/test.yaml)
+[![PyPI version](https://badge.fury.io/py/mackup-ng.svg)](https://badge.fury.io/py/mackup-ng)
+[![Python Versions](https://img.shields.io/pypi/pyversions/mackup-ng.svg)](https://pypi.org/project/mackup-ng/)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![mypy](https://img.shields.io/badge/mypy-checked-blue)](http://mypy-lang.org/)
-[![License](https://img.shields.io/github/license/lra/mackup.svg)](https://github.com/lra/mackup/blob/master/LICENSE)
+[![License](https://img.shields.io/github/license/grigorii-horos/mackup-ng.svg)](https://github.com/grigorii-horos/mackup-ng/blob/master/LICENSE)
 
 Backup and keep your application settings in sync.
 
+> **mackup-ng** is a maintained fork of [mackup](https://github.com/lra/mackup)
+> by Laurent Raufaste. It replaces the backup/restore/link commands with a
+> single two-way `sync` plus an `rm` command, while keeping the same on-disk
+> conventions (`.mackup.cfg`, the `Mackup` storage folder).
+
 ## Table of contents
 
-- [Mackup™](#mackup)
+- [mackup-ng](#mackup-ng)
   - [Table of contents](#table-of-contents)
   - [Quickstart](#quickstart)
   - [Usage](#usage)
@@ -31,25 +36,18 @@ Backup and keep your application settings in sync.
 
 ## Quickstart
 
-On macOS or Linux, if you want an easy install, you can install
-[Homebrew](http://brew.sh/) and do:
+Install it with [pip](https://pip.pypa.io/en/stable/) (or
+[uv](https://docs.astral.sh/uv/)):
 
 ```bash
-# Install Mackup
-brew install mackup
+# Install mackup-ng with pip
+pip install --upgrade mackup-ng
+
+# ...or as an isolated tool with uv
+uv tool install mackup-ng
 
 # Launch it and sync your files
-mackup sync
-```
-
-If not running macOS or Linux, or you don't like Homebrew, you can use [pip](https://pip.pypa.io/en/stable/).
-
-```bash
-# Install Mackup with PIP
-pip install --upgrade mackup
-
-# Launch it and sync your files
-mackup sync
+mackup-ng sync
 ```
 
 You're all set and can back up from now on.
@@ -57,11 +55,11 @@ You're all set and can back up from now on.
 Next, on any new workstation, do:
 
 ```bash
-# Install Mackup
-brew install mackup
+# Install mackup-ng
+pip install --upgrade mackup-ng
 
 # Launch it and sync your files
-mackup sync
+mackup-ng sync
 ```
 
 Done!
@@ -70,20 +68,20 @@ You can find more detailed instructions in [INSTALL.md](INSTALL.md).
 
 ## Usage
 
-`mackup sync`
+`mackup-ng sync`
 
 Synchronize your application files between your home folder and the Mackup folder.
 
-`mackup rm <path>`
+`mackup-ng rm <path>`
 
 Remove a managed config path locally and from the Mackup folder, and record the
 deletion so future syncs remove it on other machines too.
 
-`mackup list`
+`mackup-ng list`
 
-Display the list of applications supported by Mackup.
+Display the list of applications supported by mackup-ng.
 
-`mackup -h`
+`mackup-ng -h`
 
 Get some help, obviously...
 
@@ -93,9 +91,9 @@ By only tracking pure configuration files, it keeps the crap out of your
 freshly new installed workstation (no cache, temporary and locally specific
 files are transferred).
 
-Mackup makes setting up the environment easy and simple.
+mackup-ng makes setting up the environment easy and simple.
 
-Mackup uses sync mode.
+mackup-ng uses sync mode.
 
 ### Sync mode
 
@@ -105,13 +103,13 @@ which can be in Dropbox, iCloud, or wherever you configure it.
 
 It is covered by the commands:
 
-- `mackup sync`
-- `mackup rm <path>`
+- `mackup-ng sync`
+- `mackup-ng rm <path>`
 
-To revert a single application instead, name it, e.g.
-`mackup link uninstall git`. Scoping the command to an application unlinks only
-that app — the rest of your setup and the Mackup config itself are left in
-place, and the global uninstall confirmation is skipped.
+`sync` reconciles every managed file in both directions by modification time.
+To drop a single managed path everywhere, use `mackup-ng rm <path>`: it removes
+the file locally and from the Mackup folder, and records a deletion tombstone so
+future syncs remove it on your other machines too.
 
 ## Supported Storages
 
@@ -743,7 +741,7 @@ directory or your personal `~/.gitignore`?
 ## Fork Additions
 
 This fork adds path templating for application config definitions (`*.cfg` in
-`src/mackup/applications`) to reduce duplication and simplify cross-platform
+`src/mackup_ng/applications`) to reduce duplication and simplify cross-platform
 entries.
 
 ### 1. Brace expansion (`{...}`)
@@ -858,9 +856,10 @@ And it's [GPL](http://www.gnu.org/licenses/gpl.html), of course.
 
 ## What's up with the weird name
 
-Mackup is just a portmanteau of Mac and Backup. It is simple, short, and easy to
-remember, and it corresponds with the whole idea of Mackup: the simpler – the better!
-(And I suck at naming stuff, but who doesn't.)
+Mackup is a portmanteau of Mac and Backup. It is simple, short, and easy to
+remember, and it corresponds with the whole idea: the simpler – the better!
+The `-ng` suffix ("next generation") marks this maintained fork, which
+streamlines Mackup down to a single two-way `sync` plus `rm`.
 
 ## Architecture
 

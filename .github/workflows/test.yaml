@@ -23,4 +23,4 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - run: uv sync --all-extras --dev
-      - run: uv run pytest --cov=mackup --cov-report=term
+      - run: uv run pytest --cov=mackup_ng --cov-report=term

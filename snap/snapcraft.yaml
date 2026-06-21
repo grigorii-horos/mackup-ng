@@ -1,27 +1,27 @@
-name: mackup
+name: mackup-ng
 base: core24
-adopt-info: mackup
-title: Mackup
+adopt-info: mackup-ng
+title: mackup-ng
 summary: Keep your application settings in sync
 description: |
   Keeps your application settings in sync through a safe directory
   (e.g. Dropbox) across all your workstations.
 
 license: GPL-3.0-or-later
-contact: analogue@glop.org
-website: https://github.com/lra/mackup
-source-code: https://github.com/lra/mackup
-issues: https://github.com/lra/mackup/issues
+contact: horosgrisa@gmail.com
+website: https://github.com/grigorii-horos/mackup-ng
+source-code: https://github.com/grigorii-horos/mackup-ng
+issues: https://github.com/grigorii-horos/mackup-ng/issues
 
 grade: stable
 confinement: classic
 
 apps:
-  mackup:
-    command: bin/mackup
+  mackup-ng:
+    command: bin/mackup-ng
 
 parts:
-  mackup:
+  mackup-ng:
     plugin: python
     source: .
     stage-packages:

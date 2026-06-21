@@ -1,75 +1,61 @@
-# Detailed install instructions for Mackup
+# Detailed install instructions for mackup-ng
 
-There are 2 ways to run mackup:
-
-1. Install it with Homebrew (macOS and GNU/Linux)
-2. Install it with PIP (macOS and GNU/Linux)
+mackup-ng is distributed on PyPI as `mackup-ng`. Install it with either
+[pip](https://pip.pypa.io/en/stable/) or [uv](https://docs.astral.sh/uv/).
 
 ## Install
 
-### With Homebrew
+### With pip
 
 ```bash
-# Easy
-brew install mackup
-
-# Now just run it
-mackup -h
-```
-
-### With Homebrew master branch for latest updates
-
-Want to install the latest master release instead of waiting on the homebrew
-package version?
-
-[Homebrew reference](https://docs.brew.sh/Manpage#install-options-formulacask)
-
-```bash
-# Install master
-brew install --HEAD
-# Check if you are using the master or stale package
-brew switch mackup <HEAD-XXXX>
-
-mackup -h
-```
-
-### With Python's PIP
-
-```bash
-# Easy too
-pip install mackup
+pip install mackup-ng
 
 # Now you can run it
-mackup -h
+mackup-ng -h
+```
+
+### With uv (isolated tool)
+
+```bash
+uv tool install mackup-ng
+
+mackup-ng -h
+```
+
+### Latest development version from GitHub
+
+```bash
+pip install "git+https://github.com/grigorii-horos/mackup-ng.git"
+
+mackup-ng -h
 ```
 
 ## Upgrade
 
-### Upgrade with Homebrew
+### Upgrade with pip
 
 ```bash
-brew update
-brew upgrade
-mackup -h
+pip install --upgrade mackup-ng
+mackup-ng -h
 ```
 
-### Upgrade with Python's PIP
+### Upgrade with uv
 
 ```bash
-pip install --upgrade mackup
-mackup -h
+uv tool upgrade mackup-ng
+mackup-ng -h
 ```
 
 ## Uninstall
 
-### Uninstall with Homebrew
+### Uninstall with pip
 
 ```bash
-brew uninstall mackup
+pip uninstall mackup-ng
 ```
 
-### Uninstall with Python's PIP
+### Uninstall with uv
 
 ```bash
-pip uninstall mackup
+uv tool uninstall mackup-ng
 ```

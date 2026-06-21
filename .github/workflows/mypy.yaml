@@ -15,4 +15,4 @@ jobs:
         with:
           python-version: "3.10"
       - run: uv sync --all-extras --dev
-      - run: uv run mypy src/mackup/
+      - run: uv run mypy src/mackup_ng/

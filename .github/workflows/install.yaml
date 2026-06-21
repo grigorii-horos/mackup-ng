@@ -26,7 +26,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - run: pip install .
-      - run: mackup --help
+      - run: mackup-ng --help
 
   install-on-macos:
     strategy:
@@ -39,4 +39,4 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - run: pip install .
-      - run: mackup --help
+      - run: mackup-ng --help

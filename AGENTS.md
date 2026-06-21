@@ -3,7 +3,7 @@
 ## Purpose
 
 This fork of `mackup` adds path templating in application config definitions
-(`src/mackup/applications/*.cfg`). When editing or adding app configs, use the
+(`src/mackup_ng/applications/*.cfg`). When editing or adding app configs, use the
 fork features below to avoid duplicated platform-specific entries.
 
 ## Fork Path Templating (cfg files)
@@ -74,5 +74,5 @@ Paths are resolved in this order:
 
 - Paths that start with selectors (e.g. `[mac:...,fallback]/...`) are supported
   by this fork, but they rely on fork-specific parsing logic in
-  `src/mackup/appsdb.py`.
+  `src/mackup_ng/appsdb.py`.
 - Upstream Mackup may not support these templates.

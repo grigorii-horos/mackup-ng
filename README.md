@@ -13,6 +13,13 @@ Backup and keep your application settings in sync.
 > by Laurent Raufaste. It replaces the backup/restore/link commands with a
 > single two-way `sync` plus an `rm` command, while keeping the same on-disk
 > conventions (`.mackup.cfg`, the `Mackup` storage folder).
+>
+> ⚠️ **Incompatible with the original `mackup`.** This package installs a
+> `mackup` command (and a `mackup-ng` alias) that **shadows the upstream
+> `mackup`** — do not install both in the same environment, or the last one
+> installed wins. The on-disk format also diverges: mackup-ng records deletion
+> tombstones (`.mackup-deletions`) and syncs by modification time, so a folder
+> written by mackup-ng is not meant to be managed by the original mackup.
 
 ## Table of contents
 

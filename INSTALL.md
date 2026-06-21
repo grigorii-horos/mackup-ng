@@ -3,6 +3,11 @@
 mackup-ng is distributed on PyPI as `mackup-ng`. Install it with either
 [pip](https://pip.pypa.io/en/stable/) or [uv](https://docs.astral.sh/uv/).
 
+> ⚠️ **Do not install alongside the original `mackup`.** mackup-ng provides a
+> `mackup` command that shadows the upstream one; installing both in the same
+> environment leaves whichever was installed last on `PATH`. If you already
+> have the original mackup, uninstall it first (`pip uninstall mackup`).
+
 ## Install
 
 ### With pip

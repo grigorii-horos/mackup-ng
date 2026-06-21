@@ -1,12 +1,12 @@
 [project]
 name = "mackup"
-version = "0.10.2"
+version = "0.11.1"
 description = "Backup and keep your application settings in sync."
 readme = "README.md"
 dependencies = [
     "docopt-ng>=0.9.0",
 ]
-requires-python = ">= 3.9"
+requires-python = ">= 3.10"
 authors = [
 	{ name = "Laurent Raufaste", email = "analogue@glop.org" }
 ]
@@ -21,7 +21,6 @@ classifiers = [
     "Operating System :: MacOS :: MacOS X",
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -42,12 +41,13 @@ Changelog = "https://github.com/lra/mackup/releases"
 
 [dependency-groups]
 dev = [
-    "pytest>=8.4.2",
-    "pytest-cov>=6.0.0",
-    "coverage[toml]>=7.6.0",
-    "mypy>=1.13.0",
-    "ruff>=0.14.4",
-    "ty>=0.0.16",
+    "pytest>=9.1.0",
+    "pytest-cov>=7.1.0",
+    "coverage[toml]>=7.14.1",
+    "mypy>=2.1.0",
+    "ruff>=0.15.17",
+    "ty>=0.0.49",
+    "rumdl>=0.2.16",
 ]
 
 [build-system]
@@ -55,7 +55,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.mypy]
-python_version = "3.9"
+python_version = "3.10"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
@@ -146,10 +146,14 @@ select = [
 ]
 ignore = [
     "C901", # mccabe complexity - too complex functions
-    "FA100", # future annotations - would change behavior
     "PLR0912", # too many branches
-    "PLR0915", # too many statements
     "PTH", # use pathlib - os.path is fine for this codebase
-    "SIM115", # use context manager for open - some cases require this
-    "SLF001", # private member access - needed for testing
+]
+
+# https://github.com/rvben/rumdl
+[tool.rumdl]
+exclude = ["tests"]
+disable = [
+    "MD013", # line length - docs contain long, unwrappable URLs
+    "MD041", # first line must be a top-level heading (PR template starts with a level-3 heading)
 ]

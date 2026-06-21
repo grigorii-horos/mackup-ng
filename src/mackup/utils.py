@@ -9,7 +9,7 @@ import sqlite3
 import stat
 import subprocess
 import sys
-from typing import NoReturn, Optional
+from typing import NoReturn
 
 from . import constants
 
@@ -213,10 +213,21 @@ def chmod(target: str) -> None:
             for cur_dir in dirs:
                 os.chmod(os.path.join(root, cur_dir), folder_mode)
             for cur_file in files:
-                filepath = os.path.join(root, cur_file)
-                current = os.stat(filepath).st_mode
-                file_mode = base_file_mode | (stat.S_IXUSR if current & exec_bits else 0)
-                os.chmod(filepath, file_mode)
+                fullpath = os.path.join(root, cur_file)
+                try:
+                    current = os.stat(fullpath).st_mode
+                    file_mode = base_file_mode | (
+                        stat.S_IXUSR if current & exec_bits else 0
+                    )
+                    os.chmod(fullpath, file_mode)
+                except FileNotFoundError:
+                    # A broken symlink (e.g. a link restored before its
+                    # target) is listed by os.walk but can't be followed by
+                    # os.stat/os.chmod. Skip it instead of crashing; re-raise
+                    # for real missing regular files.
+                    if os.path.islink(fullpath):
+                        continue
+                    raise
 
     else:
         raise ValueError(f"Unsupported file type: {target}")
@@ -274,7 +285,7 @@ def get_google_drive_folder_location() -> str:
     if os.path.isfile(yosemite_gdrive_db):
         gdrive_db_path = yosemite_gdrive_db
 
-    googledrive_home: Optional[str] = None
+    googledrive_home: str | None = None
 
     gdrive_db = (
         gdrive_db_path

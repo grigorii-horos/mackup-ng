@@ -8,7 +8,6 @@ data from the Mackup Database (files).
 import configparser
 import os
 import platform
-from typing import Union
 
 from . import constants
 from .constants import APPS_DIR, CUSTOM_APPS_DIR, CUSTOM_APPS_DIR_XDG
@@ -344,7 +343,7 @@ class ApplicationsDatabase:
     def __init__(self) -> None:
         """Create a ApplicationsDatabase instance."""
         # Build the dict that will contain the properties of each application
-        self.apps: dict[str, dict[str, Union[str, set[str]]]] = {}
+        self.apps: dict[str, dict[str, str | set[str]]] = {}
         self.app_file_mappings: dict[str, set[tuple[str, str]]] = {}
 
         for config_file in ApplicationsDatabase.get_config_files():

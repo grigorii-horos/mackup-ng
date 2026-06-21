@@ -17,7 +17,7 @@ Mackup uses [uv](https://docs.astral.sh/uv/) for fast, reliable Python package m
 
 ### Prerequisites
 
-- Python 3.9 or higher
+- Python 3.10 or higher
 - [uv](https://docs.astral.sh/uv/) installed
 
 Install uv if you haven't already:
@@ -55,6 +55,7 @@ uv sync --dev
 ```
 
 This will:
+
 - Create a `.venv` directory with a virtual environment
 - Install all project dependencies
 - Install development dependencies (pytest, mypy, etc.)
@@ -96,6 +97,7 @@ uv run ruff check .
 ### Code Quality Standards
 
 All pull requests must pass:
+
 - ✅ **Tests**: All pytest tests must pass
 - ✅ **Type checking**: No mypy errors
 - ✅ **Linting**: Code must pass ruff checks

@@ -288,6 +288,3 @@ def main() -> None:
                         f"{action} {matching_mapping[0]} ({pretty_name})",
                     ),
                 )
-
-    # Delete the tmp folder
-    mckp.clean_temp_folder()

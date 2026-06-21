@@ -133,6 +133,36 @@ def main() -> None:
                 pass
         return list(dict.fromkeys(candidates))
 
+    def is_managed_directory(local_filename: str, backup_filename: str) -> bool:
+        return os.path.isdir(
+            os.path.join(os.environ["HOME"], local_filename),
+        ) or os.path.isdir(
+            os.path.join(mckp.mackup_folder, backup_filename),
+        )
+
+    def get_managed_descendant_mapping(
+        requested_path: str,
+        local_filename: str,
+        backup_filename: str,
+    ) -> Optional[tuple[str, str]]:
+        local_root = ApplicationProfile.normalize_relative_path(local_filename)
+        try:
+            relative_path = os.path.relpath(requested_path, local_root)
+        except ValueError:
+            return None
+
+        if relative_path == os.curdir or relative_path.startswith(os.pardir + os.sep):
+            return None
+        if os.path.isabs(relative_path):
+            return None
+        if not is_managed_directory(local_filename, backup_filename):
+            return None
+
+        return (
+            os.path.normpath(os.path.join(local_filename, relative_path)),
+            os.path.normpath(os.path.join(backup_filename, relative_path)),
+        )
+
     # If we want to answer mackup with "yes" for each question
     if args["--force"]:
         utils.FORCE_YES = True
@@ -203,7 +233,6 @@ def main() -> None:
                     (app_name, (local_filename, backup_filename)),
                 )
 
-        stats_by_app: dict[str, dict[str, int]] = {}
         for requested_arg in args["<path>"]:
             requested_paths = get_requested_path_candidates(requested_arg)
             if any(
@@ -224,23 +253,41 @@ def main() -> None:
                 None,
             )
             if match is None:
-                sys.exit(f"Unsupported or unmanaged path: {requested_arg}")
+                descendant_match = next(
+                    (
+                        (app_name, descendant_mapping)
+                        for path in requested_paths
+                        for app_name, (
+                            local_filename,
+                            backup_filename,
+                        ) in managed_paths.values()
+                        if (
+                            descendant_mapping := get_managed_descendant_mapping(
+                                path,
+                                local_filename,
+                                backup_filename,
+                            )
+                        )
+                        is not None
+                    ),
+                    None,
+                )
+                if descendant_match is None:
+                    sys.exit(f"Unsupported or unmanaged path: {requested_arg}")
+                match = descendant_match
 
             matching_app_name, matching_mapping = match
             pretty_name = app_db.get_name(matching_app_name)
             app = ApplicationProfile(mckp, {matching_mapping}, dry_run, verbose)
             print_app_header(matching_app_name, pretty_name)
             app_stats = app.remove_file(*matching_mapping)
-
-            app_stats_total = stats_by_app.setdefault(
-                matching_app_name,
-                {key: 0 for key in app_stats},
-            )
-            for key, value in app_stats.items():
-                app_stats_total[key] = app_stats_total.get(key, 0) + value
-
-        for app_name, stats in sorted(stats_by_app.items()):
-            print_app_result(stats, app_name, app_db.get_name(app_name))
+            action = get_action_label(app_stats)
+            if action is not None:
+                print(
+                    utils.colorize_message(
+                        f"{action} {matching_mapping[0]} ({pretty_name})",
+                    ),
+                )
 
     # Delete the tmp folder
     mckp.clean_temp_folder()

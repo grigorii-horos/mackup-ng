@@ -1,3 +1,4 @@
+import io
 import os
 import shutil
 import tempfile
@@ -194,6 +195,45 @@ class TestCLI(unittest.TestCase):
                 f".ssh/{first_name}",
                 f".ssh/{second_name}",
             ]
+
+    def test_rm_deletes_file_inside_managed_directory_from_current_directory(self):
+        """Test rm accepts nested files when their parent directory is managed."""
+        nested_dir = os.path.join(self.test_home, ".ssh")
+        os.makedirs(nested_dir, exist_ok=True)
+        nested_name = "config.bak.codex-20260430"
+        nested_path = os.path.join(nested_dir, nested_name)
+        with open(nested_path, "w") as f:
+            f.write("nested\n")
+
+        with open(self.custom_app_config, "w") as f:
+            f.write("[application]\n")
+            f.write(f"name = {self.test_app_name}\n")
+            f.write("\n")
+            f.write("[configuration_files]\n")
+            f.write(".ssh\n")
+
+        with patch("sys.argv", ["mackup", "sync"]):
+            main()
+
+        original_cwd = os.getcwd()
+        os.chdir(nested_dir)
+        try:
+            stdout = io.StringIO()
+            with patch("sys.argv", ["mackup", "rm", nested_name]), patch(
+                "sys.stdout",
+                stdout,
+            ):
+                main()
+        finally:
+            os.chdir(original_cwd)
+
+        assert not os.path.exists(nested_path)
+        assert not os.path.exists(os.path.join(self.mackup_folder, ".ssh", nested_name))
+
+        deletions_file = os.path.join(self.mackup_folder, ".mackup-deletions")
+        with open(deletions_file) as f:
+            assert f.read().splitlines() == [f".ssh/{nested_name}"]
+        assert f"Deleted .ssh/{nested_name} ({self.test_app_name})" in stdout.getvalue()
 
     def test_sync_applies_deletion_tombstone(self):
         """Test sync deletes files listed in the backup-side deletion log."""

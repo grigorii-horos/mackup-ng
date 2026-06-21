@@ -10,8 +10,8 @@ PLATFORM_WINDOWS: str = "Windows"
 # Directory containing the application configs
 APPS_DIR: str = "applications"
 
-# Mackup application name
-MACKUP_APP_NAME: str = "mackup"
+# Distribution name (used for version lookup via importlib.metadata)
+MACKUP_APP_NAME: str = "mackup-ng"
 
 # Default Mackup backup path where it stores its files in Dropbox
 MACKUP_BACKUP_PATH: str = "Mackup"
@@ -43,7 +43,7 @@ ENGINE_FS: str = "file_system"
 ENGINE_GDRIVE: str = "google_drive"
 ENGINE_ICLOUD: str = "icloud"
 
-DOCUMENTATION_URL: str = "https://github.com/lra/mackup/blob/master/doc/README.md"
+DOCUMENTATION_URL: str = "https://github.com/grigorii-horos/mackup-ng/blob/master/doc/README.md"
 
 # Error message displayed when mackup can't find the storage specified
 # in the config (or the default one).

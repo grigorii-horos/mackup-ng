@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from mackup.config import Config, ConfigError
-from mackup.constants import (
+from mackup_ng.config import Config, ConfigError
+from mackup_ng.constants import (
     ENGINE_DROPBOX,
     ENGINE_FS,
     ENGINE_GDRIVE,

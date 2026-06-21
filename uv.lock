@@ -289,7 +289,7 @@ wheels = [
 ]
 
 [[package]]
-name = "mackup"
+name = "mackup-ng"
 version = "0.11.1"
 source = { editable = "." }
 dependencies = [

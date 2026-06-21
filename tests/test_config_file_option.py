@@ -4,8 +4,8 @@ import unittest
 
 import pytest
 
-from mackup.config import Config
-from mackup.mackup import Mackup
+from mackup_ng.config import Config
+from mackup_ng.mackup import Mackup
 
 
 class TestConfigFileOption(unittest.TestCase):

@@ -1,13 +1,14 @@
 [project]
-name = "mackup"
+name = "mackup-ng"
 version = "0.11.1"
-description = "Backup and keep your application settings in sync."
+description = "Backup and keep your application settings in sync (maintained fork of mackup)."
 readme = "README.md"
 dependencies = [
     "docopt-ng>=0.9.0",
 ]
 requires-python = ">= 3.10"
 authors = [
+	{ name = "Grigorii Horos", email = "horosgrisa@gmail.com" },
 	{ name = "Laurent Raufaste", email = "analogue@glop.org" }
 ]
 license = "GPL-3.0-or-later"
@@ -32,12 +33,12 @@ classifiers = [
 ]
 
 [project.scripts]
-mackup = "mackup.main:main"
+mackup-ng = "mackup_ng.main:main"
 
 [project.urls]
-Repository = "https://github.com/lra/mackup.git"
-Issues = "https://github.com/lra/mackup/issues"
-Changelog = "https://github.com/lra/mackup/releases"
+Repository = "https://github.com/grigorii-horos/mackup-ng.git"
+Issues = "https://github.com/grigorii-horos/mackup-ng/issues"
+Changelog = "https://github.com/grigorii-horos/mackup-ng/releases"
 
 [dependency-groups]
 dev = [
@@ -70,7 +71,7 @@ strict_equality = true
 show_error_codes = true
 
 [tool.coverage.run]
-source = ["src/mackup"]
+source = ["src/mackup_ng"]
 branch = true
 omit = [
     "*/tests/*",

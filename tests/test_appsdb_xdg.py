@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from mackup.appsdb import ApplicationsDatabase
+from mackup_ng.appsdb import ApplicationsDatabase
 
 
 class TestApplicationsDatabaseXDG(unittest.TestCase):
@@ -163,21 +163,21 @@ class TestApplicationsDatabaseXDG(unittest.TestCase):
 
     def test_platform_selector_resolves_for_current_platform(self):
         """Platform selector syntax should choose the platform-specific path."""
-        with patch("mackup.appsdb.platform.system", return_value="Linux"):
+        with patch("mackup_ng.appsdb.platform.system", return_value="Linux"):
             assert (
                 ApplicationsDatabase._resolve_platform_selectors(
                     "[linux:.config/,mac:Library/Application Support,windows:AppData/Roaming,.config]/app/config2.json",
                 )
                 == ".config/app/config2.json"
             )
-        with patch("mackup.appsdb.platform.system", return_value="Darwin"):
+        with patch("mackup_ng.appsdb.platform.system", return_value="Darwin"):
             assert (
                 ApplicationsDatabase._resolve_platform_selectors(
                     "[linux:.config/,mac:Library/Application Support,windows:AppData/Roaming,.config]/app/config2.json",
                 )
                 == "Library/Application Support/app/config2.json"
             )
-        with patch("mackup.appsdb.platform.system", return_value="Windows"):
+        with patch("mackup_ng.appsdb.platform.system", return_value="Windows"):
             assert (
                 ApplicationsDatabase._resolve_platform_selectors(
                     "[linux:.config/,mac:Library/Application Support,windows:AppData/Roaming,.config]/app/config2.json",
@@ -187,7 +187,7 @@ class TestApplicationsDatabaseXDG(unittest.TestCase):
 
     def test_platform_selector_uses_unkeyed_fallback(self):
         """Selector should use the last unkeyed item as fallback."""
-        with patch("mackup.appsdb.platform.system", return_value="Linux"):
+        with patch("mackup_ng.appsdb.platform.system", return_value="Linux"):
             assert (
                 ApplicationsDatabase._resolve_platform_selectors(
                     "[mac:Library/Application Support/app/mac.conf,windows:AppData/Roaming/app/windows.conf,.config/app/other.conf]",
@@ -197,21 +197,21 @@ class TestApplicationsDatabaseXDG(unittest.TestCase):
 
     def test_platform_selector_mapping_uses_fallback_as_backup_path(self):
         """Unkeyed fallback acts as canonical backup path for all platforms."""
-        with patch("mackup.appsdb.platform.system", return_value="Darwin"):
+        with patch("mackup_ng.appsdb.platform.system", return_value="Darwin"):
             local_path, backup_path = ApplicationsDatabase._resolve_platform_selectors_with_backup(
                 "[mac:a/b/c,linux:x/y/z,m/n/o]",
             )
             assert local_path == "a/b/c"
             assert backup_path == "m/n/o"
 
-        with patch("mackup.appsdb.platform.system", return_value="Linux"):
+        with patch("mackup_ng.appsdb.platform.system", return_value="Linux"):
             local_path, backup_path = ApplicationsDatabase._resolve_platform_selectors_with_backup(
                 "[mac:a/b/c,linux:x/y/z,m/n/o]",
             )
             assert local_path == "x/y/z"
             assert backup_path == "m/n/o"
 
-        with patch("mackup.appsdb.platform.system", return_value="Linux"):
+        with patch("mackup_ng.appsdb.platform.system", return_value="Linux"):
             local_path, backup_path = ApplicationsDatabase._resolve_platform_selectors_with_backup(
                 "[mac:a/b/c,m/n/o]",
             )
@@ -220,7 +220,7 @@ class TestApplicationsDatabaseXDG(unittest.TestCase):
 
     def test_cross_platform_builtin_variables_expand(self):
         """Generic built-in vars should map to platform-specific directories."""
-        with patch("mackup.appsdb.platform.system", return_value="Linux"):
+        with patch("mackup_ng.appsdb.platform.system", return_value="Linux"):
             assert (
                 ApplicationsDatabase._expand_builtin_path_vars(
                     "@CONFIG@/app/config.json",
@@ -232,7 +232,7 @@ class TestApplicationsDatabaseXDG(unittest.TestCase):
                 == ".cache/tool/cache.db"
             )
 
-        with patch("mackup.appsdb.platform.system", return_value="Darwin"):
+        with patch("mackup_ng.appsdb.platform.system", return_value="Darwin"):
             assert (
                 ApplicationsDatabase._expand_builtin_path_vars(
                     "@CONFIG@/app/config.json",
@@ -244,7 +244,7 @@ class TestApplicationsDatabaseXDG(unittest.TestCase):
                 == "Library/Caches/tool/cache.db"
             )
 
-        with patch("mackup.appsdb.platform.system", return_value="Windows"):
+        with patch("mackup_ng.appsdb.platform.system", return_value="Windows"):
             assert (
                 ApplicationsDatabase._expand_builtin_path_vars(
                     "@CONFIG@/app/config.json",
@@ -258,7 +258,7 @@ class TestApplicationsDatabaseXDG(unittest.TestCase):
 
     def test_cross_platform_builtin_variables_expand_to_linux_for_backup(self):
         """Backup path expansion should use Linux canonical values."""
-        with patch("mackup.appsdb.platform.system", return_value="Darwin"):
+        with patch("mackup_ng.appsdb.platform.system", return_value="Darwin"):
             assert (
                 ApplicationsDatabase._expand_builtin_path_vars(
                     "@CONFIG@/app/config.json", for_backup=True,
@@ -294,7 +294,7 @@ class TestApplicationsDatabaseXDG(unittest.TestCase):
             os.environ["HOME"] = temp_home
             os.environ["XDG_CONFIG_HOME"] = temp_xdg
 
-            with patch("mackup.appsdb.platform.system", return_value="Linux"):
+            with patch("mackup_ng.appsdb.platform.system", return_value="Linux"):
                 db = ApplicationsDatabase()
                 files = db.get_files("platform-selector-test")
                 assert ".config/app/linux.conf" in files
@@ -337,7 +337,7 @@ class TestApplicationsDatabaseXDG(unittest.TestCase):
             os.environ["HOME"] = temp_home
             os.environ["XDG_CONFIG_HOME"] = temp_xdg
 
-            with patch("mackup.appsdb.platform.system", return_value="Linux"):
+            with patch("mackup_ng.appsdb.platform.system", return_value="Linux"):
                 db = ApplicationsDatabase()
                 assert ".config/myapp/config.json" in db.get_files("mapping-test")
                 mappings = db.get_file_mappings("mapping-test")
@@ -346,7 +346,7 @@ class TestApplicationsDatabaseXDG(unittest.TestCase):
                     ".local/share/shared/myapp-config.json",
                 ) in mappings
 
-            with patch("mackup.appsdb.platform.system", return_value="Darwin"):
+            with patch("mackup_ng.appsdb.platform.system", return_value="Darwin"):
                 db = ApplicationsDatabase()
                 assert "Library/Application Support/MyApp/config.json" in db.get_files(
                     "mapping-test",
@@ -389,7 +389,7 @@ class TestApplicationsDatabaseXDG(unittest.TestCase):
             os.environ["HOME"] = temp_home
             os.environ["XDG_CONFIG_HOME"] = temp_xdg
 
-            with patch("mackup.appsdb.platform.system", return_value="Linux"):
+            with patch("mackup_ng.appsdb.platform.system", return_value="Linux"):
                 db = ApplicationsDatabase()
                 files = db.get_files("builtin-vars-test")
                 assert ".config/demo/a.json" in files
@@ -429,7 +429,7 @@ class TestApplicationsDatabaseXDG(unittest.TestCase):
             os.environ["HOME"] = temp_home
             os.environ["XDG_CONFIG_HOME"] = temp_xdg
 
-            with patch("mackup.appsdb.platform.system", return_value="Darwin"):
+            with patch("mackup_ng.appsdb.platform.system", return_value="Darwin"):
                 db = ApplicationsDatabase()
                 files = db.get_files("cross-platform-vars-test")
                 assert "Library/Application Support/demo/a.json" in files

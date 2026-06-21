@@ -1,6 +1,6 @@
 import unittest
 
-from mackup import main
+from mackup_ng import main
 
 
 class TestMain(unittest.TestCase):

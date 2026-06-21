@@ -1,36 +1,37 @@
-"""Mackup.
+"""mackup-ng.
 
 Keep your application settings in sync.
-Copyright (C) 2013-2025 Laurent Raufaste <http://glop.org/>
+A maintained fork of mackup by Laurent Raufaste <http://glop.org/>.
+Copyright (C) 2013-2025 Laurent Raufaste, Grigorii Horos.
 
 Usage:
-  mackup [options] list
-  mackup [options] show <application>
-  mackup [options] sync
-  mackup [options] rm <path>...
-  mackup (-h | --help)
+  mackup-ng [options] list
+  mackup-ng [options] show <application>
+  mackup-ng [options] sync
+  mackup-ng [options] rm <path>...
+  mackup-ng (-h | --help)
 
 Options:
   -h --help                 Show this screen.
   -f --force                Force every question asked to be answered with "Yes".
   --force-no                Force every question asked to be answered with "No".
-  -r --root                 Allow mackup to be run as superuser.
+  -r --root                 Allow mackup-ng to be run as superuser.
   -n --dry-run              Show steps without executing.
   -v --verbose              Show additional details.
   -c --config-file=<path>   Specify custom config file path.
   --version                 Show version.
 
 Modes of action:
- - mackup list: display a list of all supported applications.
- - mackup show: display the details for a supported application.
- - mackup sync: synchronize local and remote config files in both directions.
- - mackup rm: remove a managed config file locally and from the remote folder.
+ - mackup-ng list: display a list of all supported applications.
+ - mackup-ng show: display the details for a supported application.
+ - mackup-ng sync: synchronize local and remote config files in both directions.
+ - mackup-ng rm: remove a managed config file locally and from the remote folder.
 
-By default, Mackup syncs all application data via
+By default, mackup-ng syncs all application data via
 Dropbox, but may be configured to exclude applications or use a different
 backend with a .mackup.cfg file.
 
-See https://github.com/lra/mackup/tree/master/doc for more information.
+See https://github.com/grigorii-horos/mackup-ng/tree/master/doc for more information.
 
 """
 
@@ -98,7 +99,7 @@ def main() -> None:
         )
     assert docstring is not None  # for type narrowing after sys.exit
 
-    args: dict[str, Any] = docopt(docstring, version=f"Mackup {VERSION}")
+    args: dict[str, Any] = docopt(docstring, version=f"mackup-ng {VERSION}")
 
     if args["--force"] and args["--force-no"]:
         sys.exit("Options --force and --force-no are mutually exclusive.")
@@ -189,7 +190,7 @@ def main() -> None:
         output += "\n"
         output += (
             f"{len(app_db.get_app_names())} applications supported in "
-            f"Mackup v{VERSION}"
+            f"mackup-ng v{VERSION}"
         )
         print(output)
 

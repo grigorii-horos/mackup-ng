@@ -7,8 +7,8 @@ from unittest.mock import patch
 
 import pytest
 
-from mackup import utils
-from mackup.main import main
+from mackup_ng import utils
+from mackup_ng.main import main
 
 
 class TestCLI(unittest.TestCase):

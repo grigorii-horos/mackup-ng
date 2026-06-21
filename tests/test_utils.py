@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 import pytest
 
-from mackup import utils
+from mackup_ng import utils
 
 
 def convert_to_octal(file_name):

@@ -6,8 +6,8 @@ import unittest
 from io import StringIO
 from unittest.mock import Mock, patch
 
-from mackup.application import ApplicationProfile
-from mackup.mackup import Mackup
+from mackup_ng.application import ApplicationProfile
+from mackup_ng.mackup import Mackup
 
 
 class TestApplicationProfile(unittest.TestCase):
@@ -118,7 +118,7 @@ class TestApplicationProfile(unittest.TestCase):
         os.utime(home_dirpath, (100, 100))
         os.utime(mackup_dirpath, (300, 300))
 
-        with patch("mackup.application.utils.copy") as mock_copy:
+        with patch("mackup_ng.application.utils.copy") as mock_copy:
             self.app_profile.sync_files()
             mock_copy.assert_not_called()
 

@@ -50,7 +50,7 @@ class TestCLI(unittest.TestCase):
             f.write("test_config=value\n")
 
         # Create custom application config
-        self.custom_apps_dir = os.path.join(self.test_home, ".mackup")
+        self.custom_apps_dir = os.path.join(self.test_home, ".mackup", "applications")
         os.makedirs(self.custom_apps_dir, exist_ok=True)
 
         self.custom_app_config = os.path.join(self.custom_apps_dir, "test-app.cfg")

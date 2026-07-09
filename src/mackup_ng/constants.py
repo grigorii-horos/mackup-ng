@@ -1,5 +1,6 @@
 """Constants used in Mackup."""
 
+import os
 from importlib.metadata import PackageNotFoundError, version
 
 # Support platforms
@@ -31,11 +32,22 @@ def get_version() -> str:
 # Current version
 VERSION: str = get_version()
 
-# Directory that can contains user defined app configs
-CUSTOM_APPS_DIR: str = ".mackup"
+# Mackup home directory (under $HOME): custom apps + hooks + markers + sets + state
+MACKUP_HOME_DIR: str = ".mackup"
+
+# Directory that can contains user defined app configs: ~/.mackup/applications/
+CUSTOM_APPS_DIR: str = os.path.join(MACKUP_HOME_DIR, APPS_DIR)
 
 # XDG-compliant directory for user defined app configs (relative to XDG_CONFIG_HOME)
 CUSTOM_APPS_DIR_XDG: str = "mackup/applications"
+
+# Sub-directories under the Mackup home (~/.mackup/)
+HOOKS_BACKUP_DIRNAME: str = "backup.d"    # run before `mackup sync`
+HOOKS_RESTORE_DIRNAME: str = "restore.d"  # run after `mackup sync`
+MARKERS_DIRNAME: str = "markers"          # machine-local condition flags
+SETS_DIRNAME: str = "sets.d"              # declarative config sets (.sync-sets)
+STATE_DIRNAME: str = "state"              # hook scratch space
+DCONF_DIRNAME: str = "dconf-backup"       # dconf dumps (*.dconf)
 
 # Supported engines
 ENGINE_DROPBOX: str = "dropbox"

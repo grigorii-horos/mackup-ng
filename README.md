@@ -88,6 +88,20 @@ deletion so future syncs remove it on other machines too.
 
 Display the list of applications supported by mackup-ng.
 
+`mackup-ng mark <marker>` / `mackup-ng unmark <marker>` / `mackup-ng markers`
+
+Set / remove / list machine-local markers (e.g. `backup`, `low-resource`,
+`no-linger`, `no-apikey`, `no-dconf`). See "Machine-local extras" below.
+
+`mackup-ng dconf-add <path>...`
+
+Track and dump dconf path(s), e.g. `/org/gnome/terminal/` (Linux/GNOME).
+
+`mackup-ng apply-sets`
+
+Apply the declarative config sets in `~/.mackup/sets.d/` (also run automatically
+after `sync`).
+
 `mackup-ng -h`
 
 Get some help, obviously...
@@ -827,6 +841,53 @@ Path templates are resolved in this order:
 - many app definitions in this fork were normalized to use `@CONFIG@`,
   `@DATA@`, and selectors to avoid macOS/Linux duplicates
   (for example VS Code-family configs)
+
+### 6. Explicit local → backup mapping (`[mapped_files]`)
+
+`[configuration_files]` keeps the local path and storage layout identical. To
+decouple them, add a `[mapped_files]` section with `LOCAL = BACKUP` pairs:
+
+```ini
+[mapped_files]
+.config/app/grisa.profile/user.js = .config/app/profile/user.js
+```
+
+`=` is the only delimiter, so spaces, dashes and even `->` are safe inside
+paths. Both sides honor selectors, built-in vars and braces (brace groups zip
+pairwise). Handy when a machine-specific local path (e.g. a per-machine Firefox
+profile dir) should share one canonical path in the backup folder.
+
+### 7. Machine-local extras (`~/.mackup/`)
+
+Beyond custom app configs, `~/.mackup/` is the home for machine-local behavior:
+
+```
+~/.mackup/
+├── applications/   custom app *.cfg files
+├── backup.d/       executables run BEFORE `sync`
+├── sets.d/         declarative config sets applied after `sync`
+├── markers/        machine-local flags (do NOT sync them)
+├── state/          hook scratch space
+└── dconf-backup/   dconf dumps (*.dconf)
+```
+
+- **Markers** (`mark`/`unmark`/`markers`) are empty flag files gating behavior on
+  one machine only. `backup` marks the source machine.
+- **dconf** (Linux/GNOME): the backup-role machine dumps tracked paths before the
+  file sync; other machines load them after. Opt out with the `no-dconf` marker;
+  register paths with `dconf-add`.
+- **Config sets** (`sets.d/*.toml`, applied after `sync` / via `apply-sets`):
+  declarative units gated by `require_marker` / `skip_if_marker` / `require_os`,
+  each carrying `[[mutate_xml]]` (XML edits), `[[systemd_dropin]]` (linux user
+  drop-ins), a `restart_service` (systemctl / brew services) with `before`/`after`
+  hooks, and/or `[[run]]` inline shell (with `require_command`) for imperative
+  bits. Files apply sorted by name — use numeric prefixes (`10-`, `20-`).
+- **Hooks**: executables in `backup.d/` run before the file sync; both hooks and
+  `[[run]]` scripts receive a `MACKUP_*` environment contract
+  (`MACKUP_ROLE`, `MACKUP_OS`, `MACKUP_ARCH`, `MACKUP_CONFIG_DIR`,
+  `MACKUP_MARKERS_DIR`, `MACKUP_STATE_DIR`, `MACKUP_DCONF_BACKUP_DIR`, ...).
+
+Requires Python 3.12+.
 
 ## Why did you do this
 

@@ -9,6 +9,11 @@ Usage:
   mackup-ng [options] show <application>
   mackup-ng [options] sync
   mackup-ng [options] rm <path>...
+  mackup-ng [options] mark <marker>
+  mackup-ng [options] unmark <marker>
+  mackup-ng [options] markers
+  mackup-ng [options] dconf-add <path>...
+  mackup-ng [options] apply-sets
   mackup-ng (-h | --help)
 
 Options:
@@ -25,7 +30,17 @@ Modes of action:
  - mackup-ng list: display a list of all supported applications.
  - mackup-ng show: display the details for a supported application.
  - mackup-ng sync: synchronize local and remote config files in both directions.
+       Runs ~/.mackup/backup.d/ hooks before and ~/.mackup/restore.d/ hooks after.
  - mackup-ng rm: remove a managed config file locally and from the remote folder.
+ - mackup-ng mark: set a machine-local marker (e.g. backup, low-resource).
+ - mackup-ng unmark: remove a machine-local marker.
+ - mackup-ng markers: list known and active markers.
+ - mackup-ng dconf-add: track and dump dconf path(s), e.g. /org/gnome/terminal/.
+ - mackup-ng apply-sets: apply declarative config sets from ~/.mackup/sets.d/.
+
+dconf paths are backed up (dumped) on the backup-role machine and restored
+(loaded) on other machines during `mackup sync`, unless the `no-dconf` marker
+is set. Dumps live in ~/.mackup/dconf-backup/.
 
 By default, mackup-ng syncs all application data via
 Dropbox, but may be configured to exclude applications or use a different
@@ -41,7 +56,7 @@ from typing import Any
 
 from docopt import docopt
 
-from . import utils
+from . import dconf, hooks, sets, utils
 from .application import ApplicationProfile
 from .appsdb import ApplicationsDatabase
 from .constants import VERSION
@@ -224,6 +239,16 @@ def main() -> None:
     elif args["sync"]:
         mckp.check_for_usable_backup_env()
 
+        role = hooks.machine_role()
+        dconf_enabled = not hooks.has_marker("no-dconf")
+
+        # Machine-local hooks before the file sync (e.g. dump local state to files).
+        hooks.run_hooks("backup", dry_run)
+
+        # On the source machine, dump tracked dconf paths so they get synced out.
+        if role == "backup" and dconf_enabled:
+            dconf.dump_all(dry_run)
+
         # Synchronize in two phases:
         # one pass per file: decide direction by mtime and do one action.
         for app_name in sorted(mckp.get_apps_to_backup()):
@@ -237,6 +262,50 @@ def main() -> None:
             print_app_header(app_name, pretty_name)
             stats = app.sync_files()
             print_app_result(stats, app_name, pretty_name)
+
+        # On consumer machines, load the synced dconf dumps into dconf.
+        if role == "restore" and dconf_enabled:
+            dconf.load_all(dry_run)
+
+        # Apply declarative config sets after the file sync (XML edits, systemd
+        # drop-ins, inline scripts — gated by markers). Replaces restore.d hooks.
+        sets.apply_dir(sets.default_sets_dir(), dry_run)
+
+    # mackup mark <marker> / unmark <marker> / markers
+    elif args["mark"] or args["unmark"] or args["markers"]:
+        if args["markers"]:
+            print(hooks.markers_report())
+        else:
+            marker_name: str = args["<marker>"]
+            if not hooks.valid_marker_name(marker_name):
+                sys.exit(
+                    f"Invalid marker name: {marker_name!r} "
+                    "(allowed: A-Z a-z 0-9 . _ -)",
+                )
+            if args["mark"]:
+                hooks.set_marker(marker_name)
+                known = hooks.KNOWN_MARKERS.get(marker_name)
+                suffix = f" — {known}" if known else " (custom)"
+                print(
+                    utils.colorize_message(
+                        f"Backed up marker '{marker_name}'{suffix}",
+                    ),
+                )
+            else:
+                hooks.unset_marker(marker_name)
+                print(utils.colorize_message(f"Deleted marker '{marker_name}'"))
+
+    # mackup dconf-add <path>...
+    elif args["dconf-add"]:
+        exit_code = dconf.add(args["<path>"], dry_run)
+        if exit_code != 0:
+            sys.exit(
+                "No valid dconf path. Example: mackup dconf-add /org/gnome/terminal/",
+            )
+
+    # mackup apply-sets
+    elif args["apply-sets"]:
+        sets.apply_dir(sets.default_sets_dir(), dry_run)
 
     # mackup rm <path>...
     elif args["rm"]:

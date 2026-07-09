@@ -49,6 +49,25 @@ Use `{...}` to define multiple entries in one line:
 Brace groups are expanded recursively (cartesian product when multiple groups
 are present).
 
+### Explicit local → backup mapping (`[mapped_files]`)
+
+`[configuration_files]` keeps local path == storage layout. To decouple them,
+use a `[mapped_files]` section with `LOCAL = BACKUP` pairs:
+
+```ini
+[mapped_files]
+.config/app/grisa.profile/user.js = .config/app/profile/user.js
+```
+
+- LHS is the local file; RHS is where it lives in the backup folder.
+- `=` is the ONLY delimiter — spaces, dashes, colons, even `->` are safe inside
+  paths (read raw, not via ConfigParser; split on the first `=`).
+- Both sides still honor selectors, built-in vars and braces (brace groups are
+  zipped pairwise, so `.local/{a,b} = .backup/{a,b}` maps a→a, b→b).
+- Lets machine-specific local paths (e.g. a per-machine Firefox profile dir)
+  share one canonical backup path. Parsed in
+  `appsdb._read_mapped_entries_from_section` + `_pair_to_exprs`.
+
 ## Processing Order
 
 Paths are resolved in this order:
@@ -76,3 +95,82 @@ Paths are resolved in this order:
   by this fork, but they rely on fork-specific parsing logic in
   `src/mackup_ng/appsdb.py`.
 - Upstream Mackup may not support these templates.
+
+## Machine-local hooks, markers and config sets (`~/.mackup/`)
+
+This fork turns `~/.mackup/` into the machine-local home for more than custom
+app configs. Layout:
+
+```
+~/.mackup/
+├── applications/   custom app *.cfg files (was ~/.mackup/*.cfg — now nested)
+├── backup.d/       executables run BEFORE `mackup sync`
+├── sets.d/         declarative config sets (TOML) applied natively after sync
+├── markers/        machine-local condition flags (must NOT be synced)
+├── state/          hook scratch space
+└── dconf-backup/   dconf dumps (*.dconf)
+```
+
+Code: `src/mackup_ng/{hooks,sets,dconf}.py`. `constants.py` holds the dir names
+(`CUSTOM_APPS_DIR = .mackup/applications`, `HOOKS_*_DIRNAME`, `MARKERS_DIRNAME`,
+`SETS_DIRNAME`, `STATE_DIRNAME`, `DCONF_DIRNAME`).
+
+### `mackup sync` phases
+
+1. `hooks.run_hooks("backup")` — backup.d executables (if any).
+2. dconf dump (backup-role machine).
+3. file sync (mackup engine).
+4. dconf load (restore-role machines).
+5. `sets.apply_dir(~/.mackup/sets.d)` — declarative sets (was restore.d hooks).
+
+Backup.d hooks + `[[run]]` scripts receive a `MACKUP_*` environment contract
+(`hooks.hook_env`): `MACKUP_PHASE`, `MACKUP_ROLE` (backup if the `backup` marker
+exists, else restore), `MACKUP_OS`, `MACKUP_ARCH`, `MACKUP_HAS_GUI`,
+`MACKUP_CONFIG_DIR` (=`~/.mackup`), `MACKUP_MARKERS_DIR`, `MACKUP_STATE_DIR`,
+`MACKUP_DCONF_BACKUP_DIR`.
+
+### Markers CLI
+
+- `mackup mark <name>`   — set a marker (known: backup, low-resource, no-linger,
+  no-apikey, no-dconf).
+- `mackup unmark <name>` — remove a marker.
+- `mackup markers`       — list known + active markers.
+
+Names are validated (`A-Z a-z 0-9 . _ -`, no `.`/`..`). Registry:
+`hooks.KNOWN_MARKERS` / `KNOWN_ORDER`.
+
+### Config sets (`sets.d/`, `sets.py`)
+
+Declarative TOML sets, applied **natively** by `sets.apply_dir` during sync (and
+via `mackup apply-sets`). No external engine. Each set is gated by
+`require_marker` / `skip_if_marker` / `require_os` and may carry:
+
+- `files` + `files_mode`, `restart_service`, `source_env`
+- `restart_service` — user service bracketed around the write: **systemctl
+  --user** on linux, **brew services** on macOS (stop before / start after,
+  only if active). `before` / `after` — arbitrary shell run before / after the
+  write (custom stop/start escape hatch; `after` is guaranteed).
+- `[[systemd_dropin]]` — write a user systemd drop-in (linux-only by default;
+  narrow with per-block `require_os`).
+- `[[mutate_xml]]` — XML edits (`select`, `set_attr`, `set_child`,
+  `create_missing`, `create_parents`). Cross-platform (works on macOS too).
+- `[[run]]` — inline shell (`script`, `shell`, `require_command`) for imperative
+  bits that can't be declarative (e.g. `10-enable-linger.toml` runs
+  `loginctl enable-linger`). Runs with the `MACKUP_*` env; must be idempotent.
+  `require_command` skips the run unless the given binary/binaries are on PATH.
+
+Files are applied **sorted by name** — use numeric prefixes (`10-`, `20-`, ...).
+XML/drop-in writes are idempotent (no write / no service restart when already
+identical); `[[run]]` scripts always execute. When XML changed but no service
+manager is available (e.g. no systemctl/brew), a warning tells the user to
+restart the service manually. (The former external `~/.bin/.sync-sets` script is
+superseded by this module.)
+
+### dconf (`dconf.py`)
+
+Native dconf backup/restore (Linux/GNOME). Tracked paths are stored as
+`~/.mackup/dconf-backup/*.dconf` dumps (file name `org.gnome.terminal.dconf`
+<-> path `/org/gnome/terminal/`). On `mackup sync`: the backup-role machine
+dumps each path before the file sync; restore-role machines load them after.
+Gated off by the `no-dconf` marker. Register a path with
+`mackup dconf-add /org/gnome/terminal/`.

@@ -119,7 +119,7 @@ class TestApplicationsDatabaseXDG(unittest.TestCase):
         """Brace groups in app cfg paths should expand into multiple files."""
         temp_home = tempfile.mkdtemp()
         temp_xdg = os.path.join(temp_home, ".config")
-        legacy_apps_dir = os.path.join(temp_home, ".mackup")
+        legacy_apps_dir = os.path.join(temp_home, ".mackup", "applications")
         xdg_apps_dir = os.path.join(temp_xdg, "mackup", "applications")
         os.makedirs(legacy_apps_dir, exist_ok=True)
         os.makedirs(xdg_apps_dir, exist_ok=True)
@@ -276,7 +276,7 @@ class TestApplicationsDatabaseXDG(unittest.TestCase):
         """Selectors are resolved first, then braces are expanded."""
         temp_home = tempfile.mkdtemp()
         temp_xdg = os.path.join(temp_home, ".config")
-        legacy_apps_dir = os.path.join(temp_home, ".mackup")
+        legacy_apps_dir = os.path.join(temp_home, ".mackup", "applications")
         os.makedirs(legacy_apps_dir, exist_ok=True)
 
         cfg_path = os.path.join(legacy_apps_dir, "platform-selector-test.cfg")
@@ -319,7 +319,7 @@ class TestApplicationsDatabaseXDG(unittest.TestCase):
         """Mappings should preserve per-platform local path and canonical backup path."""
         temp_home = tempfile.mkdtemp()
         temp_xdg = os.path.join(temp_home, ".config")
-        legacy_apps_dir = os.path.join(temp_home, ".mackup")
+        legacy_apps_dir = os.path.join(temp_home, ".mackup", "applications")
         os.makedirs(legacy_apps_dir, exist_ok=True)
 
         cfg_path = os.path.join(legacy_apps_dir, "mapping-test.cfg")
@@ -371,7 +371,7 @@ class TestApplicationsDatabaseXDG(unittest.TestCase):
         """Built-in vars should work after selectors and before brace expansion."""
         temp_home = tempfile.mkdtemp()
         temp_xdg = os.path.join(temp_home, ".config")
-        legacy_apps_dir = os.path.join(temp_home, ".mackup")
+        legacy_apps_dir = os.path.join(temp_home, ".mackup", "applications")
         os.makedirs(legacy_apps_dir, exist_ok=True)
 
         cfg_path = os.path.join(legacy_apps_dir, "builtin-vars-test.cfg")
@@ -410,7 +410,7 @@ class TestApplicationsDatabaseXDG(unittest.TestCase):
         """Cross-platform vars should resolve without requiring [] selectors."""
         temp_home = tempfile.mkdtemp()
         temp_xdg = os.path.join(temp_home, ".config")
-        legacy_apps_dir = os.path.join(temp_home, ".mackup")
+        legacy_apps_dir = os.path.join(temp_home, ".mackup", "applications")
         os.makedirs(legacy_apps_dir, exist_ok=True)
 
         cfg_path = os.path.join(legacy_apps_dir, "cross-platform-vars-test.cfg")

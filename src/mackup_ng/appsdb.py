@@ -18,6 +18,8 @@ class ApplicationsDatabase:
     """Database containing all the configured applications."""
 
     _PATH_SECTIONS: ClassVar[set[str]] = {"configuration_files"}
+    # Sections holding "local = backup" mapping entries (read raw, split on '=')
+    _MAPPING_SECTIONS: ClassVar[set[str]] = {"mapped_files"}
     _CROSS_PLATFORM_PATH_VARS: ClassVar[dict[str, dict[str, str]]] = {
         "@CONFIG@": {
             "linux": ".config",
@@ -208,6 +210,48 @@ class ApplicationsDatabase:
         return entries
 
     @classmethod
+    def _read_mapped_entries_from_section(
+        cls,
+        config_file: str,
+        section: str,
+    ) -> list[tuple[str, str]]:
+        """Read raw "local = backup" pairs from a mapping section.
+
+        Read raw (not via ConfigParser) so paths may contain spaces, dashes,
+        arrows, colons — anything but '=' (the single delimiter). Split on the
+        first '='; a line without '=' is skipped.
+        """
+        pairs: list[tuple[str, str]] = []
+        current_section: str | None = None
+        with open(config_file, encoding="utf-8") as f:
+            for raw_line in f:
+                stripped = raw_line.strip()
+                if not stripped or stripped.startswith(("#", ";")):
+                    continue
+
+                if stripped.startswith("[") and stripped.endswith("]"):
+                    section_name = stripped[1:-1].strip()
+                    is_header = (
+                        section_name
+                        and ":" not in section_name
+                        and "," not in section_name
+                        and "/" not in section_name
+                        and "{" not in section_name
+                        and "}" not in section_name
+                    )
+                    if is_header:
+                        current_section = section_name
+                        continue
+
+                if current_section != section or "=" not in stripped:
+                    continue
+                src, dest = stripped.split("=", 1)
+                src, dest = src.strip(), dest.strip()
+                if src and dest:
+                    pairs.append((src, dest))
+        return pairs
+
+    @classmethod
     def _read_sanitized_config_text_for_parser(cls, config_file: str) -> str:
         """
         Return cfg text sanitized for ConfigParser.
@@ -239,13 +283,14 @@ class ApplicationsDatabase:
                         output.append(raw_line)
                         continue
 
-                if (
-                    current_section in cls._PATH_SECTIONS
-                    and stripped
+                is_entry = (
+                    stripped
                     and not stripped.startswith("#")
                     and not stripped.startswith(";")
-                    and "=" not in stripped
-                ):
+                )
+                in_path = current_section in cls._PATH_SECTIONS and "=" not in stripped
+                in_mapping = current_section in cls._MAPPING_SECTIONS
+                if is_entry and (in_path or in_mapping):
                     placeholder_index += 1
                     output.append(f"__mackup_path_placeholder_{placeholder_index}__\n")
                     continue
@@ -348,6 +393,53 @@ class ApplicationsDatabase:
             f"{local_expr!r} vs {backup_expr!r}",
         )
 
+    @classmethod
+    def _entry_to_exprs(cls, entry: str) -> tuple[str, str]:
+        """Resolve a [configuration_files] entry into (local_expr, backup_expr).
+
+        Local == backup layout; selectors and built-in vars still apply.
+        """
+        local_expr, backup_expr = cls._resolve_platform_selectors_with_backup(entry)
+        local_expr = cls._expand_builtin_path_vars(local_expr)
+        backup_expr = cls._expand_builtin_path_vars(backup_expr, for_backup=True)
+        return local_expr, backup_expr
+
+    @classmethod
+    def _pair_to_exprs(cls, src: str, dest: str) -> tuple[str, str]:
+        """Resolve an explicit [mapped_files] pair into (local_expr, backup_expr).
+
+        SRC is the local path; DEST is where it lives in the backup folder.
+        Selectors, built-in vars and braces are honored on each side.
+        """
+        local_expr = cls._expand_builtin_path_vars(
+            cls._resolve_platform_selectors_with_backup(src)[0],
+        )
+        backup_expr = cls._expand_builtin_path_vars(
+            cls._resolve_platform_selectors_with_backup(dest)[1],
+            for_backup=True,
+        )
+        return local_expr, backup_expr
+
+    @classmethod
+    def _register_exprs(
+        cls,
+        local_expr: str,
+        backup_expr: str,
+        files_set: set[str],
+        mappings_set: set[tuple[str, str]],
+    ) -> None:
+        """Brace-expand, reject absolute paths, and record local/backup pairs."""
+        for local_path, backup_path in cls._expand_brace_mappings(
+            local_expr, backup_expr,
+        ):
+            if any(p.startswith("/") for p in (local_path, backup_path)):
+                raise ValueError(
+                    "Unsupported absolute path in mapping: "
+                    f"{local_path!r} -> {backup_path!r}",
+                )
+            files_set.add(local_path)
+            mappings_set.add((local_path, backup_path))
+
     def __init__(self) -> None:
         """Create a ApplicationsDatabase instance."""
         # Build the dict that will contain the properties of each application
@@ -382,31 +474,20 @@ class ApplicationsDatabase:
                 config_mappings: set[tuple[str, str]] = set()
                 self.apps[app_name]["configuration_files"] = config_files
                 self.app_file_mappings[app_name] = config_mappings
-                if config.has_section("configuration_files"):
-                    for path in self._read_path_entries_from_section(
-                        config_file, "configuration_files",
-                    ):
-                        (
-                            local_expr,
-                            backup_expr,
-                        ) = self._resolve_platform_selectors_with_backup(path)
-                        local_expr = self._expand_builtin_path_vars(local_expr)
-                        backup_expr = self._expand_builtin_path_vars(
-                            backup_expr, for_backup=True,
-                        )
-                        for local_path, backup_path in self._expand_brace_mappings(
-                            local_expr, backup_expr,
-                        ):
-                            if any(
-                                p.startswith("/")
-                                for p in (local_path, backup_path)
-                            ):
-                                raise ValueError(
-                                    "Unsupported absolute path in mapping: "
-                                    f"{local_path!r} -> {backup_path!r}",
-                                )
-                            config_files.add(local_path)
-                            config_mappings.add((local_path, backup_path))
+                for path in self._read_path_entries_from_section(
+                    config_file, "configuration_files",
+                ):
+                    local_expr, backup_expr = self._entry_to_exprs(path)
+                    self._register_exprs(
+                        local_expr, backup_expr, config_files, config_mappings,
+                    )
+                for src, dest in self._read_mapped_entries_from_section(
+                    config_file, "mapped_files",
+                ):
+                    local_expr, backup_expr = self._pair_to_exprs(src, dest)
+                    self._register_exprs(
+                        local_expr, backup_expr, config_files, config_mappings,
+                    )
 
     @staticmethod
     def get_config_files() -> set[str]:
@@ -418,8 +499,8 @@ class ApplicationsDatabase:
         e.g. /usr/lib/mackup/applications/bash.cfg
 
         Only one config file per application should be returned, custom config
-        having a priority over stock config. Legacy custom apps directory
-        (~/.mackup/) takes priority over XDG location.
+        having a priority over stock config. The ~/.mackup/applications/
+        directory takes priority over the XDG location.
 
         Returns:
             set of strings.
@@ -429,7 +510,7 @@ class ApplicationsDatabase:
             os.path.dirname(os.path.realpath(__file__)), APPS_DIR,
         )
 
-        # Legacy custom apps directory: ~/.mackup/
+        # Custom apps directory: ~/.mackup/applications/
         legacy_custom_apps_dir: str = os.path.join(os.environ["HOME"], CUSTOM_APPS_DIR)
 
         # XDG custom apps directory: $XDG_CONFIG_HOME/mackup/applications/

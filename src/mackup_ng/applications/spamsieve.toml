@@ -1,0 +1,5 @@
+name = "SpamSieve"
+files = [
+    "${MACKUP_XDG_CONFIG}/SpamSieve",
+    "Library/Preferences/com.c-command.SpamSieve.plist",
+]

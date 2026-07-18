@@ -1,0 +1,5 @@
+name = "Ubersicht"
+files = [
+    "${MACKUP_XDG_CONFIG}/Übersicht/widgets",
+    "Library/Preferences/tracesOf.Uebersicht.plist",
+]

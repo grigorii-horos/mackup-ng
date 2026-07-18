@@ -1,0 +1,4 @@
+name = "zoxide"
+files = [
+    "${MACKUP_XDG_CONFIG}/zoxide",
+]

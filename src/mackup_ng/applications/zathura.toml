@@ -1,0 +1,4 @@
+name = "zathura"
+files = [
+    "${MACKUP_XDG_CONFIG}/zathura/zathurarc",
+]

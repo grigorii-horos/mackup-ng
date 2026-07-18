@@ -1,0 +1,5 @@
+name = "RustRover"
+files = [
+    "Library/Preferences/{RustRover2025.2,RustRover2025.3}",
+    "${MACKUP_XDG_CONFIG}/JetBrains/{RustRover2025.2,RustRover2025.3}",
+]

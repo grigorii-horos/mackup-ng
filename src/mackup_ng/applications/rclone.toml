@@ -1,0 +1,4 @@
+name = "rclone"
+files = [
+    "${MACKUP_XDG_CONFIG}/rclone",
+]

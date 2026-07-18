@@ -1,0 +1,5 @@
+name = "HyperDock"
+files = [
+    "${MACKUP_XDG_CONFIG}/HyperDock",
+    "Library/Preferences/{de.bahoom.HyperDock.plist,de.bahoom.HyperDock.prefpane.plist}",
+]

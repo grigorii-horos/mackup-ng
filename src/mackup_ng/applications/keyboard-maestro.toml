@@ -1,0 +1,4 @@
+name = "Keyboard Maestro"
+files = [
+    "${MACKUP_XDG_CONFIG}/Keyboard Maestro",
+]

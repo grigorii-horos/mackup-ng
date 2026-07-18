@@ -1,0 +1,4 @@
+name = "Pandoc"
+files = [
+    ".pandoc",
+]

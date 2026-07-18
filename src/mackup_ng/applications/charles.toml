@@ -1,0 +1,5 @@
+name = "Charles"
+files = [
+    "${MACKUP_XDG_CONFIG}/Charles",
+    "Library/Preferences/com.xk72.charles.config",
+]

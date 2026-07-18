@@ -1,0 +1,4 @@
+name = "Devil's Pie"
+files = [
+    ".devilspie",
+]

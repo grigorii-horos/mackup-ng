@@ -1,0 +1,4 @@
+name = "Cursor"
+files = [
+    "${MACKUP_XDG_CONFIG}/Cursor/User/{keybindings.json,settings.json,snippets}",
+]

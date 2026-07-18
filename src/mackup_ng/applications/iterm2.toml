@@ -1,0 +1,5 @@
+name = "iTerm2"
+files = [
+    "Library/Preferences/com.googlecode.iterm2.plist",
+    "${MACKUP_XDG_CONFIG}/iterm2/AppSupport/DynamicProfiles",
+]

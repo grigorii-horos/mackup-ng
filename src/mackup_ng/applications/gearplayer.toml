@@ -1,0 +1,5 @@
+name = "Gear Player"
+files = [
+    "Library/Preferences/{com.treasurebox.gear.plist,com.treasurebox.magickeys.plist}",
+    "${MACKUP_XDG_CONFIG}/Gear Player/paddata.padl",
+]

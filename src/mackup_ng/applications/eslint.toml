@@ -1,0 +1,9 @@
+name = "ESLint"
+files = [
+    ".eslintrc.js",
+    ".eslintrc.yaml",
+    ".eslintrc.yml",
+    ".eslintrc.json",
+    ".eslintrc",
+    ".eslintignore",
+]

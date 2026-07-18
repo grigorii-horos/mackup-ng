@@ -1,0 +1,5 @@
+name = "Versions"
+files = [
+    "${MACKUP_XDG_CONFIG}/Versions/License",
+    "Library/Preferences/com.blackpixel.versions.plist",
+]

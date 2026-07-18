@@ -53,13 +53,13 @@ class TestCLI(unittest.TestCase):
         self.custom_apps_dir = os.path.join(self.test_home, ".mackup", "applications")
         os.makedirs(self.custom_apps_dir, exist_ok=True)
 
-        self.custom_app_config = os.path.join(self.custom_apps_dir, "test-app.cfg")
+        self.custom_app_config = os.path.join(self.custom_apps_dir, "test-app.toml")
         with open(self.custom_app_config, "w") as f:
             f.write("[application]\n")
-            f.write(f"name = {self.test_app_name}\n")
-            f.write("\n")
-            f.write("[configuration_files]\n")
-            f.write(f"{self.test_file_name}\n")
+            f.write(f'name = "{self.test_app_name}"\n')
+            f.write("files = [\n")
+            f.write(f'    "{self.test_file_name}",\n')
+            f.write("]\n")
 
         # Force yes to all prompts
         utils.FORCE_YES = True
@@ -167,11 +167,11 @@ class TestCLI(unittest.TestCase):
 
         with open(self.custom_app_config, "w") as f:
             f.write("[application]\n")
-            f.write(f"name = {self.test_app_name}\n")
-            f.write("\n")
-            f.write("[configuration_files]\n")
-            f.write(f".ssh/{first_name}\n")
-            f.write(f".ssh/{second_name}\n")
+            f.write(f'name = "{self.test_app_name}"\n')
+            f.write("files = [\n")
+            f.write(f'    ".ssh/{first_name}",\n')
+            f.write(f'    ".ssh/{second_name}",\n')
+            f.write("]\n")
 
         with patch("sys.argv", ["mackup", "sync"]):
             main()
@@ -207,10 +207,10 @@ class TestCLI(unittest.TestCase):
 
         with open(self.custom_app_config, "w") as f:
             f.write("[application]\n")
-            f.write(f"name = {self.test_app_name}\n")
-            f.write("\n")
-            f.write("[configuration_files]\n")
-            f.write(".ssh\n")
+            f.write(f'name = "{self.test_app_name}"\n')
+            f.write("files = [\n")
+            f.write('    ".ssh",\n')
+            f.write("]\n")
 
         with patch("sys.argv", ["mackup", "sync"]):
             main()
@@ -267,11 +267,11 @@ class TestCLI(unittest.TestCase):
         # Update custom app config to include the folder
         with open(self.custom_app_config, "w") as f:
             f.write("[application]\n")
-            f.write(f"name = {self.test_app_name}\n")
-            f.write("\n")
-            f.write("[configuration_files]\n")
-            f.write(f"{self.test_file_name}\n")
-            f.write(f"{test_folder_name}\n")
+            f.write(f'name = "{self.test_app_name}"\n')
+            f.write("files = [\n")
+            f.write(f'    "{self.test_file_name}",\n')
+            f.write(f'    "{test_folder_name}",\n')
+            f.write("]\n")
 
         # Run sync
         with patch("sys.argv", ["mackup", "sync"]):
@@ -300,6 +300,44 @@ class TestCLI(unittest.TestCase):
                 str(context.value)
                 == "Options --force and --force-no are mutually exclusive."
             )
+
+    def test_sync_runs_post_block_after_files(self):
+        """A config that syncs a file AND chmods it via a post block."""
+        target = os.path.join(self.test_home, ".secretrc")
+        with open(target, "w") as f:
+            f.write("k\n")
+        os.chmod(target, 0o644)
+        with open(self.custom_app_config, "w") as f:
+            f.write(
+                f'name = "{self.test_app_name}"\n'
+                'files = [".secretrc"]\n'
+                "[[block]]\n"
+                "[block.chmod]\n"
+                'path = "~/.secretrc"\n'
+                'mode = "600"\n',
+            )
+        with patch("sys.argv", ["mackup", "sync"]):
+            main()
+        assert os.stat(target).st_mode & 0o777 == 0o600
+
+    def test_list_hides_block_only(self):
+        """Block-only configs (no sync files) are hidden from `list`."""
+        with open(os.path.join(self.custom_apps_dir, "hookonly.toml"), "w") as f:
+            f.write('[run]\ncommands = ["true"]\n')
+        buf = io.StringIO()
+        with patch("sys.argv", ["mackup", "list"]), \
+                patch("sys.stdout", buf):
+            main()
+        assert "hookonly" not in buf.getvalue()
+
+    def test_apply_runs_blocks_without_sync(self):
+        """`mackup apply` runs blocks and does not sync files."""
+        out = os.path.join(self.test_home, ".applied")
+        with open(os.path.join(self.custom_apps_dir, "hook.toml"), "w") as f:
+            f.write(f'[run]\ncommands = [\'touch "{out}"\']\n')
+        with patch("sys.argv", ["mackup", "apply"]):
+            main()
+        assert os.path.isfile(out)
 
 
 if __name__ == "__main__":

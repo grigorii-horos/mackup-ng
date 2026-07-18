@@ -1,0 +1,4 @@
+name = "2Do"
+files = [
+    "Library/Preferences/com.guidedways.TodoMac.plist",
+]

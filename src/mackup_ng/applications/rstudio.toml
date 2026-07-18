@@ -1,0 +1,6 @@
+name = "RStudio"
+files = [
+    ".rstudio-desktop",
+    "Library/Preferences/org.rstudio.RStudio.plist",
+    "${MACKUP_XDG_CONFIG}/rstudio",
+]

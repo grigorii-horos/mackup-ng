@@ -1,0 +1,5 @@
+name = "Proxyman"
+files = [
+    "Library/Application Support/{com.proxyman.NSProxy,com.proxyman.NSProxy-setapp}",
+    "Library/Preferences/{com.proxyman.NSProxy-setapp.plist,com.proxyman.NSProxy.plist}",
+]

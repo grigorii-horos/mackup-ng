@@ -1,0 +1,4 @@
+name = "ShadowsocksX-NG"
+files = [
+    ".ShadowsocksX-NG",
+]

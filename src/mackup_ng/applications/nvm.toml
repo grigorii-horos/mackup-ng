@@ -1,0 +1,4 @@
+name = "nvm"
+files = [
+    ".nvm/default-packages",
+]

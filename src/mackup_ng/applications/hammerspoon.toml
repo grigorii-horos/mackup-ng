@@ -1,0 +1,4 @@
+name = "Hammerspoon"
+files = [
+    ".hammerspoon",
+]

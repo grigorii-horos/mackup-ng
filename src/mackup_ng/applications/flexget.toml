@@ -1,0 +1,5 @@
+name = "FlexGet"
+files = [
+    ".flexget/config.yml",
+    "${MACKUP_XDG_CONFIG}/flexget/config.yml",
+]

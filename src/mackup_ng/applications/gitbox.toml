@@ -1,0 +1,4 @@
+name = "Gitbox"
+files = [
+    "Library/Preferences/com.oleganza.gitbox.plist",
+]

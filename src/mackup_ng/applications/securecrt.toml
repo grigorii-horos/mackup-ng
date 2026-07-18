@@ -1,0 +1,5 @@
+name = "SecureCRT"
+files = [
+    "${MACKUP_XDG_CONFIG}/VanDyke/SecureCRT/Config",
+    "Library/Preferences/com.vandyke.SecureCRT.plist",
+]

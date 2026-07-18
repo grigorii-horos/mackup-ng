@@ -1,0 +1,4 @@
+name = "Deal Alert"
+files = [
+    "Library/Preferences/com.LittleFin.DealAlert.plist",
+]

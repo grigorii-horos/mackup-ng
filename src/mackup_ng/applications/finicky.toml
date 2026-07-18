@@ -1,0 +1,4 @@
+name = "finicky"
+files = [
+    ".finicky.js",
+]

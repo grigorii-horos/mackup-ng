@@ -1,0 +1,5 @@
+name = "Rime"
+files = [
+    "Library/Rime/{default.custom.yaml,default.yaml,installation.yaml,squirrel.custom.yaml,squirrel.yaml,symbols.yaml,user.yaml}",
+    "${MACKUP_XDG_CONFIG}/ibus/{rimedefault.custom.yaml,rimedefault.yaml,rimeinstallation.yaml,rimesquirrel.custom.yaml,rimesquirrel.yaml,rimesymbols.yaml,rimeuser.yaml}",
+]

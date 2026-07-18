@@ -214,9 +214,9 @@ In your home, create a `.mackup` directory and add a config file for the
 application you'd like to support:
 
 ```bash
-mkdir ~/.mackup
-touch ~/.mackup/nethack.cfg
-touch ~/.mackup/my-files.cfg
+mkdir ~/.mackup/applications
+touch ~/.mackup/applications/nethack.toml
+touch ~/.mackup/applications/my-files.toml
 ```
 
 #### Custom applications directory location
@@ -233,29 +233,27 @@ For XDG-compliant setups, you can use:
 
 ```bash
 mkdir -p ~/.config/mackup/applications
-touch ~/.config/mackup/applications/nethack.cfg
+touch ~/.config/mackup/applications/nethack.toml
 ```
 
 Edit those files:
 
-```bash
-$ nano ~/.mackup/nethack.cfg
-[application]
-name = Nethack
-
-[configuration_files]
-.nethackrc
+```toml
+# ~/.mackup/applications/nethack.toml
+name = "Nethack"
+files = [
+    ".nethackrc",
+]
 ```
 
-```bash
-$ nano ~/.mackup/my-files.cfg
-[application]
-name = My personal synced files and dirs
-
-[configuration_files]
-bin
-.hidden
-.gitignore
+```toml
+# ~/.mackup/applications/my-files.toml
+name = "My personal synced files and dirs"
+files = [
+    "bin",
+    ".hidden",
+    ".gitignore",
+]
 ```
 
 Note that Mackup assumes the file paths listed here are relative to your home
@@ -289,7 +287,7 @@ You can add and test an application by following these steps:
 
 - fork this project
 - create a branch _(usually containing the name of the application)_
-- add the appropriate application config file in the `mackup_ng/applications` folder
+- add the appropriate application `.toml` config file in the `mackup_ng/applications` folder
 - from the top-most folder _(mackup)_ run `make develop` that replaces the
   currently installed mackup with the local modified one
 - simply run `mackup-ng sync` to test if everything is ok
@@ -306,20 +304,19 @@ environment variable.
 
 See <https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html>
 
-This fork supports this mechanism with the `@CONFIG@` built-in variable in
-the `[configuration_files]` section.
+This fork supports this mechanism with the `${MACKUP_XDG_CONFIG}` built-in variable in
+the `files` array.
 
-If any path starts with `.config`, replace that prefix with `@CONFIG@`.
+If any path starts with `.config`, replace that prefix with `${MACKUP_XDG_CONFIG}`.
 
 Instead of:
 
-```ini
-[application]
-name = Git
-
-[configuration_files]
-.gitconfig
-@CONFIG@/git/config
-@CONFIG@/git/ignore
-@CONFIG@/git/attributes
+```toml
+name = "Git"
+files = [
+    ".gitconfig",
+    "${MACKUP_XDG_CONFIG}/git/config",
+    "${MACKUP_XDG_CONFIG}/git/ignore",
+    "${MACKUP_XDG_CONFIG}/git/attributes",
+]
 ```

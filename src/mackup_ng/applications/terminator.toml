@@ -1,0 +1,4 @@
+name = "Terminator"
+files = [
+    "${MACKUP_XDG_CONFIG}/terminator/config",
+]

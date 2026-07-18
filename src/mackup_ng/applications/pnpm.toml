@@ -1,0 +1,5 @@
+name = "pnpm"
+files = [
+    ".pnpm/global_pnpmfile.js",
+    ".pnpm-store/2/store.json",
+]

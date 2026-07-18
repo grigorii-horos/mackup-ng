@@ -1,0 +1,4 @@
+name = "mtmr"
+files = [
+    "${MACKUP_XDG_CONFIG}/MTMR/items.json",
+]

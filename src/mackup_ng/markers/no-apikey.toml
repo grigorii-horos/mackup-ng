@@ -1,0 +1,3 @@
+[marker]
+name = "opt-out: do NOT write syncthing apikey (sets)"
+order = 40

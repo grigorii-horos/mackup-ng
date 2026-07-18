@@ -40,7 +40,7 @@ class TestApplicationsDatabaseXDG(unittest.TestCase):
         config_files = ApplicationsDatabase.get_config_files()
         filenames = {os.path.basename(f) for f in config_files}
 
-        assert "legacy-test-app.cfg" in filenames
+        assert "legacy-test-app.toml" in filenames
 
     def test_xdg_custom_apps_dir(self):
         """Test that XDG custom apps directory is found."""
@@ -50,7 +50,7 @@ class TestApplicationsDatabaseXDG(unittest.TestCase):
         config_files = ApplicationsDatabase.get_config_files()
         filenames = {os.path.basename(f) for f in config_files}
 
-        assert "xdg-test-app.cfg" in filenames
+        assert "xdg-test-app.toml" in filenames
 
     def test_legacy_takes_priority_over_xdg(self):
         """Test that legacy directory takes priority when same app exists."""
@@ -60,7 +60,7 @@ class TestApplicationsDatabaseXDG(unittest.TestCase):
         config_files = ApplicationsDatabase.get_config_files()
 
         # Find the priority-test-app.cfg file
-        priority_files = [f for f in config_files if "priority-test-app.cfg" in f]
+        priority_files = [f for f in config_files if "priority-test-app.toml" in f]
 
         # Should only have one file (legacy should win)
         assert len(priority_files) == 1
@@ -78,8 +78,8 @@ class TestApplicationsDatabaseXDG(unittest.TestCase):
         filenames = {os.path.basename(f) for f in config_files}
 
         # Both unique apps should be present
-        assert "legacy-test-app.cfg" in filenames
-        assert "xdg-test-app.cfg" in filenames
+        assert "legacy-test-app.toml" in filenames
+        assert "xdg-test-app.toml" in filenames
 
     def test_xdg_default_fallback(self):
         """Test that XDG falls back to ~/.config when XDG_CONFIG_HOME is not set."""
@@ -124,15 +124,16 @@ class TestApplicationsDatabaseXDG(unittest.TestCase):
         os.makedirs(legacy_apps_dir, exist_ok=True)
         os.makedirs(xdg_apps_dir, exist_ok=True)
 
-        cfg_path = os.path.join(legacy_apps_dir, "brace-expand-test.cfg")
+        cfg_path = os.path.join(legacy_apps_dir, "brace-expand-test.toml")
         with open(cfg_path, "w") as f:
             f.write(
                 "[application]\n"
-                "name = Brace Expand Test\n\n"
-                "[configuration_files]\n"
-                "@CONFIG@/app/{config1.json,config2.json}\n"
-                "@DATA@/{one,two}/state.db\n"
-                "@CONFIG@/myapp/{prefs.toml,theme.toml}\n",
+                'name = "Brace Expand Test"\n'
+                "files = [\n"
+                '    "${MACKUP_XDG_CONFIG}/app/{config1.json,config2.json}",\n'
+                '    "${MACKUP_XDG_DATA}/{one,two}/state.db",\n'
+                '    "${MACKUP_XDG_CONFIG}/myapp/{prefs.toml,theme.toml}",\n'
+                "]\n",
             )
 
         old_home = os.environ.get("HOME")
@@ -223,36 +224,36 @@ class TestApplicationsDatabaseXDG(unittest.TestCase):
         with patch("mackup_ng.appsdb.platform.system", return_value="Linux"):
             assert (
                 ApplicationsDatabase._expand_builtin_path_vars(
-                    "@CONFIG@/app/config.json",
+                    "${MACKUP_XDG_CONFIG}/app/config.json",
                 )
                 == ".config/app/config.json"
             )
             assert (
-                ApplicationsDatabase._expand_builtin_path_vars("@CACHE@/tool/cache.db")
+                ApplicationsDatabase._expand_builtin_path_vars("${MACKUP_XDG_CACHE}/tool/cache.db")
                 == ".cache/tool/cache.db"
             )
 
         with patch("mackup_ng.appsdb.platform.system", return_value="Darwin"):
             assert (
                 ApplicationsDatabase._expand_builtin_path_vars(
-                    "@CONFIG@/app/config.json",
+                    "${MACKUP_XDG_CONFIG}/app/config.json",
                 )
                 == "Library/Application Support/app/config.json"
             )
             assert (
-                ApplicationsDatabase._expand_builtin_path_vars("@CACHE@/tool/cache.db")
+                ApplicationsDatabase._expand_builtin_path_vars("${MACKUP_XDG_CACHE}/tool/cache.db")
                 == "Library/Caches/tool/cache.db"
             )
 
         with patch("mackup_ng.appsdb.platform.system", return_value="Windows"):
             assert (
                 ApplicationsDatabase._expand_builtin_path_vars(
-                    "@CONFIG@/app/config.json",
+                    "${MACKUP_XDG_CONFIG}/app/config.json",
                 )
                 == "AppData/Roaming/app/config.json"
             )
             assert (
-                ApplicationsDatabase._expand_builtin_path_vars("@DATA@/tool/data.db")
+                ApplicationsDatabase._expand_builtin_path_vars("${MACKUP_XDG_DATA}/tool/data.db")
                 == "AppData/Local/tool/data.db"
             )
 
@@ -261,13 +262,13 @@ class TestApplicationsDatabaseXDG(unittest.TestCase):
         with patch("mackup_ng.appsdb.platform.system", return_value="Darwin"):
             assert (
                 ApplicationsDatabase._expand_builtin_path_vars(
-                    "@CONFIG@/app/config.json", for_backup=True,
+                    "${MACKUP_XDG_CONFIG}/app/config.json", for_backup=True,
                 )
                 == ".config/app/config.json"
             )
             assert (
                 ApplicationsDatabase._expand_builtin_path_vars(
-                    "@DATA@/app/data.json", for_backup=True,
+                    "${MACKUP_XDG_DATA}/app/data.json", for_backup=True,
                 )
                 == ".local/share/app/data.json"
             )
@@ -279,13 +280,14 @@ class TestApplicationsDatabaseXDG(unittest.TestCase):
         legacy_apps_dir = os.path.join(temp_home, ".mackup", "applications")
         os.makedirs(legacy_apps_dir, exist_ok=True)
 
-        cfg_path = os.path.join(legacy_apps_dir, "platform-selector-test.cfg")
+        cfg_path = os.path.join(legacy_apps_dir, "platform-selector-test.toml")
         with open(cfg_path, "w") as f:
             f.write(
                 "[application]\n"
-                "name = Platform Selector Test\n\n"
-                "[configuration_files]\n"
-                "[linux:.config/app/{linux.conf,common.conf},mac:Library/Application Support/app/{mac.conf,common.conf},windows:AppData/Roaming/app/{windows.conf,common.conf},.config/app/other.conf]\n",
+                'name = "Platform Selector Test"\n'
+                "files = [\n"
+                '    "[linux:.config/app/{linux.conf,common.conf},mac:Library/Application Support/app/{mac.conf,common.conf},windows:AppData/Roaming/app/{windows.conf,common.conf},.config/app/other.conf]",\n'
+                "]\n",
             )
 
         old_home = os.environ.get("HOME")
@@ -322,13 +324,14 @@ class TestApplicationsDatabaseXDG(unittest.TestCase):
         legacy_apps_dir = os.path.join(temp_home, ".mackup", "applications")
         os.makedirs(legacy_apps_dir, exist_ok=True)
 
-        cfg_path = os.path.join(legacy_apps_dir, "mapping-test.cfg")
+        cfg_path = os.path.join(legacy_apps_dir, "mapping-test.toml")
         with open(cfg_path, "w") as f:
             f.write(
                 "[application]\n"
-                "name = Mapping Test\n\n"
-                "[configuration_files]\n"
-                "[mac:@CONFIG@/MyApp/config.json,linux:@CONFIG@/myapp/config.json,@DATA@/shared/myapp-config.json]\n",
+                'name = "Mapping Test"\n'
+                "files = [\n"
+                '    "[mac:${MACKUP_XDG_CONFIG}/MyApp/config.json,linux:${MACKUP_XDG_CONFIG}/myapp/config.json,${MACKUP_XDG_DATA}/shared/myapp-config.json]",\n'
+                "]\n",
             )
 
         old_home = os.environ.get("HOME")
@@ -374,13 +377,14 @@ class TestApplicationsDatabaseXDG(unittest.TestCase):
         legacy_apps_dir = os.path.join(temp_home, ".mackup", "applications")
         os.makedirs(legacy_apps_dir, exist_ok=True)
 
-        cfg_path = os.path.join(legacy_apps_dir, "builtin-vars-test.cfg")
+        cfg_path = os.path.join(legacy_apps_dir, "builtin-vars-test.toml")
         with open(cfg_path, "w") as f:
             f.write(
                 "[application]\n"
-                "name = Builtin Vars Test\n\n"
-                "[configuration_files]\n"
-                "[linux:@CONFIG@/demo/{a,b}.json,mac:Library/Application Support/demo/{a,b}.json,@DATA@/demo/fallback.json]\n",
+                'name = "Builtin Vars Test"\n'
+                "files = [\n"
+                '    "[linux:${MACKUP_XDG_CONFIG}/demo/{a,b}.json,mac:Library/Application Support/demo/{a,b}.json,${MACKUP_XDG_DATA}/demo/fallback.json]",\n'
+                "]\n",
             )
 
         old_home = os.environ.get("HOME")
@@ -413,14 +417,15 @@ class TestApplicationsDatabaseXDG(unittest.TestCase):
         legacy_apps_dir = os.path.join(temp_home, ".mackup", "applications")
         os.makedirs(legacy_apps_dir, exist_ok=True)
 
-        cfg_path = os.path.join(legacy_apps_dir, "cross-platform-vars-test.cfg")
+        cfg_path = os.path.join(legacy_apps_dir, "cross-platform-vars-test.toml")
         with open(cfg_path, "w") as f:
             f.write(
                 "[application]\n"
-                "name = Cross Platform Vars Test\n\n"
-                "[configuration_files]\n"
-                "@CONFIG@/demo/{a,b}.json\n"
-                "@CACHE@/demo/cache.db\n",
+                'name = "Cross Platform Vars Test"\n'
+                "files = [\n"
+                '    "${MACKUP_XDG_CONFIG}/demo/{a,b}.json",\n'
+                '    "${MACKUP_XDG_CACHE}/demo/cache.db",\n'
+                "]\n",
             )
 
         old_home = os.environ.get("HOME")

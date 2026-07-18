@@ -1,0 +1,4 @@
+name = "Wakatime"
+files = [
+    ".wakatime.cfg",
+]

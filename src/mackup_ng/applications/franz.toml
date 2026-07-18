@@ -1,0 +1,4 @@
+name = "Franz"
+files = [
+    "${MACKUP_XDG_CONFIG}/Franz/settings",
+]

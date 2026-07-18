@@ -1,0 +1,4 @@
+name = "SuperDuper!"
+files = [
+    "${MACKUP_XDG_CONFIG}/SuperDuper!",
+]

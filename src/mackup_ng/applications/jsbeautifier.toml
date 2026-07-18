@@ -1,0 +1,4 @@
+name = "JS Beautifier"
+files = [
+    ".jsbeautifyrc",
+]

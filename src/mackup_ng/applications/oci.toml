@@ -1,0 +1,4 @@
+name = "Oracle Cloud Infrastructure CLI"
+files = [
+    ".oci/{config,oci_cli_rc}",
+]

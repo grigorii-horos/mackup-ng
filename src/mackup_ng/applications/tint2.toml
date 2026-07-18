@@ -1,0 +1,4 @@
+name = "tint2"
+files = [
+    "${MACKUP_XDG_CONFIG}/tint2/tint2rc",
+]

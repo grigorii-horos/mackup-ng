@@ -1,0 +1,4 @@
+name = "Priority Test App XDG"
+files = [
+    ".priority-test-xdg",
+]

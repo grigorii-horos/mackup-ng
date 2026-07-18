@@ -1,0 +1,6 @@
+name = "GoLand"
+files = [
+    "${MACKUP_XDG_CONFIG}/{Gogland1.0,GoLand2017.3,GoLand2018.1,GoLand2018.2,GoLand2018.3,GoLand2019.2}",
+    "Library/Preferences/{com.jetbrains.gogland-EAP.plist,Gogland1.0,GoLand2017.3,GoLand2018.1,GoLand2018.2,GoLand2018.3,GoLand2019.2}",
+    "${MACKUP_XDG_CONFIG}/JetBrains/{GoLand2023.1,GoLand2023.2}",
+]

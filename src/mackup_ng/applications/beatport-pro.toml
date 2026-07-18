@@ -1,0 +1,4 @@
+name = "Beatport Pro"
+files = [
+    "Library/Preferences/com.beatport.BeatportPro.plist",
+]

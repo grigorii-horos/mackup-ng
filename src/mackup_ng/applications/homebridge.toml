@@ -1,0 +1,4 @@
+name = "Homebridge"
+files = [
+    ".homebridge",
+]

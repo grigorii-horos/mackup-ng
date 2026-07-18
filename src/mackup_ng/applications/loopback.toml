@@ -1,0 +1,5 @@
+name = "Loopback"
+files = [
+    "Library/Preferences/com.rogueamoeba.Loopback.plist",
+    "${MACKUP_XDG_CONFIG}/Loopback/Devices.plist",
+]

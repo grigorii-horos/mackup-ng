@@ -79,9 +79,16 @@ def colorize_message(message: str) -> str:
         ("Deleting", AnsiColor.YELLOW, False),
         ("Synchronized", AnsiColor.BLUE, False),
         ("Synchronizing", AnsiColor.BLUE, False),
+        ("Applied", AnsiColor.CYAN, False),
         ("Skipped", AnsiColor.WHITE, False),
         ("Skipping", AnsiColor.WHITE, False),
         ("Doing nothing", AnsiColor.GRAY, False),
+        # action-block logs
+        ("would ", AnsiColor.GRAY, False),   # dry-run previews
+        ("copied", AnsiColor.CYAN, False),
+        ("chmod", AnsiColor.CYAN, False),
+        ("updated", AnsiColor.CYAN, False),
+        ("drop-in", AnsiColor.CYAN, False),
     )
     for prefix, color, bold in styles:
         if message.startswith(prefix):

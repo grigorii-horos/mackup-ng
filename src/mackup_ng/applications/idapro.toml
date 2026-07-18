@@ -1,0 +1,4 @@
+name = "IDA Pro"
+files = [
+    ".idapro",
+]

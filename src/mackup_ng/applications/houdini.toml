@@ -1,0 +1,5 @@
+name = "Houdini"
+files = [
+    "Library/Preferences/com.uglyapps.Houdini.plist",
+    "${MACKUP_XDG_CONFIG}/Houdini",
+]

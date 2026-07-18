@@ -1,0 +1,6 @@
+name = "Pow"
+files = [
+    ".powconfig",
+    ".powenv",
+    ".powrc",
+]

@@ -1,0 +1,4 @@
+name = "Adobe Camera Raw"
+files = [
+    "${MACKUP_XDG_CONFIG}/Adobe/CameraRaw",
+]

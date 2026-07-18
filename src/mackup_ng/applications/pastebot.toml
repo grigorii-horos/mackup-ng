@@ -1,0 +1,4 @@
+name = "Pastebot"
+files = [
+    "Library/Preferences/{com.tapbots.PastebotSync.plist,com.tapbots.PastebotSync.prefPane.plist,com.tapbots.PastebotSync.stats.plist}",
+]

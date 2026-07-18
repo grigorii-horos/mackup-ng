@@ -1,0 +1,6 @@
+name = "Mailmate"
+files = [
+    "Library/Preferences/com.freron.MailMate.plist",
+    "${MACKUP_XDG_CONFIG}/Mailmate/{com.freron.MailMate.pid,Identities.plist,Mailboxes.plist,Signatures.plist,Sources.plist,Submission.plist,Tags.plist}",
+    "${MACKUP_XDG_CONFIG}/Mailmate/Resources/KeyBindings",
+]

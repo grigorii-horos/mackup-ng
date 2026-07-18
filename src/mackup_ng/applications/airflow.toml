@@ -1,0 +1,5 @@
+name = "Airflow"
+files = [
+    "Library/Preferences/com.bitcavehq.Airflow.plist",
+    "${MACKUP_XDG_CONFIG}/Airflow",
+]

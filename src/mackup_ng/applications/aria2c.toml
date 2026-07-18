@@ -1,0 +1,5 @@
+name = "aria2c"
+files = [
+    ".aria2",
+    "${MACKUP_XDG_CONFIG}/aria2",
+]

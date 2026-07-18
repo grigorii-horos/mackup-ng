@@ -1,0 +1,4 @@
+name = "Starship"
+files = [
+    "${MACKUP_XDG_CONFIG}/starship.toml",
+]

@@ -1,0 +1,4 @@
+name = "Default Folder X"
+files = [
+    "Library/Preferences/{com.stclairsoft.DefaultFolderX.favorites.plist,com.stclairsoft.DefaultFolderX.plist,com.stclairsoft.DefaultFolderX.settings.plist}",
+]

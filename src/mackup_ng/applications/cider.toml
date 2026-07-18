@@ -1,0 +1,4 @@
+name = "Cider"
+files = [
+    ".cider",
+]

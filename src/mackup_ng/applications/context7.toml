@@ -1,0 +1,4 @@
+name = "Context7"
+files = [
+    ".context7/credentials.json",
+]

@@ -1,0 +1,4 @@
+name = "Feeds"
+files = [
+    "Library/Preferences/com.feedsapp.Feeds.plist",
+]

@@ -1,0 +1,4 @@
+name = "AusKey"
+files = [
+    "${MACKUP_XDG_CONFIG}/AUSkey/keystore.xml",
+]

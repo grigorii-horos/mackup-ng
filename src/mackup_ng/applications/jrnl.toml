@@ -1,0 +1,5 @@
+name = "jrnl"
+files = [
+    ".jrnl_config",
+    "${MACKUP_XDG_CONFIG}/jrnl/jrnl.yaml",
+]

@@ -1,0 +1,4 @@
+name = "Powerline Shell Prompt"
+files = [
+    "${MACKUP_XDG_CONFIG}/powerline-shell/config.json",
+]

@@ -1,0 +1,4 @@
+name = "Configuration for Termux"
+files = [
+    ".termux/{colors.properties,font.ttf,termux.properties}",
+]

@@ -1,0 +1,4 @@
+name = "Volt"
+files = [
+    "volt/{lock.json,plugconf,rc}",
+]

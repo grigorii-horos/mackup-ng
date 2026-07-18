@@ -1,0 +1,4 @@
+name = "Visual Studio Code Insiders"
+files = [
+    "${MACKUP_XDG_CONFIG}/Code - Insiders/User/{keybindings.json,prompts,settings.json,snippets}",
+]

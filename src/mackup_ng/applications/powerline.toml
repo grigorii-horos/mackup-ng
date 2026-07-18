@@ -1,0 +1,4 @@
+name = "Powerline"
+files = [
+    "${MACKUP_XDG_CONFIG}/powerline/{colors.json,colorschemes,config.json,themes}",
+]

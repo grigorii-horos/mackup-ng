@@ -1,0 +1,4 @@
+name = "cVim"
+files = [
+    ".cvimrc",
+]

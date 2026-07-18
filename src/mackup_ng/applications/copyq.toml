@@ -1,0 +1,4 @@
+name = "CopyQ"
+files = [
+    "${MACKUP_XDG_CONFIG}/copyq",
+]

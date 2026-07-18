@@ -1,0 +1,6 @@
+name = "Perl"
+files = [
+    ".perltidyrc",
+    ".perlcriticrc",
+    ".proverc",
+]

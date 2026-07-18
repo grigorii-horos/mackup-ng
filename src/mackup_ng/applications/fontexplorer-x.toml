@@ -1,0 +1,5 @@
+name = "FontExplorer X"
+files = [
+    "${MACKUP_XDG_CONFIG}/Linotype/FontExplorer X",
+    "FontExplorer X",
+]

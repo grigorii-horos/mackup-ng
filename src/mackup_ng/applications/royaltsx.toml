@@ -1,0 +1,5 @@
+name = "Royal TSX"
+files = [
+    "${MACKUP_XDG_CONFIG}/Royal TSX/{License.xml,UserPreferences.config}",
+    "Library/Preferences/com.lemonmojo.RoyalTSX.App.plist",
+]

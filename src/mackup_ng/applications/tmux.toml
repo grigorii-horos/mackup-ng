@@ -1,0 +1,5 @@
+name = "Tmux"
+files = [
+    ".tmux.conf",
+    "${MACKUP_XDG_CONFIG}/tmux/tmux.conf",
+]

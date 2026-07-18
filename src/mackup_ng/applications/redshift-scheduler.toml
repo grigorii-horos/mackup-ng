@@ -1,0 +1,4 @@
+name = "Redshift Scheduler"
+files = [
+    "${MACKUP_XDG_CONFIG}/redshift-scheduler/rules.conf",
+]

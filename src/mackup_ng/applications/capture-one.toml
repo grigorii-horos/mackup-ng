@@ -1,0 +1,4 @@
+name = "Capture One"
+files = [
+    "${MACKUP_XDG_CONFIG}/Capture One",
+]

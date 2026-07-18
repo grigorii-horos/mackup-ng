@@ -1,0 +1,5 @@
+name = "PokerStars"
+files = [
+    "${MACKUP_XDG_CONFIG}/{PokerStars,PokerStarsEU}",
+    "Library/Preferences/{com.pokerstars.eu.user.ini,com.pokerstars.PokerStars.plist,com.pokerstars.PokerStarsEU.plist,com.pokerstars.user.ini}",
+]

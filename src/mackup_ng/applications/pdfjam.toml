@@ -1,0 +1,4 @@
+name = "PDFjam"
+files = [
+    ".pdfjam.conf",
+]

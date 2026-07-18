@@ -1,0 +1,5 @@
+name = "Querious"
+files = [
+    "Library/Preferences/com.araeliumgroup.querious.plist",
+    "${MACKUP_XDG_CONFIG}/Querious",
+]

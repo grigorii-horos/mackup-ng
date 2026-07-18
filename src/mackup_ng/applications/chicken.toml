@@ -1,0 +1,4 @@
+name = "Chicken"
+files = [
+    "Library/Preferences/net.sourceforge.chicken.plist",
+]

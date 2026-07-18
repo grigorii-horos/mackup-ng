@@ -1,0 +1,4 @@
+name = "Podman"
+files = [
+    "${MACKUP_XDG_CONFIG}/containers/podman-connections.json",
+]

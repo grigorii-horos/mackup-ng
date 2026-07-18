@@ -1,0 +1,3 @@
+[marker]
+name = "opt-out: do NOT back up / restore dconf on sync"
+order = 50

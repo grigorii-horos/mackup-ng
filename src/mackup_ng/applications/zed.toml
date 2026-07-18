@@ -1,0 +1,4 @@
+name = "Zed"
+files = [
+    "${MACKUP_XDG_CONFIG}/zed/{keymap.json,settings.json}",
+]

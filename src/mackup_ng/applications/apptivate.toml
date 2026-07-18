@@ -1,0 +1,4 @@
+name = "Apptivate"
+files = [
+    "${MACKUP_XDG_CONFIG}/Apptivate/hotkeys",
+]

@@ -1,0 +1,4 @@
+name = "mako"
+files = [
+    "${MACKUP_XDG_CONFIG}/mako/config",
+]

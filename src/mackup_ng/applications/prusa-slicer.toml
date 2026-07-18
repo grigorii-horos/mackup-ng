@@ -1,0 +1,4 @@
+name = "PrusaSlicer"
+files = [
+    "${MACKUP_XDG_CONFIG}/PrusaSlicer",
+]

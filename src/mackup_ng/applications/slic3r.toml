@@ -1,0 +1,4 @@
+name = "Slic3r"
+files = [
+    "${MACKUP_XDG_CONFIG}/Slic3r",
+]

@@ -1,0 +1,5 @@
+name = "SABnzbd"
+files = [
+    "${MACKUP_XDG_CONFIG}/SABnzbd/sabnzbd.ini",
+    "${MACKUP_XDG_CONFIG}/SABnzbd/admin/rss_data.sab",
+]

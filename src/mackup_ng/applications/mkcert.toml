@@ -1,0 +1,4 @@
+name = "mkcert"
+files = [
+    "${MACKUP_XDG_CONFIG}/mkcert",
+]

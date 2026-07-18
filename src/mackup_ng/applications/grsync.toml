@@ -1,0 +1,4 @@
+name = "grsync"
+files = [
+    ".grsync/grsync.ini",
+]

@@ -1,0 +1,6 @@
+name = "Aspell"
+files = [
+    ".aspell.conf",
+    ".aspell.en.prepl",
+    ".aspell.en.pws",
+]

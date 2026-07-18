@@ -1,0 +1,8 @@
+name = "Zsh"
+files = [
+    ".zshenv",
+    ".zprofile",
+    ".zshrc",
+    ".zlogin",
+    ".zlogout",
+]

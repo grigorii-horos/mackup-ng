@@ -1,0 +1,4 @@
+name = "Micro"
+files = [
+    "${MACKUP_XDG_CONFIG}/micro/{bindings.json,colorschemes,settings.json,syntax}",
+]

@@ -1,0 +1,4 @@
+name = "Dozer"
+files = [
+    "Library/Preferences/com.mortennn.Dozer.plist",
+]

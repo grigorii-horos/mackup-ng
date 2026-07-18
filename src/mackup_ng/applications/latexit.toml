@@ -1,0 +1,4 @@
+name = "LaTeXiT"
+files = [
+    "Library/Preferences/fr.chachatelier.pierre.LaTeXiT.plist",
+]

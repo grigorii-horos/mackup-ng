@@ -5,38 +5,49 @@ The Applications Database provides an easy to use interface to load application
 data from the Mackup Database (files).
 """
 
-import configparser
 import os
 import platform
+import re
+import tomllib
 from typing import ClassVar
 
-from . import constants
+from . import blocks, constants, utils
 from .constants import APPS_DIR, CUSTOM_APPS_DIR, CUSTOM_APPS_DIR_XDG
+
+# ${VAR} token; NAME is captured. Reserved names below are the dual-path
+# built-ins; anything else is resolved from the environment / source_env.
+_ENV_VAR_RE = re.compile(r"\$\{(\w+)\}")
 
 
 class ApplicationsDatabase:
     """Database containing all the configured applications."""
 
-    _PATH_SECTIONS: ClassVar[set[str]] = {"configuration_files"}
-    # Sections holding "local = backup" mapping entries (read raw, split on '=')
-    _MAPPING_SECTIONS: ClassVar[set[str]] = {"mapped_files"}
+    # Reserved built-in var names (dual-path, platform-aware) — NOT env vars.
+    # The MACKUP_ prefix marks them as mackup-owned so they never clash with a
+    # real ${VAR} the user resolves from the environment / source_env.
+    _RESERVED_VARS: ClassVar[set[str]] = {
+        "MACKUP_XDG_CONFIG",
+        "MACKUP_XDG_DATA",
+        "MACKUP_XDG_STATE",
+        "MACKUP_XDG_CACHE",
+    }
     _CROSS_PLATFORM_PATH_VARS: ClassVar[dict[str, dict[str, str]]] = {
-        "@CONFIG@": {
+        "${MACKUP_XDG_CONFIG}": {
             "linux": ".config",
             "mac": "Library/Application Support",
             "windows": "AppData/Roaming",
         },
-        "@DATA@": {
+        "${MACKUP_XDG_DATA}": {
             "linux": ".local/share",
             "mac": "Library/Application Support",
             "windows": "AppData/Local",
         },
-        "@STATE@": {
+        "${MACKUP_XDG_STATE}": {
             "linux": ".local/state",
             "mac": "Library/Application Support",
             "windows": "AppData/Local",
         },
-        "@CACHE@": {
+        "${MACKUP_XDG_CACHE}": {
             "linux": ".cache",
             "mac": "Library/Caches",
             "windows": "AppData/Local",
@@ -165,141 +176,6 @@ class ApplicationsDatabase:
         return "linux"
 
     @classmethod
-    def _read_path_entries_from_section(
-        cls,
-        config_file: str,
-        section: str,
-    ) -> list[str]:
-        """
-        Read raw path entries from a cfg section.
-
-        This bypasses ConfigParser limitations for entries that begin with '[',
-        which we use for platform selectors.
-        """
-        entries: list[str] = []
-        current_section: str | None = None
-        with open(config_file, encoding="utf-8") as f:
-            for raw_line in f:
-                stripped = raw_line.strip()
-                if not stripped or stripped.startswith(("#", ";")):
-                    continue
-
-                if stripped.startswith("[") and stripped.endswith("]"):
-                    section_name = stripped[1:-1].strip()
-                    # Selector lines can also start/end with brackets; only treat as
-                    # a new section if it looks like a section header.
-                    is_header = (
-                        section_name
-                        and ":" not in section_name
-                        and "," not in section_name
-                        and "/" not in section_name
-                        and "{" not in section_name
-                        and "}" not in section_name
-                    )
-                    if is_header:
-                        current_section = section_name
-                        continue
-
-                if current_section != section:
-                    continue
-
-                # Keep parity with existing no-value option semantics: path lines only.
-                if "=" in stripped:
-                    continue
-                entries.append(stripped)
-        return entries
-
-    @classmethod
-    def _read_mapped_entries_from_section(
-        cls,
-        config_file: str,
-        section: str,
-    ) -> list[tuple[str, str]]:
-        """Read raw "local = backup" pairs from a mapping section.
-
-        Read raw (not via ConfigParser) so paths may contain spaces, dashes,
-        arrows, colons — anything but '=' (the single delimiter). Split on the
-        first '='; a line without '=' is skipped.
-        """
-        pairs: list[tuple[str, str]] = []
-        current_section: str | None = None
-        with open(config_file, encoding="utf-8") as f:
-            for raw_line in f:
-                stripped = raw_line.strip()
-                if not stripped or stripped.startswith(("#", ";")):
-                    continue
-
-                if stripped.startswith("[") and stripped.endswith("]"):
-                    section_name = stripped[1:-1].strip()
-                    is_header = (
-                        section_name
-                        and ":" not in section_name
-                        and "," not in section_name
-                        and "/" not in section_name
-                        and "{" not in section_name
-                        and "}" not in section_name
-                    )
-                    if is_header:
-                        current_section = section_name
-                        continue
-
-                if current_section != section or "=" not in stripped:
-                    continue
-                src, dest = stripped.split("=", 1)
-                src, dest = src.strip(), dest.strip()
-                if src and dest:
-                    pairs.append((src, dest))
-        return pairs
-
-    @classmethod
-    def _read_sanitized_config_text_for_parser(cls, config_file: str) -> str:
-        """
-        Return cfg text sanitized for ConfigParser.
-
-        Path entries in path sections may start with '[' due to platform
-        selectors; ConfigParser interprets them as section headers. We replace
-        such lines with placeholders for parser consumption only.
-        """
-        output: list[str] = []
-        current_section: str | None = None
-        placeholder_index = 0
-
-        with open(config_file, encoding="utf-8") as f:
-            for raw_line in f:
-                stripped = raw_line.strip()
-
-                if stripped.startswith("[") and stripped.endswith("]"):
-                    section_name = stripped[1:-1].strip()
-                    is_header = (
-                        section_name
-                        and ":" not in section_name
-                        and "," not in section_name
-                        and "/" not in section_name
-                        and "{" not in section_name
-                        and "}" not in section_name
-                    )
-                    if is_header:
-                        current_section = section_name
-                        output.append(raw_line)
-                        continue
-
-                is_entry = (
-                    stripped
-                    and not stripped.startswith("#")
-                    and not stripped.startswith(";")
-                )
-                in_path = current_section in cls._PATH_SECTIONS and "=" not in stripped
-                in_mapping = current_section in cls._MAPPING_SECTIONS
-                if is_entry and (in_path or in_mapping):
-                    placeholder_index += 1
-                    output.append(f"__mackup_path_placeholder_{placeholder_index}__\n")
-                    continue
-
-                output.append(raw_line)
-
-        return "".join(output)
-
-    @classmethod
     def _resolve_platform_selectors(cls, path: str) -> str:
         """
         Resolve platform-specific selectors in square brackets.
@@ -393,30 +269,84 @@ class ApplicationsDatabase:
             f"{local_expr!r} vs {backup_expr!r}",
         )
 
-    @classmethod
-    def _entry_to_exprs(cls, entry: str) -> tuple[str, str]:
-        """Resolve a [configuration_files] entry into (local_expr, backup_expr).
+    @staticmethod
+    def _lookup_source_env(name: str, env_files: list[str]) -> str | None:
+        """Return NAME's value from the first source_env file that defines it."""
+        for env_file in env_files:
+            path = os.path.expanduser(str(env_file))
+            try:
+                with open(path, encoding="utf-8") as handle:
+                    for raw in handle:
+                        line = raw.strip()
+                        if not line or line.startswith("#") or "=" not in line:
+                            continue
+                        key, value = line.split("=", 1)
+                        if key.strip() == name:
+                            return value.strip().strip('"').strip("'")
+            except OSError:
+                continue
+        return None
 
-        Local == backup layout; selectors and built-in vars still apply.
+    @classmethod
+    def _expand_env_vars(cls, path: str, env_files: list[str]) -> str:
+        """Replace non-reserved ``${VAR}`` with env / source_env values.
+
+        Reserved built-ins (``${MACKUP_*}``) are left untouched (resolved
+        elsewhere). Raises ``KeyError`` if a referenced var is unresolved.
         """
+        def repl(match: re.Match) -> str:
+            name = match.group(1)
+            if name in cls._RESERVED_VARS:
+                return match.group(0)
+            value = os.environ.get(name)
+            if value is None:
+                value = cls._lookup_source_env(name, env_files)
+            if value is None:
+                raise KeyError(name)
+            return value
+
+        return _ENV_VAR_RE.sub(repl, path)
+
+    @classmethod
+    def _entry_to_exprs(
+        cls, entry: str, env_files: list[str] | None = None,
+    ) -> tuple[str, str]:
+        """Resolve a configuration_files entry into (local_expr, backup_expr).
+
+        Local == backup layout; selectors, built-in vars and env vars all apply.
+        """
+        env_files = env_files or []
         local_expr, backup_expr = cls._resolve_platform_selectors_with_backup(entry)
-        local_expr = cls._expand_builtin_path_vars(local_expr)
-        backup_expr = cls._expand_builtin_path_vars(backup_expr, for_backup=True)
+        local_expr = cls._expand_env_vars(
+            cls._expand_builtin_path_vars(local_expr), env_files,
+        )
+        backup_expr = cls._expand_env_vars(
+            cls._expand_builtin_path_vars(backup_expr, for_backup=True), env_files,
+        )
         return local_expr, backup_expr
 
     @classmethod
-    def _pair_to_exprs(cls, src: str, dest: str) -> tuple[str, str]:
+    def _pair_to_exprs(
+        cls, src: str, dest: str, env_files: list[str] | None = None,
+    ) -> tuple[str, str]:
         """Resolve an explicit [mapped_files] pair into (local_expr, backup_expr).
 
         SRC is the local path; DEST is where it lives in the backup folder.
-        Selectors, built-in vars and braces are honored on each side.
+        Selectors, built-in vars, env vars and braces are honored on each side.
         """
-        local_expr = cls._expand_builtin_path_vars(
-            cls._resolve_platform_selectors_with_backup(src)[0],
+        env_files = env_files or []
+        local_expr = cls._expand_env_vars(
+            cls._expand_builtin_path_vars(
+                cls._resolve_platform_selectors_with_backup(src)[0],
+            ),
+            env_files,
         )
-        backup_expr = cls._expand_builtin_path_vars(
-            cls._resolve_platform_selectors_with_backup(dest)[1],
-            for_backup=True,
+        backup_expr = cls._expand_env_vars(
+            cls._expand_builtin_path_vars(
+                cls._resolve_platform_selectors_with_backup(dest)[1],
+                for_backup=True,
+            ),
+            env_files,
         )
         return local_expr, backup_expr
 
@@ -445,49 +375,106 @@ class ApplicationsDatabase:
         # Build the dict that will contain the properties of each application
         self.apps: dict[str, dict[str, str | set[str]]] = {}
         self.app_file_mappings: dict[str, set[tuple[str, str]]] = {}
+        self.app_blocks: dict[str, list[dict]] = {}
+        self.app_env_files: dict[str, list[str]] = {}
 
         for config_file in ApplicationsDatabase.get_config_files():
-            config: configparser.ConfigParser = configparser.ConfigParser(
-                allow_no_value=True,
+            with open(config_file, "rb") as handle:
+                try:
+                    data = tomllib.load(handle)
+                except tomllib.TOMLDecodeError:
+                    continue
+
+            # The app id is the toml filename without the extension.
+            filename: str = os.path.basename(config_file)
+            app_name: str = filename[: -len(".toml")]
+
+            # Config keys live flat at the top level. A legacy [application]
+            # table is still accepted: its keys fall back for name/files/env.
+            legacy = data.get("application")
+            if not isinstance(legacy, dict):
+                legacy = {}
+
+            # Start building a dict for this app
+            self.apps[app_name] = {}
+
+            # Fancy display name (falls back to the id)
+            self.apps[app_name]["name"] = data.get(
+                "name", legacy.get("name", app_name),
             )
 
-            # Needed to not lowercase the configuration_files in the ini files
-            config.optionxform = str  # type: ignore
+            # The whole top level is one block: top-level keys that are not
+            # sync/meta become the top-level implicit block. It counts as a block
+            # only if it carries an action sub-table (xml/copy/chmod/run/systemd);
+            # it is prepended to the [[block]] array (so it runs first).
+            reserved = {
+                "name",
+                "files",
+                "configuration_files",
+                "mapped_files",
+                "source_env",
+                "block",
+                "application",
+            }
+            top_block = {k: v for k, v in data.items() if k not in reserved}
+            cfg_blocks = list(data.get("block", []))
+            if blocks.block_action(top_block) is not None:
+                cfg_blocks.insert(0, top_block)
+            self.app_blocks[app_name] = cfg_blocks
 
-            config_text = self._read_sanitized_config_text_for_parser(config_file)
-            config.read_string(config_text, source=config_file)
-            if config.has_section("application"):
-                # Get the filename without the directory name
-                filename: str = os.path.basename(config_file)
-                # The app name is the cfg filename with the extension
-                app_name: str = filename[: -len(".cfg")]
+            # Extra ${VAR} beyond the built-ins resolve from these files (+ env).
+            env_files = list(
+                data.get("source_env", legacy.get("source_env", [])),
+            )
+            self.app_env_files[app_name] = env_files
 
-                # Start building a dict for this app
-                self.apps[app_name] = {}
+            # Add the configuration files to sync
+            config_files: set[str] = set()
+            config_mappings: set[tuple[str, str]] = set()
+            self.apps[app_name]["configuration_files"] = config_files
+            self.app_file_mappings[app_name] = config_mappings
 
-                # Add the fancy name for the app, for display purpose
-                app_pretty_name: str = config.get("application", "name")
-                self.apps[app_name]["name"] = app_pretty_name
-
-                # Add the configuration files to sync
-                config_files: set[str] = set()
-                config_mappings: set[tuple[str, str]] = set()
-                self.apps[app_name]["configuration_files"] = config_files
-                self.app_file_mappings[app_name] = config_mappings
-                for path in self._read_path_entries_from_section(
-                    config_file, "configuration_files",
-                ):
-                    local_expr, backup_expr = self._entry_to_exprs(path)
-                    self._register_exprs(
-                        local_expr, backup_expr, config_files, config_mappings,
+            config_paths = next(
+                (
+                    v
+                    for v in (
+                        data.get("files"),
+                        legacy.get("files"),
+                        data.get("configuration_files"),
+                        legacy.get("configuration_files"),
                     )
-                for src, dest in self._read_mapped_entries_from_section(
-                    config_file, "mapped_files",
-                ):
-                    local_expr, backup_expr = self._pair_to_exprs(src, dest)
-                    self._register_exprs(
-                        local_expr, backup_expr, config_files, config_mappings,
+                    if v is not None
+                ),
+                [],
+            )
+            for path in config_paths:
+                try:
+                    local_expr, backup_expr = self._entry_to_exprs(
+                        str(path), env_files,
                     )
+                except KeyError as exc:
+                    print(utils.colorize_message(
+                        f"Warning: {app_name}: unresolved var {exc} in {path!r}, "
+                        "skipping",
+                    ))
+                    continue
+                self._register_exprs(
+                    local_expr, backup_expr, config_files, config_mappings,
+                )
+            for src, dest in data.get("mapped_files", {}).items():
+                try:
+                    local_expr, backup_expr = self._pair_to_exprs(
+                        str(src), str(dest), env_files,
+                    )
+                except KeyError as exc:
+                    print(utils.colorize_message(
+                        f"Warning: {app_name}: unresolved var {exc} in {src!r}, "
+                        "skipping",
+                    ))
+                    continue
+                self._register_exprs(
+                    local_expr, backup_expr, config_files, config_mappings,
+                )
 
     @staticmethod
     def get_config_files() -> set[str]:
@@ -496,7 +483,7 @@ class ApplicationsDatabase:
 
         Return a list of configuration files describing the apps supported by
         Mackup. The files returned are absolute full path to those files.
-        e.g. /usr/lib/mackup/applications/bash.cfg
+        e.g. /usr/lib/mackup/applications/bash.toml
 
         Only one config file per application should be returned, custom config
         having a priority over stock config. The ~/.mackup/applications/
@@ -529,7 +516,7 @@ class ApplicationsDatabase:
         # (legacy takes priority over XDG)
         if os.path.isdir(legacy_custom_apps_dir):
             for filename in os.listdir(legacy_custom_apps_dir):
-                if filename.endswith(".cfg"):
+                if filename.endswith(".toml"):
                     config_files.add(os.path.join(legacy_custom_apps_dir, filename))
                     custom_files.add(filename)
 
@@ -537,14 +524,14 @@ class ApplicationsDatabase:
         # (only if not already in legacy directory)
         if os.path.isdir(xdg_custom_apps_dir):
             for filename in os.listdir(xdg_custom_apps_dir):
-                if filename.endswith(".cfg") and filename not in custom_files:
+                if filename.endswith(".toml") and filename not in custom_files:
                     config_files.add(os.path.join(xdg_custom_apps_dir, filename))
                     custom_files.add(filename)
 
         # Add the default provided app config files, but only if those are not
         # customized, as we don't want to overwrite custom app config.
         for filename in os.listdir(apps_dir):
-            if filename.endswith(".cfg") and filename not in custom_files:
+            if filename.endswith(".toml") and filename not in custom_files:
                 config_files.add(os.path.join(apps_dir, filename))
 
         return config_files
@@ -580,6 +567,18 @@ class ApplicationsDatabase:
     def get_file_mappings(self, name: str) -> set[tuple[str, str]]:
         """Return local->backup path mappings for an application."""
         return set(self.app_file_mappings[name])
+
+    def get_blocks(self, name: str) -> list[dict]:
+        """Return the config's action blocks in order (top-level block first)."""
+        return list(self.app_blocks.get(name, []))
+
+    def get_env_files(self, name: str) -> list[str]:
+        """Return the config's source_env files (for ${VAR} in blocks)."""
+        return list(self.app_env_files.get(name, []))
+
+    def app_has_sync(self, name: str) -> bool:
+        """True if the config declares files to sync (not a block-only config)."""
+        return bool(self.apps.get(name, {}).get("configuration_files"))
 
     def get_app_names(self) -> set[str]:
         """

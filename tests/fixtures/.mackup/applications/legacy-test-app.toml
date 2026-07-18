@@ -1,0 +1,4 @@
+name = "Legacy Test App"
+files = [
+    ".legacy-test-app-config",
+]

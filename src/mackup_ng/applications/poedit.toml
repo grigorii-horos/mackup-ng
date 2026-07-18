@@ -1,0 +1,4 @@
+name = "Poedit"
+files = [
+    "Library/Preferences/{net.poedit.Poedit.cfg,net.poedit.Poedit.plist}",
+]

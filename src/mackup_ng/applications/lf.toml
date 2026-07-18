@@ -1,0 +1,4 @@
+name = "lf"
+files = [
+    "${MACKUP_XDG_CONFIG}/lf/lfrc",
+]

@@ -1,0 +1,4 @@
+name = "Clasp"
+files = [
+    ".clasprc.json",
+]

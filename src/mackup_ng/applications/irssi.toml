@@ -1,0 +1,4 @@
+name = "Irssi"
+files = [
+    ".irssi",
+]

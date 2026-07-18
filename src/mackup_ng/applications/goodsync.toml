@@ -1,0 +1,4 @@
+name = "GoodSync"
+files = [
+    ".goodsync",
+]

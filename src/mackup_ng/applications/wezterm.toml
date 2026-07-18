@@ -1,0 +1,5 @@
+name = "WezTerm"
+files = [
+    ".wezterm.lua",
+    "${MACKUP_XDG_CONFIG}/wezterm",
+]

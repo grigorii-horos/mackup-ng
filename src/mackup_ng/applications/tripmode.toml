@@ -1,0 +1,4 @@
+name = "TripMode"
+files = [
+    "${MACKUP_XDG_CONFIG}/TripMode",
+]

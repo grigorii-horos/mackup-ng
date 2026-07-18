@@ -1,0 +1,4 @@
+name = "deepin-dde-dock"
+files = [
+    "${MACKUP_XDG_CONFIG}/deepin/dde-dock.conf",
+]

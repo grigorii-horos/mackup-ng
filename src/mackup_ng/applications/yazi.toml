@@ -1,0 +1,4 @@
+name = "yazi"
+files = [
+    "${MACKUP_XDG_CONFIG}/yazi/{keymap.toml,theme.toml,yazi.toml}",
+]

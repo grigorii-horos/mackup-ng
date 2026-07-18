@@ -1,0 +1,5 @@
+name = "Hocus Focus"
+files = [
+    "Library/Preferences/com.uglyapps.HocusFocus.plist",
+    "Library/Application Support/com.uglyapps.HocusFocus/{HocusFocus.db,HocusFocus.db-shm,HocusFocus.db-wal}",
+]

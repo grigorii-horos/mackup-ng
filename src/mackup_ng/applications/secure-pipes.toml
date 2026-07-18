@@ -1,0 +1,5 @@
+name = "Secure Pipes"
+files = [
+    "Library/Preferences/{net.edgeservices.connections.plist,net.edgeservices.Secure-Pipes.plist,net.edgeservices.sp-config.plist}",
+    "${MACKUP_XDG_CONFIG}/Secure Pipes",
+]

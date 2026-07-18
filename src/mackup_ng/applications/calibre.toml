@@ -1,0 +1,5 @@
+name = "Calibre"
+files = [
+    "Library/Preferences/calibre",
+    "${MACKUP_XDG_CONFIG}/calibre",
+]

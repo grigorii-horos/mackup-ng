@@ -1,0 +1,5 @@
+name = "Typinator"
+files = [
+    "${MACKUP_XDG_CONFIG}/Typinator",
+    "Library/Preferences/com.macility.typinator2.plist",
+]

@@ -1,0 +1,11 @@
+name = "mise-en-place"
+files = [
+    "mise.toml",
+    "mise/config.toml",
+    ".mise.toml",
+    ".mise/config.toml",
+    "${MACKUP_XDG_CONFIG}/mise.toml",
+    "${MACKUP_XDG_CONFIG}/mise/{conf.d,config.toml}",
+    "${MACKUP_XDG_CONFIG}/.mise.toml",
+    "${MACKUP_XDG_CONFIG}/.mise/{conf.d,config.toml}",
+]

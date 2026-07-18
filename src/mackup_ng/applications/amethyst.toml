@@ -1,0 +1,5 @@
+name = "Amethyst"
+files = [
+    "Library/Preferences/com.amethyst.Amethyst.plist",
+    "${MACKUP_XDG_CONFIG}/amethyst/amethyst.yml",
+]

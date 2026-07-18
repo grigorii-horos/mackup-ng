@@ -1,0 +1,4 @@
+name = "Brave"
+files = [
+    "${MACKUP_XDG_CONFIG}/BraveSoftware/Brave-Browser/Default/Preferences",
+]

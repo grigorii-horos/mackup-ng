@@ -1,0 +1,4 @@
+name = "MacVim"
+files = [
+    "Library/Preferences/{org.vim.MacVim.LSSharedFileList.plist,org.vim.MacVim.plist}",
+]

@@ -1,0 +1,4 @@
+name = "Shuttle"
+files = [
+    ".shuttle.json",
+]

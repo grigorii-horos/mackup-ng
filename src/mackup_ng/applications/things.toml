@@ -1,0 +1,5 @@
+name = "Things"
+files = [
+    "Library/Preferences/com.culturedcode.things.plist",
+    "${MACKUP_XDG_CONFIG}/Cultured Code/Licenses.plist",
+]

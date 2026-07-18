@@ -1,0 +1,4 @@
+name = "Vimwiki"
+files = [
+    "vimwiki",
+]

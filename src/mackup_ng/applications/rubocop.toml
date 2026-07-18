@@ -1,0 +1,4 @@
+name = "Rubocop"
+files = [
+    ".rubocop.yml",
+]

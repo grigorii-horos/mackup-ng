@@ -1,0 +1,4 @@
+name = "Caffeine"
+files = [
+    "Library/Preferences/{com.intelliscapesolutions.caffeine.plist,com.lightheadsw.Caffeine.plist}",
+]

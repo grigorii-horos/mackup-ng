@@ -1,0 +1,4 @@
+name = "ShiftIt"
+files = [
+    "Library/Preferences/org.shiftitapp.ShiftIt.plist",
+]

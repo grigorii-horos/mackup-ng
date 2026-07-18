@@ -1,0 +1,4 @@
+name = "rofi"
+files = [
+    "${MACKUP_XDG_CONFIG}/rofi/config.rasi",
+]

@@ -1,0 +1,4 @@
+name = "GMVault"
+files = [
+    ".gmvault/gmvault_defaults.conf",
+]

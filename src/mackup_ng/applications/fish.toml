@@ -1,0 +1,4 @@
+name = "Fish"
+files = [
+    "${MACKUP_XDG_CONFIG}/fish/{completions,conf.d,config.fish,fish_variables,functions}",
+]

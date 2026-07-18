@@ -1,0 +1,4 @@
+name = "Multitouch"
+files = [
+    "Library/Preferences/com.brassmonkery.Multitouch.plist",
+]

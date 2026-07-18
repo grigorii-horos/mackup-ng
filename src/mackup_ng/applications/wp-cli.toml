@@ -1,0 +1,4 @@
+name = "WP-CLI"
+files = [
+    ".wp-cli",
+]

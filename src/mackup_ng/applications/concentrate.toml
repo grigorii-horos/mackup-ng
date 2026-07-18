@@ -1,0 +1,4 @@
+name = "Concentrate"
+files = [
+    "${MACKUP_XDG_CONFIG}/Concentrate/Concentrate.sqlite3",
+]

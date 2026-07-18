@@ -1,0 +1,5 @@
+name = "poetry"
+files = [
+    "${MACKUP_XDG_CONFIG}/pypoetry/config.toml",
+    "Library/Preferences/pypoetry/config.toml",
+]

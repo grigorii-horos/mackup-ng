@@ -1,0 +1,4 @@
+name = "Gnome SSH Tunnel Manager"
+files = [
+    ".gSTM",
+]

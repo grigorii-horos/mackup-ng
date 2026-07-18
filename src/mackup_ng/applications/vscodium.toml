@@ -1,0 +1,4 @@
+name = "VSCodium"
+files = [
+    "${MACKUP_XDG_CONFIG}/VSCodium/User/{keybindings.json,settings.json,snippets}",
+]

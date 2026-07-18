@@ -1,0 +1,4 @@
+name = "k9s"
+files = [
+    "${MACKUP_XDG_CONFIG}/k9s/{config.yml,skin.yml}",
+]

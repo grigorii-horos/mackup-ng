@@ -1,0 +1,5 @@
+name = "SizeUp"
+files = [
+    "Library/Preferences/com.irradiatedsoftware.SizeUp.plist",
+    "${MACKUP_XDG_CONFIG}/SizeUp/SizeUp.sizeuplicense",
+]

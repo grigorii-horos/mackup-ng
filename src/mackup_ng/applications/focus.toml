@@ -1,0 +1,4 @@
+name = "Focus"
+files = [
+    "${MACKUP_XDG_CONFIG}/Focus/default.cfg",
+]

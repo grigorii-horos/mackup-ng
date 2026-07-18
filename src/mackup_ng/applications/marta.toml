@@ -1,0 +1,4 @@
+name = "Marta"
+files = [
+    "${MACKUP_XDG_CONFIG}/[mac:org.yanex.marta,marta]/{conf.json,conf.marco,favorites.json,favorites.marco}",
+]

@@ -1,0 +1,5 @@
+name = "Viscosity"
+files = [
+    "${MACKUP_XDG_CONFIG}/Viscosity/OpenVPN",
+    "Library/Preferences/com.viscosityvpn.Viscosity.plist",
+]

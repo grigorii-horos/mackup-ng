@@ -1,0 +1,7 @@
+name = "Xcode"
+files = [
+    "Library/Preferences/com.apple.dt.Xcode.plist",
+    "${MACKUP_XDG_CONFIG}/Developer/Shared/Xcode/Plug-ins",
+    "Library/Developer/Xcode/UserData/{CodeSnippets,Debugger,FontAndColorThemes,KeyBindings,SearchScopes.xcsclist,xcdebugger}",
+    "Library/Developer/Xcode/Templates",
+]

@@ -1,0 +1,5 @@
+name = "Files and directories I want to sync"
+files = [
+    "bin",
+    "src/mackup",
+]

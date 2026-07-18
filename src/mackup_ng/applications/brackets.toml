@@ -1,0 +1,5 @@
+name = "Brackets"
+files = [
+    "${MACKUP_XDG_CONFIG}/Brackets",
+    "Library/Preferences/io.brackets.appshell.plist",
+]

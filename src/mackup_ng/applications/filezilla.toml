@@ -1,0 +1,5 @@
+name = "FileZilla"
+files = [
+    ".filezilla",
+    "${MACKUP_XDG_CONFIG}/filezilla/{filezilla.xml,layout.xml,sitemanager.xml}",
+]

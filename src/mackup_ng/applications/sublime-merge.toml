@@ -1,0 +1,4 @@
+name = "Sublime Merge"
+files = [
+    "${MACKUP_XDG_CONFIG}/Sublime Merge/Packages/User",
+]

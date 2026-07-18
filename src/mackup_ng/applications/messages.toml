@@ -1,0 +1,4 @@
+name = "Messages"
+files = [
+    "Library/Preferences/{com.apple.iChat.AIM.plist,com.apple.iChat.Jabber.plist,com.apple.iChat.StatusMessages.plist,com.apple.iChat.Yahoo.plist}",
+]

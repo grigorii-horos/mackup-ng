@@ -1,0 +1,6 @@
+name = "CLion"
+files = [
+    "Library/Preferences/CLion2016.2",
+    "${MACKUP_XDG_CONFIG}/CLion2016.2",
+    "${MACKUP_XDG_CONFIG}/JetBrains/{CLion2023.1,CLion2023.2}",
+]

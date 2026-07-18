@@ -1,0 +1,6 @@
+name = "TablePlus"
+files = [
+    "Library/Application Support/com.tinyapp.TablePlus/Cache/{Favorite,History}",
+    "Library/Application Support/com.tinyapp.TablePlus/{Data,Plugins}",
+    "Library/Preferences/com.tinyapp.TablePlus.plist",
+]

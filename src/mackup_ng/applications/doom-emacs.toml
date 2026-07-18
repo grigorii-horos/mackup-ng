@@ -1,0 +1,5 @@
+name = "Doom Emacs"
+files = [
+    ".doom.d",
+    "${MACKUP_XDG_CONFIG}/doom",
+]

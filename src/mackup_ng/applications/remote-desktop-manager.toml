@@ -1,0 +1,5 @@
+name = "Remote Desktop Manager"
+files = [
+    "Library/Application Support/com.devolutions.remotedesktopmanager.free/Connections.db",
+    "Library/Application Support/com.devolutions.remotedesktopmanager/Connections.db",
+]

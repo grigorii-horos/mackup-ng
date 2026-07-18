@@ -1,0 +1,4 @@
+name = "NoSQLBooster for MongoDB"
+files = [
+    "Documents/NoSQLBooster",
+]

@@ -3,21 +3,65 @@
 ## Purpose
 
 This fork of `mackup` adds path templating in application config definitions
-(`src/mackup_ng/applications/*.cfg`). When editing or adding app configs, use the
-fork features below to avoid duplicated platform-specific entries.
+(`src/mackup_ng/applications/*.toml`). App definitions are **flat TOML** (not the
+upstream INI `.cfg`, and no `[application]` wrapper): top-level `name` and a
+`files` array, plus an optional `[mapped_files]` table and action
+blocks (see "Action blocks"):
 
-## Fork Path Templating (cfg files)
+```toml
+name = "Code"
+files = [
+    "${MACKUP_XDG_CONFIG}/Code/User/{snippets,keybindings.json,settings.json}",
+    "[mac:Library/Application Support/Code,~/.config/Code]/User/tasks.json",
+]
 
-Path templating is supported in `[configuration_files]` entries.
+[mapped_files]
+".config/app/grisa.profile/user.js" = ".config/app/profile/user.js"
+```
 
-### Built-in variables
+A legacy `[application]` table (with `name`/`files`/`source_env`
+inside) is still accepted as a fallback, but new configs use the flat form.
 
-Use these Mackup-specific variables (not OS env vars):
+When editing or adding app configs, use the fork features below to avoid
+duplicated platform-specific entries.
 
-- `@CONFIG@` -> `.config` (Linux) / `Library/Application Support` (macOS) / `AppData/Roaming` (Windows)
-- `@DATA@` -> `.local/share` (Linux) / `Library/Application Support` (macOS) / `AppData/Local` (Windows)
-- `@STATE@` -> `.local/state` (Linux) / `Library/Application Support` (macOS) / `AppData/Local` (Windows)
-- `@CACHE@` -> `.cache` (Linux) / `Library/Caches` (macOS) / `AppData/Local` (Windows)
+## Fork Path Templating (toml files)
+
+Path templating is supported in `files` array entries (and both
+sides of `[mapped_files]`). Selectors/braces/vars are just text inside the TOML
+strings, so no escaping quirks apply.
+
+### Built-in XDG variables (dual-path, `${MACKUP_XDG_*}`)
+
+These are reserved Mackup-owned variables (NOT env vars) that mimic the XDG base
+directories on **every** OS — even systems that don't set the `XDG_*` env vars.
+The `MACKUP_` prefix keeps them from clashing with a real `${VAR}` env
+reference; `XDG` marks the semantics. Each resolves to a platform-specific
+**local** path and a canonical Linux **backup** path:
+
+- `${MACKUP_XDG_CONFIG}` -> `.config` (Linux) / `Library/Application Support` (macOS) / `AppData/Roaming` (Windows)
+- `${MACKUP_XDG_DATA}` -> `.local/share` (Linux) / `Library/Application Support` (macOS) / `AppData/Local` (Windows)
+- `${MACKUP_XDG_STATE}` -> `.local/state` (Linux) / `Library/Application Support` (macOS) / `AppData/Local` (Windows)
+- `${MACKUP_XDG_CACHE}` -> `.cache` (Linux) / `Library/Caches` (macOS) / `AppData/Local` (Windows)
+
+### Environment variables (`${VAR}` + `source_env`)
+
+Any `${VAR}` whose name is **not** a reserved `MACKUP_*` built-in is resolved as
+a real environment variable, falling back to `KEY=VALUE` lines in the files
+listed in the app's `source_env`. Unlike the built-ins, an env var expands to
+the **same** value on both the local and backup side, so use it only for
+relative, machine-specific fragments (a profile dir name, a hostname). An
+unresolved var, or one that yields an absolute path, skips just that entry.
+
+```toml
+name = "Firefox"
+source_env = ["~/.config/mackup-env"]   # KEY=VALUE lines; env takes priority
+files = [
+    "${MACKUP_XDG_CONFIG}/firefox/${FF_PROFILE}/prefs.js",
+]
+```
+
+Resolved by `appsdb._expand_env_vars` / `_lookup_source_env`.
 
 ### Platform selector
 
@@ -32,41 +76,40 @@ Selector semantics in this fork:
 - local path = platform-specific value (or fallback if no matching key)
 - backup path = fallback (or selected path if no fallback is provided)
 - built-in variables in backup paths are resolved to Linux canonical values
-  (`@CONFIG@ -> .config`, `@DATA@ -> .local/share`, etc.)
+  (`${MACKUP_XDG_CONFIG} -> .config`, `${MACKUP_XDG_DATA} -> .local/share`, etc.)
 
 Examples:
 
-- `@CONFIG@/[mac:Blender,blender]`
-- `@CONFIG@/[mac:Sublime Text 3,sublime-text-3]/Packages/User`
-- `[mac:@CONFIG@/MyApp/config.json,linux:@CONFIG@/myapp/config.json,@CONFIG@/shared/myapp-config.json]`
+- `${MACKUP_XDG_CONFIG}/[mac:Blender,blender]`
+- `${MACKUP_XDG_CONFIG}/[mac:Sublime Text 3,sublime-text-3]/Packages/User`
+- `[mac:${MACKUP_XDG_CONFIG}/MyApp/config.json,linux:${MACKUP_XDG_CONFIG}/myapp/config.json,${MACKUP_XDG_CONFIG}/shared/myapp-config.json]`
 
 ### Brace expansion
 
 Use `{...}` to define multiple entries in one line:
 
-- `@CONFIG@/Code/User/{snippets,keybindings.json,settings.json}`
+- `${MACKUP_XDG_CONFIG}/Code/User/{snippets,keybindings.json,settings.json}`
 
 Brace groups are expanded recursively (cartesian product when multiple groups
 are present).
 
 ### Explicit local → backup mapping (`[mapped_files]`)
 
-`[configuration_files]` keeps local path == storage layout. To decouple them,
-use a `[mapped_files]` section with `LOCAL = BACKUP` pairs:
+`files` keeps local path == storage layout. To decouple them,
+use a `[mapped_files]` table of `LOCAL = BACKUP` pairs (TOML quoted keys/values):
 
-```ini
+```toml
 [mapped_files]
-.config/app/grisa.profile/user.js = .config/app/profile/user.js
+".config/app/grisa.profile/user.js" = ".config/app/profile/user.js"
 ```
 
-- LHS is the local file; RHS is where it lives in the backup folder.
-- `=` is the ONLY delimiter — spaces, dashes, colons, even `->` are safe inside
-  paths (read raw, not via ConfigParser; split on the first `=`).
+- Key is the local file; value is where it lives in the backup folder.
+- Paths are quoted TOML strings, so spaces, dashes, colons, even `->` are safe.
 - Both sides still honor selectors, built-in vars and braces (brace groups are
   zipped pairwise, so `.local/{a,b} = .backup/{a,b}` maps a→a, b→b).
 - Lets machine-specific local paths (e.g. a per-machine Firefox profile dir)
-  share one canonical backup path. Parsed in
-  `appsdb._read_mapped_entries_from_section` + `_pair_to_exprs`.
+  share one canonical backup path. Parsed from the `[mapped_files]` table in
+  `appsdb.__init__` + `_pair_to_exprs`.
 
 ## Processing Order
 
@@ -74,18 +117,20 @@ Paths are resolved in this order:
 
 1. Platform selector `[...]`
    Produces local path and canonical backup path
-2. Built-in variables (`@CONFIG@`, `@DATA@`, `@STATE@`, `@CACHE@`)
+2. Built-in variables (`${MACKUP_XDG_CONFIG}`, `${MACKUP_XDG_DATA}`, `${MACKUP_XDG_STATE}`, `${MACKUP_XDG_CACHE}`)
    Local path uses current OS mapping; backup path uses Linux canonical mapping
-3. Brace expansion `{...}`
+3. Environment variables (any other `${VAR}`, from env / `source_env`)
+   Same value on both sides; unresolved or absolute → entry skipped
+4. Brace expansion `{...}`
 
 ## Config Style (This Fork)
 
-- Prefer `[configuration_files]` only.
-- `xdg_configuration_files` is unsupported in this fork. Use `@CONFIG@/...` in `[configuration_files]`.
+- Prefer `files` only.
+- Upstream `xdg_configuration_files` is unsupported. Use `${MACKUP_XDG_CONFIG}/...` in `files`.
 - Prefer a single templated line over duplicated macOS/Linux entries when
   semantics are the same.
-- If macOS path naming differs, prefer a selector inside `@CONFIG@`, e.g.
-  `@CONFIG@/[mac:Foo App,foo-app]`.
+- If macOS path naming differs, prefer a selector inside `${MACKUP_XDG_CONFIG}`, e.g.
+  `${MACKUP_XDG_CONFIG}/[mac:Foo App,foo-app]`.
 - Keep `Library/Preferences/...` entries as-is unless there is a clear
   cross-platform equivalent.
 
@@ -96,75 +141,144 @@ Paths are resolved in this order:
   `src/mackup_ng/appsdb.py`.
 - Upstream Mackup may not support these templates.
 
-## Machine-local hooks, markers and config sets (`~/.mackup/`)
+## Machine-local markers and action blocks (`~/.mackup/`)
 
 This fork turns `~/.mackup/` into the machine-local home for more than custom
 app configs. Layout:
 
-```
+```text
 ~/.mackup/
-├── applications/   custom app *.cfg files (was ~/.mackup/*.cfg — now nested)
-├── backup.d/       executables run BEFORE `mackup sync`
-├── sets.d/         declarative config sets (TOML) applied natively after sync
-├── markers/        machine-local condition flags (must NOT be synced)
-├── state/          hook scratch space
+├── applications/   config *.toml files: sync lists AND action blocks
+├── markers/        LOCAL marker definitions (<name>.toml — same format as apps)
 └── dconf-backup/   dconf dumps (*.dconf)
 ```
 
-Code: `src/mackup_ng/{hooks,sets,dconf}.py`. `constants.py` holds the dir names
-(`CUSTOM_APPS_DIR = .mackup/applications`, `HOOKS_*_DIRNAME`, `MARKERS_DIRNAME`,
-`SETS_DIRNAME`, `STATE_DIRNAME`, `DCONF_DIRNAME`).
+There is no separate `sets/` or `backup.d/` directory: everything imperative is
+an action block inside an `applications/*.toml` config (a file may be sync-only,
+block-only, or both). A pre-sync executable is just a `[run]` block with
+`phase = "pre"`. See "Action blocks" below.
+
+Marker **state** (which markers are on) is machine-local runtime state and lives
+in `$XDG_STATE_HOME/mackup/markers/` (default `~/.local/state/mackup/markers/`),
+NOT under `~/.mackup/`. A pre-XDG `~/.mackup/markers/` state dir is migrated into
+the XDG location automatically on first marker access (`_migrate_legacy_markers`).
+
+Code: `src/mackup_ng/{appsdb,blocks,conditions,hooks,dconf}.py`. `constants.py`
+holds the dir names (`CUSTOM_APPS_DIR = .mackup/applications`,
+`CUSTOM_MARKERS_DIR = .mackup/markers`, `MARKERS_DEFS_DIRNAME` (package
+built-ins), `MARKERS_STATE_XDG`, `LEGACY_MARKERS_STATE_DIR`, `DCONF_DIRNAME`).
 
 ### `mackup sync` phases
 
-1. `hooks.run_hooks("backup")` — backup.d executables (if any).
-2. dconf dump (backup-role machine).
-3. file sync (mackup engine).
-4. dconf load (restore-role machines).
-5. `sets.apply_dir(~/.mackup/sets.d)` — declarative sets (was restore.d hooks).
+1. dconf dump (backup-role machine).
+2. per config (sorted by id): `blocks.apply_blocks(phase="pre")` → file sync →
+   `blocks.apply_blocks(phase="post")`.
+3. dconf load (restore-role machines).
 
-Backup.d hooks + `[[run]]` scripts receive a `MACKUP_*` environment contract
-(`hooks.hook_env`): `MACKUP_PHASE`, `MACKUP_ROLE` (backup if the `backup` marker
-exists, else restore), `MACKUP_OS`, `MACKUP_ARCH`, `MACKUP_HAS_GUI`,
-`MACKUP_CONFIG_DIR` (=`~/.mackup`), `MACKUP_MARKERS_DIR`, `MACKUP_STATE_DIR`,
-`MACKUP_DCONF_BACKUP_DIR`.
+`mackup apply` runs every config's blocks (pre+post) without syncing files.
+
+`[run]` blocks receive a `MACKUP_*` environment contract (`hooks.hook_env`):
+`MACKUP_ROLE` (backup if the `backup` marker exists, else restore), `MACKUP_OS`,
+`MACKUP_ARCH`, `MACKUP_HAS_GUI`, `MACKUP_CONFIG_DIR` (=`~/.mackup`),
+`MACKUP_BACKUP_DIR` (=`Config.fullpath`, the storage folder Mackup syncs into —
+resolves the configured engine/path, so configs never hard-code
+`~/Sync/Configs/Mackup`), `MACKUP_MARKERS_DIR`, `MACKUP_DCONF_BACKUP_DIR`.
 
 ### Markers CLI
 
-- `mackup mark <name>`   — set a marker (known: backup, low-resource, no-linger,
-  no-apikey, no-dconf).
+- `mackup mark <name>` — set a marker (write a flag into the XDG state dir).
 - `mackup unmark <name>` — remove a marker.
-- `mackup markers`       — list known + active markers.
+- `mackup markers` — list known + active markers.
 
-Names are validated (`A-Z a-z 0-9 . _ -`, no `.`/`..`). Registry:
-`hooks.KNOWN_MARKERS` / `KNOWN_ORDER`.
+Names are validated (`A-Z a-z 0-9 . _ -`, no `.`/`..`). Any name can be set
+(custom markers are allowed); the *known* set is just what has a definition.
 
-### Config sets (`sets.d/`, `sets.py`)
+**Definitions** are one `<name>.toml` per marker in the **same TOML format as app
+definitions** (`tomllib`): a `[marker]` table with `name` (human label, mirrors
+the app `name` key) and optional `order`. Discovered like app defs — built-ins
+ship in the package (`src/mackup_ng/markers/*.toml`: backup, low-resource,
+no-linger, no-apikey, no-dconf), local ones live in `~/.mackup/markers/*.toml`
+and override a built-in of the same name. Loaded by `hooks.load_marker_defs()`;
+`markers_report()` lists them sorted by `order` then name.
 
-Declarative TOML sets, applied **natively** by `sets.apply_dir` during sync (and
-via `mackup apply-sets`). No external engine. Each set is gated by
-`require_marker` / `skip_if_marker` / `require_os` and may carry:
+### Action blocks (`blocks.py`, `conditions.py`)
 
-- `files` + `files_mode`, `restart_service`, `source_env`
-- `restart_service` — user service bracketed around the write: **systemctl
-  --user** on linux, **brew services** on macOS (stop before / start after,
-  only if active). `before` / `after` — arbitrary shell run before / after the
-  write (custom stop/start escape hatch; `after` is guaranteed).
-- `[[systemd_dropin]]` — write a user systemd drop-in (linux-only by default;
-  narrow with per-block `require_os`).
-- `[[mutate_xml]]` — XML edits (`select`, `set_attr`, `set_child`,
-  `create_missing`, `create_parents`). Cross-platform (works on macOS too).
-- `[[run]]` — inline shell (`script`, `shell`, `require_command`) for imperative
-  bits that can't be declarative (e.g. `10-enable-linger.toml` runs
-  `loginctl enable-linger`). Runs with the `MACKUP_*` env; must be idempotent.
-  `require_command` skips the run unless the given binary/binaries are on PATH.
+Action blocks live in `applications/*.toml` config files (parsed by `appsdb`,
+executed by `blocks.apply_blocks`). A **block** = base keys (phase, conditions,
+`restart_service`) + exactly **one action sub-table** whose name selects the
+action — there is no `type` key. A config's blocks are: the top-level implicit
+block (base keys + one action table at the top level — being top-level, they
+must precede any `[mapped_files]`/`[[block]]` table, per TOML) then the
+`[[block]]` array entries, in that order.
 
-Files are applied **sorted by name** — use numeric prefixes (`10-`, `20-`, ...).
-XML/drop-in writes are idempotent (no write / no service restart when already
-identical); `[[run]]` scripts always execute. When XML changed but no service
-manager is available (e.g. no systemctl/brew), a warning tells the user to
-restart the service manually. (The former external `~/.bin/.sync-sets` script is
-superseded by this module.)
+Full example — a hybrid config (syncs `.ssh`, then fixes its perms; plus a
+marker-gated extra block):
+
+```toml
+name = "SSH"
+files = [".ssh"]
+
+# top-level block: chmod the just-synced .ssh (default phase = post)
+[when]
+os = ["linux", "macos"]
+[chmod]
+path = "~/.ssh"
+recursive = true
+dir_mode = "700"
+file_mode = "600"
+
+# a second block (array form): only with the `paranoid` marker
+[[block]]
+[block.when]
+marker = ["paranoid"]
+[block.run]
+commands = ["ssh-add -l"]
+```
+
+Base scalars (on the block itself):
+
+- `phase` — `pre` | `post` (default `post`): before / after this config's file
+  sync.
+- `restart_service` — user service bracketed around this block's action
+  (**systemctl --user** on linux, **brew services** on macOS; only if active).
+
+Conditions sub-table `[when]` (`conditions.block_passes`; any-of lists; short
+keys — the section supplies the context). A block runs only if every condition
+in its `[when]` passes (no file-level inheritance — the top level is itself a
+block):
+
+- `os`, `arch` — current OS / `platform.machine()` in list.
+- `marker`, `not_marker` — every / none of the listed markers set.
+- `command` — every listed binary on PATH.
+- `gui` — `true` and `MACKUP_HAS_GUI`.
+- `exists`, `not_exists` — every / none of the listed paths exist.
+- `env` — list → every var set; table → every var equals its value.
+
+Action sub-tables (exactly one per block; the key is the action):
+
+- `[copy]` — `from`, `to` (honor `~`, `$VAR`/`${VAR}` from the `MACKUP_*` env, so
+  `$MACKUP_BACKUP_DIR/...`, `~/.apps/$MACKUP_ARCH`). File source idempotent
+  (unlinks dest first — never writes through a symlink); directory source merges
+  (`cp -RpLf src/. dst`, follows symlinks) and is always applied.
+- `[chmod]` — roots via `path`/`paths` (`~`/`$VAR`/globs). Octal (`"700"`) or
+  symbolic-add (`"+x"`). Either `mode` (the root) **or** `recursive = true` with
+  `dir_mode` / `file_mode` per directory / file. Idempotent; missing paths
+  skipped.
+- `[run]` — `script` (heredoc) or `commands` (list, stops at first failure);
+  `shell`. Always executes when its block's conditions pass; must be idempotent.
+- `[xml]` — `paths` + `paths_mode`, `select`, `set_attr`, `set_child`,
+  `create_missing`, `create_parents`. Cross-platform. Idempotent (no write / no
+  restart when already identical).
+- `[systemd]` — `service`, `name`, `Environment` (+ `MemoryMax`/`CPUQuota`/
+  `Nice`). Gate with `[when]` `os = ["linux"]`.
+
+In the `[[block]]` array, sub-tables are written `[block.when]` /
+`[block.<action>]`; at the top level they are just `[when]` / `[<action>]`.
+
+Configs are processed **sorted by filename** — cross-cutting hooks use numeric
+prefixes (`10-`, `40-`). `${VAR}` (non-`MACKUP_*`) in block values resolves from
+the environment / a top-level `source_env` list. (The former `~/.bin/.sync-sets`
+script and the separate `sets/` directory are superseded by this model.)
 
 ### dconf (`dconf.py`)
 

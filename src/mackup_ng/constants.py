@@ -42,12 +42,19 @@ CUSTOM_APPS_DIR: str = os.path.join(MACKUP_HOME_DIR, APPS_DIR)
 CUSTOM_APPS_DIR_XDG: str = "mackup/applications"
 
 # Sub-directories under the Mackup home (~/.mackup/)
-HOOKS_BACKUP_DIRNAME: str = "backup.d"    # run before `mackup sync`
-HOOKS_RESTORE_DIRNAME: str = "restore.d"  # run after `mackup sync`
-MARKERS_DIRNAME: str = "markers"          # machine-local condition flags
-SETS_DIRNAME: str = "sets.d"              # declarative config sets (.sync-sets)
-STATE_DIRNAME: str = "state"              # hook scratch space
+MARKERS_DIRNAME: str = "markers"          # marker definitions (and legacy state)
 DCONF_DIRNAME: str = "dconf-backup"       # dconf dumps (*.dconf)
+
+# Marker DEFINITIONS (name + order), one *.toml per marker, like apps:
+# built-in ones ship in the package, local ones live under ~/.mackup/markers/.
+MARKERS_DEFS_DIRNAME: str = "markers"                          # package built-ins
+CUSTOM_MARKERS_DIR: str = os.path.join(MACKUP_HOME_DIR, MARKERS_DIRNAME)  # local defs
+
+# Marker STATE (on/off flags) is machine-local runtime state -> XDG_STATE_HOME.
+MARKERS_STATE_XDG: str = "mackup/markers"     # relative to $XDG_STATE_HOME
+# Pre-XDG state lived alongside the defs in ~/.mackup/markers/ (flag files, no
+# extension); migrated out to the XDG dir, leaving *.toml definitions in place.
+LEGACY_MARKERS_STATE_DIR: str = os.path.join(MACKUP_HOME_DIR, MARKERS_DIRNAME)
 
 # Supported engines
 ENGINE_DROPBOX: str = "dropbox"

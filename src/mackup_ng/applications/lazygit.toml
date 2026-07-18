@@ -1,0 +1,4 @@
+name = "lazygit"
+files = [
+    "${MACKUP_XDG_CONFIG}/[mac:jesseduffield/lazygit,lazygit]/config.yml",
+]

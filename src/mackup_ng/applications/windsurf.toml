@@ -1,0 +1,4 @@
+name = "Windsurf"
+files = [
+    "${MACKUP_XDG_CONFIG}/Windsurf/User/{keybindings.json,settings.json,snippets}",
+]

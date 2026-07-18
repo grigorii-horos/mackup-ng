@@ -1,0 +1,4 @@
+name = "Nethack"
+files = [
+    ".nethackrc",
+]

@@ -1,0 +1,4 @@
+name = "LibreOffice"
+files = [
+    "${MACKUP_XDG_CONFIG}/libreoffice",
+]

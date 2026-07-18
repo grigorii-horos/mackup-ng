@@ -1,0 +1,4 @@
+name = "pass"
+files = [
+    ".password-store",
+]

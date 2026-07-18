@@ -1,0 +1,4 @@
+name = "Paintbrush"
+files = [
+    "Library/Preferences/com.soggywaffles.Paintbrush.plist",
+]

@@ -1,0 +1,4 @@
+name = "Ancient Domains of Mystery"
+files = [
+    ".adom.data",
+]

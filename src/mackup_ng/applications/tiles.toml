@@ -1,0 +1,4 @@
+name = "Tiles"
+files = [
+    "Library/Preferences/com.sempliva.Tiles.plist",
+]

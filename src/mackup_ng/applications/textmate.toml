@@ -1,0 +1,9 @@
+name = "TextMate"
+files = [
+    "${MACKUP_XDG_CONFIG}/TextMate/Bundles",
+    "${MACKUP_XDG_CONFIG}/TextMate/PlugIns",
+    "${MACKUP_XDG_CONFIG}/TextMate/Pristine Copy",
+    "${MACKUP_XDG_CONFIG}/TextMate/Managed/Bundles",
+    "Library/Preferences/com.macromates.textmate.latex_config.plist",
+    ".tm_properties",
+]

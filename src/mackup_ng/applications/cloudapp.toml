@@ -1,0 +1,4 @@
+name = "CloudApp"
+files = [
+    "Library/Preferences/com.linebreak.CloudAppMacOSX.plist",
+]

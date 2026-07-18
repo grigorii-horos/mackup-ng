@@ -1,0 +1,5 @@
+name = "MPV"
+files = [
+    ".mpv/{channels.conf,config,input.conf}",
+    "${MACKUP_XDG_CONFIG}/mpv/{config,input.conf,mpv.conf,script-opts,scripts,watch_later}",
+]

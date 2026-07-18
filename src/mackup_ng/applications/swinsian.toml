@@ -1,0 +1,5 @@
+name = "Swinsian"
+files = [
+    "${MACKUP_XDG_CONFIG}/Swinsian/{Library.sqlite,License.swinsianlicense}",
+    "Library/Preferences/{com.swinsian.Swinsian.plist,com.swinsian.SwinsianDesktopWindow.plist}",
+]

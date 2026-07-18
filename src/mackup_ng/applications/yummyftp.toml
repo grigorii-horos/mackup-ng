@@ -1,0 +1,5 @@
+name = "Yummy FTP"
+files = [
+    "Library/Preferences/com.yummysoftware.yummy-ftp.plist",
+    "${MACKUP_XDG_CONFIG}/Yummy FTP/{Bookmarks,DefaultBookmark.bkmk}",
+]

@@ -1,0 +1,4 @@
+name = "Subler"
+files = [
+    "${MACKUP_XDG_CONFIG}/Subler",
+]

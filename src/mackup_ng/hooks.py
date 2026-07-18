@@ -1,60 +1,38 @@
-"""Machine-local hooks and markers for mackup-ng.
+"""Machine-local markers and the MACKUP_* env contract for mackup-ng.
 
 Layout under the Mackup home (``~/.mackup/``)::
 
-    applications/   custom application .cfg files
-    backup.d/       executables run BEFORE ``mackup sync``
-    sets.d/         declarative config sets applied natively after the file sync
-                    (see sets.py) — the restore-phase logic lives here now
-    markers/        machine-local condition flags gating hooks
-    state/          hook scratch space
+    applications/   config .toml files: sync lists + action blocks (see blocks.py)
+    markers/        LOCAL marker definitions (*.toml, same format as apps)
     dconf-backup/   dconf dumps (*.dconf)
 
-Markers are empty files whose presence toggles behaviour on this machine only
-(they must not be synced). ``backup`` marks the source machine.
+Marker STATE (empty flag files toggling behaviour on this machine only, never
+synced) lives in ``$XDG_STATE_HOME/mackup/markers/``. ``backup`` marks the
+source machine.
 
-Hooks receive a ``MACKUP_*`` environment contract (via :func:`hook_env`); the
-same contract is passed to ``[[run]]`` scripts inside config sets.
+Action blocks (`[run]`) receive a ``MACKUP_*`` environment contract via
+:func:`hook_env`.
 """
 
+import contextlib
 import os
 import platform
-import subprocess
+import shutil
+import tomllib
 
 from . import utils
+from .config import Config
 from .constants import (
+    CUSTOM_MARKERS_DIR,
     DCONF_DIRNAME,
-    HOOKS_BACKUP_DIRNAME,
-    HOOKS_RESTORE_DIRNAME,
+    LEGACY_MARKERS_STATE_DIR,
     MACKUP_HOME_DIR,
-    MARKERS_DIRNAME,
+    MARKERS_DEFS_DIRNAME,
+    MARKERS_STATE_XDG,
     PLATFORM_DARWIN,
     PLATFORM_LINUX,
     PLATFORM_WINDOWS,
-    STATE_DIRNAME,
 )
-
-# Phase name -> hook sub-directory
-PHASE_DIRS: dict[str, str] = {
-    "backup": HOOKS_BACKUP_DIRNAME,
-    "restore": HOOKS_RESTORE_DIRNAME,
-}
-
-# Known markers with descriptions (custom markers are also allowed)
-KNOWN_MARKERS: dict[str, str] = {
-    "backup": "this machine is the source; auto-mode = backup",
-    "low-resource": "weak device: syncthing tuning (sets.d)",
-    "no-linger": "opt-out: do NOT enable systemd linger (restore hook)",
-    "no-apikey": "opt-out: do NOT write syncthing apikey (sets.d)",
-    "no-dconf": "opt-out: do NOT back up / restore dconf on sync",
-}
-KNOWN_ORDER: list[str] = [
-    "backup",
-    "low-resource",
-    "no-linger",
-    "no-apikey",
-    "no-dconf",
-]
 
 
 # ---------------------------------------------------------------- paths
@@ -63,20 +41,97 @@ def mackup_home() -> str:
     return os.path.join(os.environ["HOME"], MACKUP_HOME_DIR)
 
 
+def backup_dir() -> str:
+    """Absolute path to the storage folder Mackup syncs into (``Config.fullpath``).
+
+    Resolves the configured storage engine/path from ``~/.mackup.cfg`` so hooks
+    and sets never hard-code ``~/Sync/Configs/Mackup``; it differs per machine.
+    Falls back to an empty string if the config can't be read.
+    """
+    try:
+        return Config().fullpath
+    except (Exception, SystemExit):
+        # Config() calls utils.error() (-> SystemExit) when the storage engine
+        # can't be located; the env var must degrade to "" rather than abort.
+        return ""
+
+
+def _pkg_markers_dir() -> str:
+    """Built-in marker definitions shipped inside the package."""
+    here = os.path.dirname(os.path.realpath(__file__))
+    return os.path.join(here, MARKERS_DEFS_DIRNAME)
+
+
+def custom_markers_dir() -> str:
+    """Local marker definitions: ~/.mackup/markers/."""
+    return os.path.join(os.environ["HOME"], CUSTOM_MARKERS_DIR)
+
+
 def markers_dir() -> str:
-    return os.path.join(mackup_home(), MARKERS_DIRNAME)
-
-
-def state_dir() -> str:
-    return os.path.join(mackup_home(), STATE_DIRNAME)
-
-
-def phase_dir(phase: str) -> str:
-    return os.path.join(mackup_home(), PHASE_DIRS[phase])
+    """Directory holding marker STATE flags: $XDG_STATE_HOME/mackup/markers/."""
+    base = os.environ.get(
+        "XDG_STATE_HOME", os.path.join(os.environ["HOME"], ".local", "state"),
+    )
+    return os.path.join(base, MARKERS_STATE_XDG)
 
 
 # ---------------------------------------------------------------- markers
+def _read_marker_def(path: str) -> dict | None:
+    """Parse one ``<name>.toml`` marker definition (same TOML format as apps)."""
+    try:
+        with open(path, "rb") as handle:
+            data = tomllib.load(handle)
+    except (OSError, tomllib.TOMLDecodeError):
+        return None
+    marker = data.get("marker")
+    return marker if isinstance(marker, dict) else None
+
+
+def load_marker_defs() -> dict[str, dict]:
+    """Known marker definitions: package built-ins + ~/.mackup/markers/.
+
+    Each definition is a ``<name>.toml`` file (id = filename stem) in the same
+    TOML format as app definitions, with a ``[marker]`` table (``name`` = human
+    label, optional ``order``). Local files override built-ins of the same id.
+    """
+    defs: dict[str, dict] = {}
+    for directory in (_pkg_markers_dir(), custom_markers_dir()):
+        if not os.path.isdir(directory):
+            continue
+        for filename in sorted(os.listdir(directory)):
+            if not filename.endswith(".toml"):
+                continue
+            data = _read_marker_def(os.path.join(directory, filename))
+            if data is not None:
+                defs[filename[: -len(".toml")]] = data
+    return defs
+
+
+def _migrate_legacy_markers() -> None:
+    """Move pre-XDG state flags from ~/.mackup/markers/ into the XDG state dir.
+
+    That directory now also holds marker *definitions* (``*.toml``); only the
+    extensionless flag files are migrated, definitions are left untouched.
+    """
+    legacy = os.path.join(os.environ["HOME"], LEGACY_MARKERS_STATE_DIR)
+    if not os.path.isdir(legacy):
+        return
+    dst = markers_dir()
+    if os.path.abspath(legacy) == os.path.abspath(dst):
+        return  # defs dir == state dir (misconfigured); nothing to migrate
+    for name in os.listdir(legacy):
+        src = os.path.join(legacy, name)
+        if name.endswith(".toml") or not os.path.isfile(src):
+            continue  # keep definitions and subdirs
+        os.makedirs(dst, exist_ok=True)
+        if not os.path.exists(os.path.join(dst, name)):
+            shutil.move(src, os.path.join(dst, name))
+    with contextlib.suppress(OSError):
+        os.rmdir(legacy)  # only succeeds when now empty (no defs, no flags)
+
+
 def has_marker(name: str) -> bool:
+    _migrate_legacy_markers()
     return os.path.isfile(os.path.join(markers_dir(), name))
 
 
@@ -93,29 +148,46 @@ def valid_marker_name(name: str) -> bool:
 
 
 def set_marker(name: str) -> None:
+    _migrate_legacy_markers()
     os.makedirs(markers_dir(), exist_ok=True)
     open(os.path.join(markers_dir(), name), "a").close()
 
 
 def unset_marker(name: str) -> None:
+    _migrate_legacy_markers()
     path = os.path.join(markers_dir(), name)
     if os.path.exists(path):
         os.remove(path)
 
 
+def _marker_line(name: str, label: str, *, active: bool) -> str:
+    """One colorized marker row: [x]/[ ] name — description."""
+    if active:
+        box = utils.style_text("[x]", color=utils.AnsiColor.GREEN)
+        name_c = utils.style_text(f"{name:<14}", color=utils.AnsiColor.CYAN, bold=True)
+    else:
+        box = utils.style_text("[ ]", color=utils.AnsiColor.GRAY)
+        name_c = f"{name:<14}"
+    dash = utils.style_text("—", color=utils.AnsiColor.GRAY)
+    label_c = utils.style_text(label, color=utils.AnsiColor.GRAY)
+    return f"  {box} {name_c} {dash} {label_c}"
+
+
 def markers_report() -> str:
     """Human-readable list: known markers (checked) + active custom ones."""
-    lines = [f"Markers ({markers_dir()}):"]
-    for name in KNOWN_ORDER:
-        flag = "[x]" if has_marker(name) else "[ ]"
-        lines.append(f"  {flag} {name:<14} — {KNOWN_MARKERS[name]}")
-    if os.path.isdir(markers_dir()):
-        for name in sorted(os.listdir(markers_dir())):
-            if not os.path.isfile(os.path.join(markers_dir(), name)):
-                continue
-            if name in KNOWN_MARKERS:
-                continue
-            lines.append(f"  [x] {name:<14} — custom")
+    defs = load_marker_defs()
+    state = markers_dir()
+    lines = [utils.style_text(f"Markers ({state}):", bold=True)]
+    lines.extend(
+        _marker_line(name, defs[name].get("name", ""), active=has_marker(name))
+        for name in sorted(defs, key=lambda n: (defs[n].get("order", 999), n))
+    )
+    if os.path.isdir(state):
+        lines.extend(
+            _marker_line(name, "custom", active=True)
+            for name in sorted(os.listdir(state))
+            if os.path.isfile(os.path.join(state, name)) and name not in defs
+        )
     return "\n".join(lines)
 
 
@@ -134,10 +206,8 @@ def os_kind() -> str:
     return "linux"
 
 
-def _has_gui() -> str:
-    if os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"):
-        return "1"
-    return "0"
+def has_gui() -> bool:
+    return bool(os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"))
 
 
 def hook_env(phase: str) -> dict[str, str]:
@@ -150,47 +220,13 @@ def hook_env(phase: str) -> dict[str, str]:
             "MACKUP_ROLE": machine_role(),
             "MACKUP_OS": os_kind(),
             "MACKUP_ARCH": platform.machine(),
-            "MACKUP_HAS_GUI": _has_gui(),
+            "MACKUP_HAS_GUI": "1" if has_gui() else "0",
             "MACKUP_CONFIG_DIR": home,
+            "MACKUP_BACKUP_DIR": backup_dir(),
             "MACKUP_MARKERS_DIR": markers_dir(),
-            "MACKUP_STATE_DIR": state_dir(),
             "MACKUP_DCONF_BACKUP_DIR": os.path.join(home, DCONF_DIRNAME),
         },
     )
     return env
 
 
-# ---------------------------------------------------------------- runner
-def _is_executable(path: str) -> bool:
-    return os.path.isfile(path) and os.access(path, os.X_OK)
-
-
-def run_hooks(phase: str, dry_run: bool = False) -> None:
-    """Run executable hooks in ~/.mackup/<phase>.d/ sorted by name.
-
-    A failing hook is warned about but never aborts the run.
-    """
-    hook_dir = phase_dir(phase)
-    if not os.path.isdir(hook_dir):
-        return
-
-    env = hook_env(phase)
-    for name in sorted(os.listdir(hook_dir)):
-        path = os.path.join(hook_dir, name)
-        if not _is_executable(path):
-            continue
-        print(utils.colorize_message(f"Synchronizing hook {phase}: {name}"), flush=True)
-        if dry_run:
-            continue
-        try:
-            subprocess.run([path], env=env, check=True)
-        except subprocess.CalledProcessError as exc:
-            print(
-                utils.colorize_message(
-                    f"Warning: hook {name} failed (code {exc.returncode})",
-                ),
-            )
-        except OSError as exc:
-            print(
-                utils.colorize_message(f"Warning: hook {name} could not run: {exc}"),
-            )

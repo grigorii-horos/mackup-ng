@@ -1,0 +1,5 @@
+name = "Transmit"
+files = [
+    "Library/Preferences/com.panic.Transmit.plist",
+    "${MACKUP_XDG_CONFIG}/Transmit/{Favorites,Metadata}",
+]

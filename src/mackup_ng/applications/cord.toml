@@ -1,0 +1,4 @@
+name = "CoRD"
+files = [
+    "${MACKUP_XDG_CONFIG}/CoRD",
+]

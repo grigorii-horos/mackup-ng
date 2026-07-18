@@ -1,0 +1,4 @@
+name = "tilix"
+files = [
+    "tilix.dconf",
+]

@@ -1,0 +1,5 @@
+name = "Sequel Pro"
+files = [
+    "${MACKUP_XDG_CONFIG}/Sequel Pro/{Bundles,Data,Themes}",
+    "Library/Preferences/com.sequelpro.SequelPro.plist",
+]

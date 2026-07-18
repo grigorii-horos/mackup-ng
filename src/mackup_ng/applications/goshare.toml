@@ -1,0 +1,4 @@
+name = "GoShare"
+files = [
+    "${MACKUP_XDG_CONFIG}/dictget/goshare",
+]

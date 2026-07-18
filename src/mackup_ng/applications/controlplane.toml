@@ -1,0 +1,4 @@
+name = "ControlPlane"
+files = [
+    "Library/Preferences/com.dustinrue.ControlPlane.plist",
+]

@@ -1,0 +1,4 @@
+name = "Prezto"
+files = [
+    ".zpreztorc",
+]

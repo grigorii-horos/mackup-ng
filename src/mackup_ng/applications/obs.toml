@@ -1,0 +1,5 @@
+name = "OBS"
+files = [
+    "Library/Preferences/com.obsproject.obs-studio.plist",
+    "${MACKUP_XDG_CONFIG}/obs-studio/{basic,global.ini}",
+]

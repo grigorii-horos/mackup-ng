@@ -1,0 +1,5 @@
+name = "Adobe Lightroom"
+files = [
+    "${MACKUP_XDG_CONFIG}/Adobe/Lightroom",
+    "Library/Preferences/{com.adobe.Lightroom4.plist,com.adobe.Lightroom5.plist,com.adobe.Lightroom6.plist}",
+]

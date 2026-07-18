@@ -1,0 +1,4 @@
+name = "iTermocil"
+files = [
+    ".itermocil",
+]

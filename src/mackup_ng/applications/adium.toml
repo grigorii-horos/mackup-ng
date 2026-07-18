@@ -1,0 +1,5 @@
+name = "Adium"
+files = [
+    "${MACKUP_XDG_CONFIG}/Adium 2.0",
+    "Library/Preferences/com.adiumX.adiumX.plist",
+]

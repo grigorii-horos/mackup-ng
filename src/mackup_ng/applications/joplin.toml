@@ -1,0 +1,4 @@
+name = "Joplin"
+files = [
+    "${MACKUP_XDG_CONFIG}/joplin-desktop/{userchrome.css,userstyle.css}",
+]

@@ -1,0 +1,4 @@
+name = "Autokey"
+files = [
+    "${MACKUP_XDG_CONFIG}/autokey",
+]

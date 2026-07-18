@@ -1,0 +1,5 @@
+name = "Qutebrowser"
+files = [
+    ".qutebrowser/config.py",
+    "${MACKUP_XDG_CONFIG}/qutebrowser/{config.py,qutebrowser.conf}",
+]

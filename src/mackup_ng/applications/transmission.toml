@@ -1,0 +1,6 @@
+name = "Transmission"
+files = [
+    "Library/Preferences/org.m0k.transmission.plist",
+    "${MACKUP_XDG_CONFIG}/[mac:Transmission,transmission]/{blocklists,settings.json,stats.json}",
+    "${MACKUP_XDG_CONFIG}/transmission-daemon/{blocklists,settings.json,stats.json}",
+]

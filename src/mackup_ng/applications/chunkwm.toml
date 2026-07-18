@@ -1,0 +1,5 @@
+name = "chunkwm"
+files = [
+    ".chunkwmrc",
+    ".chunkwm_plugins",
+]

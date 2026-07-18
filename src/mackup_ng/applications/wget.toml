@@ -1,0 +1,5 @@
+name = "Wget"
+files = [
+    ".wgetrc",
+    ".wget-hsts",
+]

@@ -1,0 +1,5 @@
+name = "flake8"
+files = [
+    ".flake8",
+    "${MACKUP_XDG_CONFIG}/flake8",
+]

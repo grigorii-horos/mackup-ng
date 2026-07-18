@@ -1,0 +1,4 @@
+name = "Forge"
+files = [
+    "${MACKUP_XDG_CONFIG}/Forge",
+]

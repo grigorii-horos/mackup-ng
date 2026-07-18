@@ -1,0 +1,4 @@
+name = "XChat"
+files = [
+    ".xchat2",
+]

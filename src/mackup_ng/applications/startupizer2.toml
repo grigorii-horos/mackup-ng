@@ -1,0 +1,4 @@
+name = "Startupizer2"
+files = [
+    "${MACKUP_XDG_CONFIG}/Startupizer",
+]

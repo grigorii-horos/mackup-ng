@@ -1,0 +1,5 @@
+name = "skhd"
+files = [
+    ".skhdrc",
+    "${MACKUP_XDG_CONFIG}/skhd/skhdrc",
+]

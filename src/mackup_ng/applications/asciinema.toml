@@ -1,0 +1,4 @@
+name = "asciinema"
+files = [
+    "${MACKUP_XDG_CONFIG}/asciinema",
+]

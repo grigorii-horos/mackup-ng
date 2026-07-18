@@ -1,0 +1,4 @@
+name = "hub"
+files = [
+    "${MACKUP_XDG_CONFIG}/hub",
+]

@@ -1,0 +1,4 @@
+name = "fastlane"
+files = [
+    ".fastlane/completions",
+]

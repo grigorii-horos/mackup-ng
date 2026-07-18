@@ -1,0 +1,5 @@
+name = "Bartender"
+files = [
+    "Library/Preferences/{com.surteesstudios.Bartender-setapp.plist,com.surteesstudios.Bartender.plist}",
+    "${MACKUP_XDG_CONFIG}/Bartender/Bartender.BartenderPreferences",
+]

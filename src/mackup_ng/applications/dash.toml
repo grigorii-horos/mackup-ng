@@ -1,0 +1,6 @@
+name = "Dash"
+files = [
+    "${MACKUP_XDG_CONFIG}/Dash/library.dash",
+    "${MACKUP_XDG_CONFIG}/Dash/License/license.dash-license",
+    "Library/Preferences/{com.kapeli.dash.plist,com.kapeli.dashdoc.plist}",
+]

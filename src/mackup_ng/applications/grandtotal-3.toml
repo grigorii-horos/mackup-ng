@@ -1,0 +1,5 @@
+name = "GrandTotal 3"
+files = [
+    "${MACKUP_XDG_CONFIG}/GrandTotal/AddressBook.plist",
+    "Library/Preferences/com.mediaatelier.GrandTotal3.plist",
+]

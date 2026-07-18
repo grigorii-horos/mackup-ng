@@ -1,0 +1,4 @@
+name = "Environmental Station Alpha"
+files = [
+    "${MACKUP_XDG_CONFIG}/MMFApplications",
+]

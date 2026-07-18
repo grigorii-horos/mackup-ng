@@ -1,0 +1,5 @@
+name = "Tower"
+files = [
+    "Library/Application Support/{com.fournova.Tower3,Tower}",
+    "Library/Preferences/{com.fournova.Tower.plist,com.fournova.Tower3.plist}",
+]

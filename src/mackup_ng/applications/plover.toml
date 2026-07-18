@@ -1,0 +1,4 @@
+name = "Plover"
+files = [
+    "${MACKUP_XDG_CONFIG}/Plover",
+]

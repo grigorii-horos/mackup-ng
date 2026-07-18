@@ -1,0 +1,4 @@
+name = "Double Commander"
+files = [
+    "${MACKUP_XDG_CONFIG}/doublecmd/{doublecmd.ext,doublecmd.xml,shortcuts.scf,wfx.ini}",
+]

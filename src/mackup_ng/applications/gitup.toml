@@ -1,0 +1,4 @@
+name = "GitUp"
+files = [
+    "Library/Preferences/co.gitup.mac.plist",
+]

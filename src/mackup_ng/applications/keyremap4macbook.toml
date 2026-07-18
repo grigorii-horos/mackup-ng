@@ -1,0 +1,5 @@
+name = "KeyRemap4MacBook"
+files = [
+    "Library/Preferences/{org.pqrs.KeyRemap4MacBook.multitouchextension.plist,org.pqrs.KeyRemap4MacBook.plist}",
+    "${MACKUP_XDG_CONFIG}/KeyRemap4MacBook/private.xml",
+]

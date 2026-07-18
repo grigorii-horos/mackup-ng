@@ -1,0 +1,4 @@
+name = "Electrum"
+files = [
+    ".electrum/config",
+]

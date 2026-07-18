@@ -1,0 +1,4 @@
+name = "Mendelay Desktop"
+files = [
+    "${MACKUP_XDG_CONFIG}/Mendeley Desktop",
+]

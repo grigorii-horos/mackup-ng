@@ -1,0 +1,4 @@
+name = "waybar"
+files = [
+    "${MACKUP_XDG_CONFIG}/waybar",
+]

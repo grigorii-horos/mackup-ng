@@ -1,0 +1,5 @@
+name = "MacDive"
+files = [
+    "${MACKUP_XDG_CONFIG}/MacDive",
+    "Library/Preferences/com.mintsoftware.MacDive2.plist",
+]

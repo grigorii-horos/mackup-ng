@@ -1,0 +1,5 @@
+name = "Ghostty"
+files = [
+    "${MACKUP_XDG_CONFIG}/ghostty/config",
+    "Library/Application Support/com.mitchellh.ghostty",
+]

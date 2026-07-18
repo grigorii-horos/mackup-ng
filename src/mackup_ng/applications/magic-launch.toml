@@ -1,0 +1,4 @@
+name = "Magic Launch"
+files = [
+    "Library/Preferences/com.metakine.magic-launch.agent.plist",
+]

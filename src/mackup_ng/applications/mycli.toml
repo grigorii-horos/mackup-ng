@@ -1,0 +1,4 @@
+name = "mycli"
+files = [
+    ".myclirc",
+]

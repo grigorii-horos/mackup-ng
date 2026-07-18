@@ -1,0 +1,4 @@
+name = "Keymo"
+files = [
+    "Library/Preferences/com.manytricks.Keymo.plist",
+]

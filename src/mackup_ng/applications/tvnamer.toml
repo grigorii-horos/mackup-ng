@@ -1,0 +1,4 @@
+name = "tvnamer"
+files = [
+    ".tvnamer.json",
+]

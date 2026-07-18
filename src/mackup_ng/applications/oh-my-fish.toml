@@ -1,0 +1,4 @@
+name = "Oh My Fish"
+files = [
+    "${MACKUP_XDG_CONFIG}/omf",
+]

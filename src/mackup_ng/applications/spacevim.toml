@@ -1,0 +1,4 @@
+name = "SpaceVim"
+files = [
+    ".SpaceVim.d",
+]

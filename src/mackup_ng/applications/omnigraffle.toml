@@ -1,0 +1,4 @@
+name = "OmniGraffle"
+files = [
+    "${MACKUP_XDG_CONFIG}/The Omni Group/OmniGraffle",
+]

@@ -1,0 +1,6 @@
+name = "KeePassX"
+files = [
+    ".keepassx",
+    "Library/Preferences/org.keepassx.keepassx.plist",
+    "${MACKUP_XDG_CONFIG}/keepassx/keepassx2.ini",
+]

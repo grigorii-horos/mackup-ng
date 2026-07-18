@@ -1,0 +1,7 @@
+name = "Stata"
+files = [
+    "${MACKUP_XDG_CONFIG}/Stata",
+    "Library/Preferences/com.stata.stata12.plist",
+    "Library/Preferences/com.stata.stata13.plist",
+    "Library/Preferences/Stata 13 Preferences",
+]

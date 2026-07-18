@@ -1,0 +1,4 @@
+name = "Tmuxinator"
+files = [
+    "${MACKUP_XDG_CONFIG}/tmuxinator",
+]

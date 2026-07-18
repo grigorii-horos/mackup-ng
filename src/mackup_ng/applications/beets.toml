@@ -1,0 +1,4 @@
+name = "Beets"
+files = [
+    "${MACKUP_XDG_CONFIG}/beets/config.yaml",
+]

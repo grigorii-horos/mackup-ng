@@ -1,0 +1,4 @@
+name = "nvpy"
+files = [
+    ".nvpy.cfg",
+]

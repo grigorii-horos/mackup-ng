@@ -1,0 +1,4 @@
+name = "Ghidra"
+files = [
+    ".ghidra",
+]

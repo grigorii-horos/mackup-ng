@@ -1,0 +1,5 @@
+name = "Kaleidoscope"
+files = [
+    "Library/Preferences/com.blackpixel.kaleidoscope.plist",
+    "${MACKUP_XDG_CONFIG}/Kaleidoscope",
+]

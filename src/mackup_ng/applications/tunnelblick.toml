@@ -1,0 +1,4 @@
+name = "Tunnelblick"
+files = [
+    "${MACKUP_XDG_CONFIG}/Tunnelblick/Configurations",
+]

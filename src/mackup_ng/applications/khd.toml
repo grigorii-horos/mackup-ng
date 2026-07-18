@@ -1,0 +1,4 @@
+name = "khd"
+files = [
+    ".khdrc",
+]

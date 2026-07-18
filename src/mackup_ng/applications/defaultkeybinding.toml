@@ -1,0 +1,4 @@
+name = "DefaultKeyBinding"
+files = [
+    "Library/KeyBindings/DefaultKeyBinding.dict",
+]

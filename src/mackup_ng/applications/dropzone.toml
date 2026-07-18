@@ -1,0 +1,5 @@
+name = "Dropzone 3"
+files = [
+    "${MACKUP_XDG_CONFIG}/Dropzone 3",
+    "Library/Preferences/com.aptonic.Dropzone3.plist",
+]

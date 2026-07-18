@@ -1,0 +1,5 @@
+name = "MySQL Workbench"
+files = [
+    "${MACKUP_XDG_CONFIG}/MySQL/Workbench/{connections.xml,server_instances.xml,wb_options.xml}",
+    "Library/Preferences/com.oracle.mysql.workbench.plist",
+]

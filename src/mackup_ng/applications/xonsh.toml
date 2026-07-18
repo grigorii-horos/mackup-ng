@@ -1,0 +1,5 @@
+name = "Xonsh"
+files = [
+    ".xonshrc",
+    "${MACKUP_XDG_CONFIG}/xonsh",
+]

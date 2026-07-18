@@ -1,0 +1,4 @@
+name = "Lollypop"
+files = [
+    "${MACKUP_XDG_DATA}/lollypop",
+]

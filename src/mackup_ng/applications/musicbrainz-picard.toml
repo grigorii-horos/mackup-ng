@@ -1,0 +1,4 @@
+name = "MusicBrainz Picard"
+files = [
+    "${MACKUP_XDG_CONFIG}/MusicBrainz",
+]

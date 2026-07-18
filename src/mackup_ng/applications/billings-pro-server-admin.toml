@@ -1,0 +1,4 @@
+name = "Billings Pro Server Admin"
+files = [
+    "Library/Preferences/com.marketcircle.BillingsProServerAdmin.plist",
+]

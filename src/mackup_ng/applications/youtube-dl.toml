@@ -1,0 +1,4 @@
+name = "youtube-dl"
+files = [
+    "${MACKUP_XDG_CONFIG}/{youtube-dl,yt-dlp}/config",
+]

@@ -1,0 +1,5 @@
+name = "OpenCode"
+files = [
+    "${MACKUP_XDG_DATA}/opencode/auth.json",
+    "${MACKUP_XDG_CONFIG}/opencode/{agent,AGENTS.md,command,config.json,opencode.json,opencode.jsonc,settings,themes,tool}",
+]

@@ -1,0 +1,5 @@
+name = "Kdenlive"
+files = [
+    "kdenlive",
+    "${MACKUP_XDG_CONFIG}/kdenliverc",
+]

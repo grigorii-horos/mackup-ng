@@ -1,0 +1,5 @@
+name = "FastScripts"
+files = [
+    "Library/Preferences/com.red-sweater.fastscripts.plist",
+    "${MACKUP_XDG_CONFIG}/FastScripts",
+]

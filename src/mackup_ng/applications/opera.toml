@@ -1,0 +1,7 @@
+name = "Opera"
+files = [
+    "${MACKUP_XDG_CONFIG}/[mac:com.operasoftware.Opera,opera]",
+    "${MACKUP_XDG_CONFIG}/[mac:com.operasoftware.OperaDeveloper,opera-developer]",
+    "${MACKUP_XDG_CONFIG}/[mac:com.operasoftware.OperaNext,opera-next]",
+    "Library/Preferences/{com.operasoftware.Opera.plist,com.operasoftware.OperaDeveloper.plist,com.operasoftware.OperaNext.plist}",
+]

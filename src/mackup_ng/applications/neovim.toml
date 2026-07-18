@@ -1,0 +1,6 @@
+name = "neovim"
+files = [
+    ".nvimrc",
+    ".nvim",
+    "${MACKUP_XDG_CONFIG}/nvim/{colors,compiler,ftdetect,ftplugin,indent,init.lua,init.vim,lua,plugin,syntax}",
+]

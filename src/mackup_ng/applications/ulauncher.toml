@@ -1,0 +1,4 @@
+name = "Ulauncher"
+files = [
+    "${MACKUP_XDG_CONFIG}/ulauncher/{extensions.json,settings.json,shortcuts.json}",
+]

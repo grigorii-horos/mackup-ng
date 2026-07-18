@@ -1,0 +1,5 @@
+name = "Karabiner"
+files = [
+    "Library/Preferences/{org.pqrs.Karabiner-AXNotifier.plist,org.pqrs.Karabiner.multitouchextension.plist,org.pqrs.Karabiner.plist}",
+    "${MACKUP_XDG_CONFIG}/Karabiner",
+]

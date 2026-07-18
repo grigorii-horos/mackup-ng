@@ -1,0 +1,4 @@
+name = "Priority Test App Legacy"
+files = [
+    ".priority-test-legacy",
+]

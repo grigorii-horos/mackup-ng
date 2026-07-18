@@ -1,0 +1,4 @@
+name = "ColorSync"
+files = [
+    "Library/ColorSync/Profiles",
+]

@@ -1,0 +1,4 @@
+name = "Verdaccio"
+files = [
+    "${MACKUP_XDG_CONFIG}/verdaccio/config.yaml",
+]

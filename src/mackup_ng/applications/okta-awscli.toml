@@ -1,0 +1,4 @@
+name = "okta-awscli"
+files = [
+    ".okta-aws",
+]

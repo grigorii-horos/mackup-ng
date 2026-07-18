@@ -1,0 +1,4 @@
+name = "Zoom"
+files = [
+    "Library/Preferences/{us.zoom.Transcode.plist,us.zoom.xos.Hotkey.plist,us.zoom.xos.plist,us.zoom.ZoomAutoUpdater.plist,ZoomChat.plist}",
+]

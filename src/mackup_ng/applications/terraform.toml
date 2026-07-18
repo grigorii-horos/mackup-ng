@@ -1,0 +1,5 @@
+name = "Terraform"
+files = [
+    ".terraformrc",
+    ".terraform.d",
+]

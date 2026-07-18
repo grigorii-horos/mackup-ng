@@ -1,0 +1,5 @@
+name = "Boxer"
+files = [
+    "Library/Preferences/net.washboardabs.boxer.plist",
+    "Applications/DOS Games",
+]

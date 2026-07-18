@@ -1,0 +1,4 @@
+name = "PicGo"
+files = [
+    "${MACKUP_XDG_CONFIG}/picgo/data.json",
+]

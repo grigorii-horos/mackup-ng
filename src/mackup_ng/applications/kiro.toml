@@ -1,0 +1,4 @@
+name = "Kiro"
+files = [
+    "${MACKUP_XDG_CONFIG}/Kiro/User/{keybindings.json,settings.json,snippets}",
+]

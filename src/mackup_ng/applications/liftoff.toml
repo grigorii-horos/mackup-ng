@@ -1,0 +1,4 @@
+name = "liftoff"
+files = [
+    ".liftoffrc",
+]

@@ -1,0 +1,5 @@
+name = "PostgreSQL"
+files = [
+    ".pgpass",
+    ".psqlrc",
+]

@@ -1,0 +1,4 @@
+name = "Karabiner Elements"
+files = [
+    "${MACKUP_XDG_CONFIG}/karabiner",
+]

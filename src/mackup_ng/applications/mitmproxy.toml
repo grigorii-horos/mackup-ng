@@ -1,0 +1,4 @@
+name = "mitmproxy"
+files = [
+    ".mitmproxy/config.yaml",
+]

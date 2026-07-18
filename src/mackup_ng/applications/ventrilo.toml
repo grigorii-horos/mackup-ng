@@ -1,0 +1,4 @@
+name = "Ventrilo"
+files = [
+    "Library/Preferences/Ventrilo",
+]

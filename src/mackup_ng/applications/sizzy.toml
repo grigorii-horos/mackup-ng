@@ -1,0 +1,4 @@
+name = "Sizzy"
+files = [
+    "${MACKUP_XDG_CONFIG}/Sizzy/{config.json,window-state.json}",
+]

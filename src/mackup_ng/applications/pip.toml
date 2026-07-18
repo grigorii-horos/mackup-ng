@@ -1,0 +1,5 @@
+name = "pip"
+files = [
+    "${MACKUP_XDG_CONFIG}/pip/pip.conf",
+    ".pip/pip.conf",
+]

@@ -1,0 +1,4 @@
+name = "HexChat"
+files = [
+    "${MACKUP_XDG_CONFIG}/hexchat",
+]

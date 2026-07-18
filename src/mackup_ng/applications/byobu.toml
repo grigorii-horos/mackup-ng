@@ -1,0 +1,7 @@
+name = "Byobu"
+files = [
+    ".byobu/{.screenrc,.tmux.conf,backend,color,color.tmux,datetime.tmux,keybindings,keybindings.tmux,profile,profile.tmux,prompt,prompt.tmux,status,statusrc,windows,windows.tmux}",
+    ".byoburc",
+    ".byoburc.tmux",
+    ".byoburc.screen",
+]

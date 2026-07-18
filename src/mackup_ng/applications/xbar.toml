@@ -1,0 +1,4 @@
+name = "xbar"
+files = [
+    "${MACKUP_XDG_CONFIG}/xbar/{plugins,xbar.config.json}",
+]

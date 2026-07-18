@@ -1,0 +1,4 @@
+name = "Mail"
+files = [
+    "Library/Preferences/com.apple.mail.plist",
+]

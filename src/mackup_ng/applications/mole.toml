@@ -1,0 +1,4 @@
+name = "Mole"
+files = [
+    "${MACKUP_XDG_CONFIG}/mole/whitelist",
+]

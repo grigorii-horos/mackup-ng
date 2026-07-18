@@ -1,0 +1,4 @@
+name = "Eagle (ogdesign)"
+files = [
+    "${MACKUP_XDG_CONFIG}/Eagle/Settings",
+]

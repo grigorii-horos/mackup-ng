@@ -1,0 +1,4 @@
+name = "Microsoft Remote Desktop"
+files = [
+    "Library/Containers/com.microsoft.rdc.macos/Data/Library/Preferences/com.microsoft.rdc.macos.plist",
+]

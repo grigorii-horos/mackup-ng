@@ -1,0 +1,4 @@
+name = "Wireshark 2"
+files = [
+    "${MACKUP_XDG_CONFIG}/wireshark",
+]

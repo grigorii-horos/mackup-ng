@@ -1,0 +1,5 @@
+name = "Liquid Prompt"
+files = [
+    ".liquidpromptrc",
+    "${MACKUP_XDG_CONFIG}/liquidpromptrc",
+]

@@ -1,0 +1,4 @@
+name = "Popcorn-Time"
+files = [
+    "${MACKUP_XDG_CONFIG}/Popcorn-Time/data/{bookmarks.db,movies.db,settings.db,shows.db,watched.db}",
+]

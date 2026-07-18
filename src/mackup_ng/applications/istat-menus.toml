@@ -1,0 +1,4 @@
+name = "iStat Menus"
+files = [
+    "Library/Preferences/{com.bjango.istatmenus.menubar.7.plist,com.bjango.istatmenus.plist,com.bjango.istatmenus.status.plist,com.bjango.istatmenus5.extras.plist,com.bjango.istatmenus6.extras.plist}",
+]

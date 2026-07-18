@@ -1,0 +1,4 @@
+name = "Cerebro"
+files = [
+    "${MACKUP_XDG_CONFIG}/Cerebro/{config.json,plugins}",
+]

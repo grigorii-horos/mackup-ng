@@ -1,0 +1,4 @@
+name = "Twitterrific"
+files = [
+    "${MACKUP_XDG_CONFIG}/Twitterrific",
+]

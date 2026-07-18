@@ -1,0 +1,4 @@
+name = "Phoenix"
+files = [
+    ".phoenix.js",
+]

@@ -1,0 +1,4 @@
+name = "Arm"
+files = [
+    ".arm/armrc",
+]

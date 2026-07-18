@@ -1,0 +1,5 @@
+name = "Tig"
+files = [
+    ".tigrc",
+    "${MACKUP_XDG_CONFIG}/tig/config",
+]

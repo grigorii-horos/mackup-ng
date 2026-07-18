@@ -1,0 +1,5 @@
+name = "yabai"
+files = [
+    ".yabairc",
+    "${MACKUP_XDG_CONFIG}/yabai/yabairc",
+]

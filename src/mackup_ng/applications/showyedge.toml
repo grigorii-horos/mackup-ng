@@ -1,0 +1,4 @@
+name = "ShowyEdge"
+files = [
+    "Library/Preferences/org.pqrs.ShowyEdge.plist",
+]

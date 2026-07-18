@@ -1,0 +1,5 @@
+name = "Htop"
+files = [
+    ".htoprc",
+    "${MACKUP_XDG_CONFIG}/htop/htoprc",
+]

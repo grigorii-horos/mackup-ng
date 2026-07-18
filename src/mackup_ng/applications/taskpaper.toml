@@ -1,0 +1,5 @@
+name = "Task Paper"
+files = [
+    "Library/Preferences/com.hogbaysoftware.TaskPaper.mac.plist",
+    "${MACKUP_XDG_CONFIG}/TaskPaper",
+]

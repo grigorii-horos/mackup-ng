@@ -1,0 +1,6 @@
+name = "Emacs"
+files = [
+    ".emacs",
+    ".emacs.d",
+    "${MACKUP_XDG_CONFIG}/emacs",
+]

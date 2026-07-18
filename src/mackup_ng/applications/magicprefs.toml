@@ -1,0 +1,4 @@
+name = "MagicPrefs"
+files = [
+    "Library/Preferences/{com.vladalexa.MagicPrefs.MagicPrefsPlugins.plist,com.vladalexa.MagicPrefs.plist}",
+]

@@ -1,0 +1,4 @@
+name = "rubiTrack 5"
+files = [
+    "Library/Preferences/com.shiftoption.rubitrack5.pro.plist",
+]

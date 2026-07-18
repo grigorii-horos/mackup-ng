@@ -1,0 +1,7 @@
+name = "Soulver"
+files = [
+    "${MACKUP_XDG_CONFIG}/Soulver",
+    "Library/Preferences/com.acqualia.soulver.plist",
+    "${MACKUP_XDG_CONFIG}/Soulver 3",
+    "Library/Preferences/app.soulver.mac.plist",
+]

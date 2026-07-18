@@ -1,0 +1,4 @@
+name = "Ghostwriter"
+files = [
+    "${MACKUP_XDG_CONFIG}/ghostwriter",
+]

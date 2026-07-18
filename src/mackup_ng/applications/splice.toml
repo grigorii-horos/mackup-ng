@@ -1,0 +1,4 @@
+name = "Splice"
+files = [
+    "Library/Preferences/com.splice.Splice.plist",
+]

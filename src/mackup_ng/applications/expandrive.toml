@@ -1,0 +1,5 @@
+name = "ExpanDrive"
+files = [
+    "${MACKUP_XDG_CONFIG}/ExpanDrive",
+    "Preferences/{com.expandrive.ExpanDrive2.plist,com.expandrive.ExpanDrive3.plist}",
+]

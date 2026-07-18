@@ -1,0 +1,5 @@
+name = "VLC"
+files = [
+    "${MACKUP_XDG_CONFIG}/[mac:org.videolan.vlc,vlc]",
+    "Library/Preferences/{org.videolan.vlc,org.videolan.vlc.LSSharedFileList.plist,org.videolan.vlc.plist}",
+]

@@ -1,0 +1,5 @@
+name = "ClipMenu"
+files = [
+    "${MACKUP_XDG_CONFIG}/ClipMenu",
+    "Library/Preferences/com.naotaka.ClipMenu.plist",
+]

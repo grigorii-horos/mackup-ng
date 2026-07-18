@@ -1,0 +1,4 @@
+name = "openbox"
+files = [
+    "${MACKUP_XDG_CONFIG}/openbox/{autostart,environment,menu.xml,rc.xml}",
+]

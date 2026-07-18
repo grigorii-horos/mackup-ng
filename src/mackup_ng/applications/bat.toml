@@ -1,0 +1,4 @@
+name = "Bat"
+files = [
+    "${MACKUP_XDG_CONFIG}/bat/{config,syntaxes,themes}",
+]

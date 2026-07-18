@@ -1,0 +1,4 @@
+name = "Pock"
+files = [
+    "Library/Preferences/com.pigigaldi.pock.plist",
+]

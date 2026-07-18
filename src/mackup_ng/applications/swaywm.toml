@@ -1,0 +1,4 @@
+name = "Swaywm"
+files = [
+    "${MACKUP_XDG_CONFIG}/sway",
+]

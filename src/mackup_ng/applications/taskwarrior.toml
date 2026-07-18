@@ -1,0 +1,4 @@
+name = "Taskwarrior"
+files = [
+    ".taskrc",
+]

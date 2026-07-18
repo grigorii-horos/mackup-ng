@@ -1,0 +1,4 @@
+name = "Doxie"
+files = [
+    "Library/Preferences/com.getdoxie.doxie.plist",
+]

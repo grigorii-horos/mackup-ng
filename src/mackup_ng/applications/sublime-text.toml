@@ -1,0 +1,4 @@
+name = "Sublime Text"
+files = [
+    "${MACKUP_XDG_CONFIG}/[mac:Sublime Text,sublime-text]/Packages/User",
+]

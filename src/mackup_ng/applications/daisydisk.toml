@@ -1,0 +1,5 @@
+name = "DaisyDisk"
+files = [
+    "${MACKUP_XDG_CONFIG}/DaisyDisk/License.DaisyDisk",
+    "Library/Preferences/com.daisydiskapp.DaisyDiskStandAlone.plist",
+]

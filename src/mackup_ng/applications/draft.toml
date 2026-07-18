@@ -1,0 +1,4 @@
+name = "Draft"
+files = [
+    ".draft/config.toml",
+]

@@ -1,0 +1,5 @@
+name = "Livestreamer"
+files = [
+    ".livestreamerrc",
+    "${MACKUP_XDG_CONFIG}/livestreamer/{config,plugins}",
+]

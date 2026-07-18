@@ -1,0 +1,4 @@
+name = "SourceTree"
+files = [
+    "${MACKUP_XDG_CONFIG}/SourceTree/{browser.plist,hgrc_sourcetree,hostingservices.plist,sourcetree.license}",
+]

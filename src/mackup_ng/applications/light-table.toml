@@ -1,0 +1,5 @@
+name = "Light Table"
+files = [
+    "${MACKUP_XDG_CONFIG}/LightTable/{plugins,settings,User}",
+    "Library/Preferences/com.kodowa.LightTable.plist",
+]

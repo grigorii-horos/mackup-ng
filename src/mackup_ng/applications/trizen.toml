@@ -1,0 +1,4 @@
+name = "Trizen"
+files = [
+    "${MACKUP_XDG_CONFIG}/trizen/trizen.conf",
+]

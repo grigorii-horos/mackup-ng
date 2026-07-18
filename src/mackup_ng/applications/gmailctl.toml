@@ -1,0 +1,4 @@
+name = "gmailctl"
+files = [
+    ".gmailctl/{config.jsonnet,credentials.json,gmailctl.libsonnet}",
+]

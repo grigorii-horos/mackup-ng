@@ -1,0 +1,4 @@
+name = "PsySH"
+files = [
+    "${MACKUP_XDG_CONFIG}/psysh/config.php",
+]

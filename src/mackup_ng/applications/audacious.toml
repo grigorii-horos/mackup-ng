@@ -1,0 +1,4 @@
+name = "Audacious"
+files = [
+    "${MACKUP_XDG_CONFIG}/audacious/{config,playlist-state,playlists,plugin-registry,scrobbler.log}",
+]

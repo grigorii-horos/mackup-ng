@@ -1,0 +1,4 @@
+name = "inkscape"
+files = [
+    "${MACKUP_XDG_CONFIG}/inkscape/preferences.xml",
+]

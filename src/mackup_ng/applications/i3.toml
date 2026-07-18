@@ -1,0 +1,6 @@
+name = "i3"
+files = [
+    ".i3/config",
+    ".i3status.conf",
+    "${MACKUP_XDG_CONFIG}/i3/config",
+]

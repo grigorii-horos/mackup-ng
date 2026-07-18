@@ -1,0 +1,4 @@
+name = "SpaceLauncher"
+files = [
+    "Library/Preferences/name.guoc.SpaceLauncher.plist",
+]

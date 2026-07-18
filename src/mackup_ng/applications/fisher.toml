@@ -1,0 +1,4 @@
+name = "Fisher"
+files = [
+    "${MACKUP_XDG_CONFIG}/fish/fish_plugins",
+]

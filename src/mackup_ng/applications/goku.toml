@@ -1,0 +1,4 @@
+name = "Goku"
+files = [
+    "${MACKUP_XDG_CONFIG}/karabiner.edn",
+]

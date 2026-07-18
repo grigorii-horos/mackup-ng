@@ -64,19 +64,37 @@ Manages the database of supported applications and their configuration files.
 
 **Sources:**
 
-- Built-in application configs (`mackup_ng/applications/*.cfg`)
-- User-defined custom configs (`~/.mackup/*.cfg`)
+- Built-in application configs (`mackup_ng/applications/*.toml`)
+- User-defined custom configs (`~/.mackup/applications/*.toml`)
 
-**Application Config Format:**
+**Application Config Format (flat TOML):**
 
-```ini
-[application]
-name = Application Name
+```toml
+name = "Application Name"
+files = [
+    ".config_file",
+    "folder/",
+    "${MACKUP_XDG_CONFIG}/app/config",
+]
+```
 
-[configuration_files]
-.config_file
-folder/
-@CONFIG@/app/config
+A config may also carry **action blocks** (parsed by `appsdb`, run by
+`blocks.py` around the file sync): each block has an optional `[when]`
+conditions sub-table and exactly one action sub-table (`[copy]` / `[chmod]` /
+`[run]` / `[xml]` / `[systemd]`); use `[[block]]` + `[block.<action>]` for more
+than one. See AGENTS.md for the full block reference.
+
+```toml
+name = "SSH"
+files = [".ssh"]
+
+[when]
+os = ["linux"]
+[chmod]
+path = "~/.ssh"
+recursive = true
+dir_mode = "700"
+file_mode = "600"
 ```
 
 ### 4. Application Handler (`application.py`)
@@ -181,7 +199,7 @@ Future syncs remove the same path on other machines
 
 - **Standards compliance**: Respects XDG Base Directory Specification
 - **Flexibility**: Handles non-standard `$XDG_CONFIG_HOME`
-- **Config entries**: Use `@CONFIG@/...` in `[configuration_files]`
+- **Config entries**: Use `${MACKUP_XDG_CONFIG}/...` in `files`
 
 ## File Structure
 
@@ -205,16 +223,15 @@ mackup/
 
 ### Adding a New Application
 
-Create `mackup_ng/applications/myapp.cfg`:
+Create `mackup_ng/applications/myapp.toml`:
 
-```ini
-[application]
-name = My Application
-
-[configuration_files]
-.myapprc
-.myapp/
-@CONFIG@/myapp/config.yml
+```toml
+name = "My Application"
+files = [
+    ".myapprc",
+    ".myapp/",
+    "${MACKUP_XDG_CONFIG}/myapp/config.yml",
+]
 ```
 
 Submit PR with the new config file.
@@ -228,15 +245,14 @@ Submit PR with the new config file.
 
 ### Custom File Sync
 
-Users can sync any files by creating `~/.mackup/custom.cfg`:
+Users can sync any files by creating `~/.mackup/applications/custom.toml`:
 
-```ini
-[application]
-name = My Custom Files
-
-[configuration_files]
-.custom_file
-custom_directory/
+```toml
+name = "My Custom Files"
+files = [
+    ".custom_file",
+    "custom_directory/",
+]
 ```
 
 ## Testing Strategy

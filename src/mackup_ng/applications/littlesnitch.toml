@@ -1,0 +1,5 @@
+name = "LittleSnitch"
+files = [
+    "Library/Preferences/{at.obdev.littlesnitch.networkmonitor.plist,at.obdev.LittleSnitchNetworkMonitor.plist}",
+    "${MACKUP_XDG_CONFIG}/Little Snitch/{configuration.user.xpl,configuration.xpl,configuration4.user.xpl,rules.usr.xpl}",
+]

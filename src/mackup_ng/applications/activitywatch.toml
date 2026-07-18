@@ -1,0 +1,4 @@
+name = "Activity Watch"
+files = [
+    "${MACKUP_XDG_CONFIG}/activitywatch",
+]

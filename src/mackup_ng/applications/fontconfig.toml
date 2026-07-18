@@ -1,0 +1,4 @@
+name = "Fontconfig"
+files = [
+    "${MACKUP_XDG_CONFIG}/fontconfig",
+]

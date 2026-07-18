@@ -1,0 +1,5 @@
+name = "OmniFocus"
+files = [
+    "${MACKUP_XDG_CONFIG}/OmniFocus/{Plug-Ins,Themes}",
+    "Library/Preferences/com.omnigroup.OmniFocus.plist",
+]

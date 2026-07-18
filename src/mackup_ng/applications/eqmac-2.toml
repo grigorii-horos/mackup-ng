@@ -1,0 +1,4 @@
+name = "eqMac2"
+files = [
+    "Library/Preferences/com.bitgapp.eqMac2.plist",
+]

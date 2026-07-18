@@ -1,0 +1,4 @@
+name = "SSH"
+files = [
+    ".ssh/{authorized_keys,config}",
+]

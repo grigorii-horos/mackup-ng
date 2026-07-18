@@ -1,0 +1,5 @@
+name = "Spacemacs"
+files = [
+    ".spacemacs",
+    ".spacemacs.d",
+]

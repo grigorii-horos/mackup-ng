@@ -1,0 +1,5 @@
+name = "Rocket"
+files = [
+    "Library/Preferences/net.matthewpalmer.Rocket.plist",
+    "${MACKUP_XDG_CONFIG}/Rocket",
+]

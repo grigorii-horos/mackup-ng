@@ -1,0 +1,5 @@
+name = "TextExpander"
+files = [
+    "${MACKUP_XDG_CONFIG}/TextExpander/Settings.textexpander",
+    "Library/Preferences/com.smileonmymac.textexpander.plist",
+]

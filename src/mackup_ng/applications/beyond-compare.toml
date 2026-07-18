@@ -1,0 +1,5 @@
+name = "Beyond Compare"
+files = [
+    "Library/Preferences/com.ScooterSoftware.BeyondCompare.plist",
+    "${MACKUP_XDG_CONFIG}/Beyond Compare/{BC4Key.txt,BCColors.xml,BCCommands.xml,BCPreferences.xml}",
+]

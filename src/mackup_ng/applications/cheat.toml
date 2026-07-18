@@ -1,0 +1,5 @@
+name = "Cheat"
+files = [
+    ".cheat",
+    "${MACKUP_XDG_CONFIG}/cheat/conf.yml",
+]

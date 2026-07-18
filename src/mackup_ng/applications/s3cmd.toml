@@ -1,0 +1,4 @@
+name = "S3cmd"
+files = [
+    ".s3cfg",
+]

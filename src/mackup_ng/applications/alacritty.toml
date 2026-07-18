@@ -1,0 +1,6 @@
+name = "Alacritty"
+files = [
+    ".alacritty.yml",
+    ".alacritty.toml",
+    "${MACKUP_XDG_CONFIG}/alacritty/{alacritty.toml,alacritty.yml}",
+]

@@ -1,0 +1,5 @@
+name = "Atom"
+files = [
+    "Library/Preferences/com.github.atom.plist",
+    ".atom/{config.cson,init.coffee,keymap.cson,keymaps,snippets.cson,styles.less}",
+]

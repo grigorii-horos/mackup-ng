@@ -1,0 +1,4 @@
+name = "btop"
+files = [
+    "${MACKUP_XDG_CONFIG}/btop",
+]

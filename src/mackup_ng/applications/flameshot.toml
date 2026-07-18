@@ -1,0 +1,4 @@
+name = "Flameshot"
+files = [
+    "${MACKUP_XDG_CONFIG}/flameshot/flameshot.ini",
+]

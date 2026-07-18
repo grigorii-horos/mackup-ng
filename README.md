@@ -97,10 +97,10 @@ Set / remove / list machine-local markers (e.g. `backup`, `low-resource`,
 
 Track and dump dconf path(s), e.g. `/org/gnome/terminal/` (Linux/GNOME).
 
-`mackup-ng apply-sets`
+`mackup-ng apply`
 
-Apply the declarative config sets in `~/.mackup/sets.d/` (also run automatically
-after `sync`).
+Run every config's action blocks (without syncing files); blocks also run
+automatically during `sync`.
 
 `mackup-ng -h`
 
@@ -761,17 +761,22 @@ directory or your personal `~/.gitignore`?
 
 ## Fork Additions
 
-This fork adds path templating for application config definitions (`*.cfg` in
+This fork adds path templating for application config definitions (`*.toml` in
 `src/mackup_ng/applications`) to reduce duplication and simplify cross-platform
-entries.
+entries. App definitions are **flat TOML** (no `[application]` wrapper):
+top-level `name` and a `files` array (plus an optional
+`[mapped_files]` table and action blocks). A legacy `[application]` table is
+still accepted.
 
 ### 1. Brace expansion (`{...}`)
 
 You can define multiple paths in one line:
 
-```ini
-[configuration_files]
-@CONFIG@/Code/User/{snippets,keybindings.json,settings.json}
+```toml
+name = "Code"
+files = [
+    "${MACKUP_XDG_CONFIG}/Code/User/{snippets,keybindings.json,settings.json}",
+]
 ```
 
 This expands to one entry per item (cartesian product if multiple brace groups
@@ -781,16 +786,18 @@ are used).
 
 You can choose different path fragments per platform:
 
-```ini
-[configuration_files]
-@CONFIG@/[mac:Blender,blender]
+```toml
+files = [
+    "${MACKUP_XDG_CONFIG}/[mac:Blender,blender]",
+]
 ```
 
 Another example with a full-path fallback:
 
-```ini
-[configuration_files]
-[linux:@CONFIG@/myapp/linux.conf,mac:@CONFIG@/MyApp/mac.conf,windows:@CONFIG@/MyApp/windows.conf,@CONFIG@/myapp/other.conf]
+```toml
+files = [
+    "[linux:${MACKUP_XDG_CONFIG}/myapp/linux.conf,mac:${MACKUP_XDG_CONFIG}/MyApp/mac.conf,windows:${MACKUP_XDG_CONFIG}/MyApp/windows.conf,${MACKUP_XDG_CONFIG}/myapp/other.conf]",
+]
 ```
 
 - `linux:`, `mac:`, `windows:` are supported keys
@@ -800,92 +807,147 @@ Another example with a full-path fallback:
 This means the selector can map different local paths to one shared backup path.
 Example:
 
-```ini
-[configuration_files]
-[mac:@CONFIG@/MyApp/config.json,linux:@CONFIG@/myapp/config.json,@CONFIG@/shared/myapp-config.json]
+```toml
+files = [
+    "[mac:${MACKUP_XDG_CONFIG}/MyApp/config.json,linux:${MACKUP_XDG_CONFIG}/myapp/config.json,${MACKUP_XDG_CONFIG}/shared/myapp-config.json]",
+]
 ```
 
 Behavior:
 
-- macOS local path: `@CONFIG@/MyApp/config.json`
-- Linux local path: `@CONFIG@/myapp/config.json`
+- macOS local path: `${MACKUP_XDG_CONFIG}/MyApp/config.json`
+- Linux local path: `${MACKUP_XDG_CONFIG}/myapp/config.json`
 - backup path (all platforms): canonical Linux path for the fallback, i.e. `.config/shared/myapp-config.json`
 
-### 3. Built-in cross-platform variables
+### 3. Built-in XDG variables
 
-These are Mackup-specific aliases (not OS environment variables):
+These reserved Mackup-owned aliases (not OS environment variables) mimic the XDG
+base directories on **every** OS, even ones that don't set the `XDG_*` env vars.
+The `MACKUP_` prefix keeps them distinct from real `${VAR}` env references; `XDG`
+marks the semantics:
 
-- `@CONFIG@` -> `.config` (Linux) / `Library/Application Support` (macOS) / `AppData/Roaming` (Windows)
-- `@DATA@` -> `.local/share` (Linux) / `Library/Application Support` (macOS) / `AppData/Local` (Windows)
-- `@STATE@` -> `.local/state` (Linux) / `Library/Application Support` (macOS) / `AppData/Local` (Windows)
-- `@CACHE@` -> `.cache` (Linux) / `Library/Caches` (macOS) / `AppData/Local` (Windows)
+- `${MACKUP_XDG_CONFIG}` -> `.config` (Linux) / `Library/Application Support` (macOS) / `AppData/Roaming` (Windows)
+- `${MACKUP_XDG_DATA}` -> `.local/share` (Linux) / `Library/Application Support` (macOS) / `AppData/Local` (Windows)
+- `${MACKUP_XDG_STATE}` -> `.local/state` (Linux) / `Library/Application Support` (macOS) / `AppData/Local` (Windows)
+- `${MACKUP_XDG_CACHE}` -> `.cache` (Linux) / `Library/Caches` (macOS) / `AppData/Local` (Windows)
 
 Important in this fork:
 
 - built-in variables in local paths are resolved for the current OS
 - built-in variables in backup paths are always resolved to Linux canonical paths
-  (e.g. `@CONFIG@` in backup becomes `.config`)
+  (e.g. `${MACKUP_XDG_CONFIG}` in backup becomes `.config`)
 
-### 4. Processing order
+### 4. Environment variables (`${VAR}` + `source_env`)
+
+Any `${VAR}` that is not a reserved `MACKUP_*` built-in is resolved as a real
+environment variable, falling back to `KEY=VALUE` lines in the app's
+`source_env` files. It expands to the same value on both the local and backup
+side, so use it for relative, machine-specific fragments (a profile dir name,
+a hostname). Unresolved or absolute results skip just that entry.
+
+```toml
+name = "Firefox"
+source_env = ["~/.config/mackup-env"]   # KEY=VALUE lines; env takes priority
+files = [
+    "${MACKUP_XDG_CONFIG}/firefox/${FF_PROFILE}/prefs.js",
+]
+```
+
+### 5. Processing order
 
 Path templates are resolved in this order:
 
 1. Platform selector `[...]` (produces local path + canonical backup path)
-2. Built-in variables (`@CONFIG@`, `@DATA@`, `@STATE@`, `@CACHE@`)
-3. Brace expansion `{...}`
+2. Built-in variables (`${MACKUP_XDG_CONFIG}`, `${MACKUP_XDG_DATA}`, `${MACKUP_XDG_STATE}`, `${MACKUP_XDG_CACHE}`)
+3. Environment variables (any other `${VAR}`, from env / `source_env`)
+4. Brace expansion `{...}`
 
-### 5. Config style in this fork
+### 6. Config style in this fork
 
 - Upstream-style `xdg_configuration_files` is not used in this fork; express entries directly in
-  `[configuration_files]` using `@CONFIG@/...`
-- many app definitions in this fork were normalized to use `@CONFIG@`,
-  `@DATA@`, and selectors to avoid macOS/Linux duplicates
+  `files` using `${MACKUP_XDG_CONFIG}/...`
+- many app definitions in this fork were normalized to use `${MACKUP_XDG_CONFIG}`,
+  `${MACKUP_XDG_DATA}`, and selectors to avoid macOS/Linux duplicates
   (for example VS Code-family configs)
 
-### 6. Explicit local → backup mapping (`[mapped_files]`)
+### 7. Explicit local → backup mapping (`[mapped_files]`)
 
-`[configuration_files]` keeps the local path and storage layout identical. To
-decouple them, add a `[mapped_files]` section with `LOCAL = BACKUP` pairs:
+`files` keeps the local path and storage layout identical. To
+decouple them, add a `[mapped_files]` table with `LOCAL = BACKUP` pairs:
 
-```ini
+```toml
 [mapped_files]
-.config/app/grisa.profile/user.js = .config/app/profile/user.js
+".config/app/grisa.profile/user.js" = ".config/app/profile/user.js"
 ```
 
-`=` is the only delimiter, so spaces, dashes and even `->` are safe inside
-paths. Both sides honor selectors, built-in vars and braces (brace groups zip
+Paths are quoted TOML strings, so spaces, dashes and even `->` are safe inside
+them. Both sides honor selectors, built-in vars and braces (brace groups zip
 pairwise). Handy when a machine-specific local path (e.g. a per-machine Firefox
 profile dir) should share one canonical path in the backup folder.
 
-### 7. Machine-local extras (`~/.mackup/`)
+### 8. Action blocks
+
+A config file can also carry **action blocks** — imperative steps run around its
+file sync (`pre`/`post`). A block has an optional `[when]` conditions sub-table
+and exactly one action sub-table; there is no `type` key. Actions: `[copy]`,
+`[chmod]`, `[run]`, `[xml]` (edit XML), `[systemd]` (user drop-in).
+
+```toml
+name = "SSH"
+files = [".ssh"]
+
+# after syncing .ssh, fix its permissions (default phase = post)
+[when]
+os = ["linux", "macos"]
+[chmod]
+path = "~/.ssh"
+recursive = true
+dir_mode = "700"
+file_mode = "600"
+```
+
+`[when]` keys (any-of lists): `os`, `arch`, `marker`, `not_marker`, `command`,
+`gui`, `exists`, `not_exists`, `env`. For more than one block per file use a
+`[[block]]` array with `[block.when]` / `[block.<action>]`. Configs run sorted
+by filename; `mackup apply` runs blocks without syncing. A block-only file (no
+`files`) is a pure hook.
+
+### 9. Machine-local extras (`~/.mackup/`)
 
 Beyond custom app configs, `~/.mackup/` is the home for machine-local behavior:
 
-```
+```text
 ~/.mackup/
-├── applications/   custom app *.cfg files
-├── backup.d/       executables run BEFORE `sync`
-├── sets.d/         declarative config sets applied after `sync`
-├── markers/        machine-local flags (do NOT sync them)
-├── state/          hook scratch space
+├── applications/   config *.toml files: sync lists AND action blocks
+├── markers/        LOCAL marker definitions (*.toml, same format as apps)
 └── dconf-backup/   dconf dumps (*.dconf)
 ```
+
+Marker *state* (which markers are on) lives in
+`$XDG_STATE_HOME/mackup/markers/` (default `~/.local/state/mackup/markers/`), not
+under `~/.mackup/`; a pre-XDG `~/.mackup/markers/` is migrated automatically.
 
 - **Markers** (`mark`/`unmark`/`markers`) are empty flag files gating behavior on
   one machine only. `backup` marks the source machine.
 - **dconf** (Linux/GNOME): the backup-role machine dumps tracked paths before the
   file sync; other machines load them after. Opt out with the `no-dconf` marker;
   register paths with `dconf-add`.
-- **Config sets** (`sets.d/*.toml`, applied after `sync` / via `apply-sets`):
-  declarative units gated by `require_marker` / `skip_if_marker` / `require_os`,
-  each carrying `[[mutate_xml]]` (XML edits), `[[systemd_dropin]]` (linux user
-  drop-ins), a `restart_service` (systemctl / brew services) with `before`/`after`
-  hooks, and/or `[[run]]` inline shell (with `require_command`) for imperative
-  bits. Files apply sorted by name — use numeric prefixes (`10-`, `20-`).
-- **Hooks**: executables in `backup.d/` run before the file sync; both hooks and
-  `[[run]]` scripts receive a `MACKUP_*` environment contract
+- **Action blocks** (in `applications/*.toml`, applied during `sync` / via
+  `apply`): each config file may carry blocks — a top-level implicit block
+  and/or a `[[block]]` array. A block = base scalars + a `[when]` conditions
+  sub-table + exactly one **action sub-table** whose name is the action
+  (`[copy]` / `[chmod]` / `[run]` / `[xml]` / `[systemd]`); no `type` key. Base
+  scalars: `phase` (`pre`/`post`, relative to that config's file sync) and
+  optional `restart_service`. `[when]` holds short-keyed conditions (`os`,
+  `arch`, `marker`, `not_marker`, `command`, `gui`, `exists`, `not_exists`,
+  `env`). In a `[[block]]` array the sub-tables are `[block.when]` /
+  `[block.<action>]`; at the top level `[when]` / `[<action>]`. Configs apply
+  sorted by filename — cross-cutting hooks use numeric prefixes (`10-`, `40-`).
+- **Environment contract**: `[run]` blocks receive a `MACKUP_*` environment
   (`MACKUP_ROLE`, `MACKUP_OS`, `MACKUP_ARCH`, `MACKUP_CONFIG_DIR`,
-  `MACKUP_MARKERS_DIR`, `MACKUP_STATE_DIR`, `MACKUP_DCONF_BACKUP_DIR`, ...).
+  `MACKUP_BACKUP_DIR`, `MACKUP_MARKERS_DIR`,
+  `MACKUP_DCONF_BACKUP_DIR`, ...). A pre-sync executable is a `[run]` block with
+  `phase = "pre"`.
 
 Requires Python 3.12+.
 

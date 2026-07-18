@@ -1,0 +1,6 @@
+name = "gimp"
+files = [
+    ".gimp/{colorrc,contextrc,controllerrc,devicerc,dockrc,gimprc,gtkrc,menurc,parasiterc,pluginrc,profilerc,sessionrc,templaterc,themerc,toolrc,unitrc}",
+    "${MACKUP_XDG_CONFIG}/GIMP/2.8/{colorrc,contextrc,controllerrc,devicerc,dockrc,gimprc,gtkrc,menurc,parasiterc,pluginrc,profilerc,sessionrc,templaterc,themerc,toolrc,unitrc}",
+    "${MACKUP_XDG_CONFIG}/GIMP/2.10/{colorrc,contextrc,controllerrc,devicerc,dockrc,gimprc,gtkrc,menurc,parasiterc,pluginrc,profilerc,sessionrc,templaterc,themerc,toolrc,unitrc}",
+]

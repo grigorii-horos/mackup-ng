@@ -1,0 +1,4 @@
+name = "MPS Youtube"
+files = [
+    "${MACKUP_XDG_CONFIG}/mps-youtube/{config,playlist_v2}",
+]

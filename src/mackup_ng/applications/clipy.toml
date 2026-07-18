@@ -1,0 +1,4 @@
+name = "Clipy"
+files = [
+    "Library/Preferences/com.clipy-app.Clipy.plist",
+]

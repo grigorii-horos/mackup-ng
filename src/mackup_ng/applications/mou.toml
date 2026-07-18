@@ -1,0 +1,5 @@
+name = "Mou"
+files = [
+    "Library/Preferences/{com.mouapp.Mou.LSSharedFileList.plist,com.mouapp.Mou.plist}",
+    "${MACKUP_XDG_CONFIG}/Mou",
+]

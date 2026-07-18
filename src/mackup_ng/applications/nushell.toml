@@ -1,0 +1,4 @@
+name = "Nushell"
+files = [
+    "${MACKUP_XDG_CONFIG}/nushell/{config.nu,env.nu}",
+]

@@ -1,0 +1,4 @@
+name = "Factory Droid"
+files = [
+    ".factory/{AGENTS.md,auth.json,commands,config.json,droids,mcp.json,settings.json}",
+]

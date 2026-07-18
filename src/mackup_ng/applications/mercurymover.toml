@@ -1,0 +1,4 @@
+name = "MercuryMover"
+files = [
+    "Library/Preferences/com.heliumfoot.MyWiAgent.plist",
+]

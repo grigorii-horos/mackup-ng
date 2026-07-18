@@ -1,0 +1,5 @@
+name = "MacDown"
+files = [
+    "Library/Preferences/com.uranusjr.macdown.plist",
+    "${MACKUP_XDG_CONFIG}/MacDown/{Styles,Themes}",
+]

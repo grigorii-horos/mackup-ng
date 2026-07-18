@@ -1,0 +1,4 @@
+name = "Spectrwm"
+files = [
+    ".spectrwm.conf",
+]

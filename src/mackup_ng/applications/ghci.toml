@@ -1,0 +1,4 @@
+name = "ghci"
+files = [
+    ".ghci",
+]

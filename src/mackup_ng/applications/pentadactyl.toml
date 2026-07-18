@@ -1,0 +1,5 @@
+name = "Pentadactyl"
+files = [
+    ".pentadactyl",
+    ".pentadactylrc",
+]

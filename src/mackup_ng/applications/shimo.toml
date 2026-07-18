@@ -1,0 +1,5 @@
+name = "Shimo"
+files = [
+    "${MACKUP_XDG_CONFIG}/Shimo/ShimoProfiles.xml",
+    "Library/Preferences/com.chungwasoft.Shimo.plist",
+]

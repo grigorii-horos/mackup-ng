@@ -1,0 +1,4 @@
+name = "Affinity Designer"
+files = [
+    "Library/Containers/Affinity Designer/Data/Library/Application Support/user",
+]

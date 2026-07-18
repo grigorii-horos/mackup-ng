@@ -1,0 +1,4 @@
+name = "JSHint"
+files = [
+    ".jshintrc",
+]

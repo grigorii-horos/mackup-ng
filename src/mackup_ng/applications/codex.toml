@@ -1,0 +1,4 @@
+name = "Codex"
+files = [
+    ".codex/{AGENTS.md,auth.json,config.toml}",
+]

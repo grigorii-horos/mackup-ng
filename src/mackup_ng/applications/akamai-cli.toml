@@ -1,0 +1,4 @@
+name = "Akamai-CLI"
+files = [
+    ".edgerc",
+]

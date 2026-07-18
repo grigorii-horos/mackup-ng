@@ -1,0 +1,4 @@
+name = "Mosaic"
+files = [
+    "Library/Application Support/com.lightpillar.Mosaic/MosaicCoreData.storedata",
+]

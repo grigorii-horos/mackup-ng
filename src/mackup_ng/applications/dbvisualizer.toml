@@ -1,0 +1,4 @@
+name = "DbVisualizer"
+files = [
+    ".dbvis",
+]

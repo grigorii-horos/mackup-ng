@@ -1,0 +1,4 @@
+name = "Quitter"
+files = [
+    "Library/Preferences/com.marcoarment.quitter.plist",
+]

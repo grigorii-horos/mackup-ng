@@ -1,0 +1,4 @@
+name = "GitHub CLI"
+files = [
+    "${MACKUP_XDG_CONFIG}/gh/config.yml",
+]

@@ -1,0 +1,4 @@
+name = "Ranger"
+files = [
+    "${MACKUP_XDG_CONFIG}/ranger/{commands.py,plugins,rc.conf,rifle.conf,scope.sh}",
+]

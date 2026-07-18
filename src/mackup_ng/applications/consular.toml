@@ -1,0 +1,5 @@
+name = "Consular"
+files = [
+    ".consularc",
+    "${MACKUP_XDG_CONFIG}/consular",
+]

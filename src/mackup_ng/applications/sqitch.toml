@@ -1,0 +1,4 @@
+name = "Sqitch"
+files = [
+    ".sqitch/sqitch.conf",
+]

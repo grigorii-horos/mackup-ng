@@ -28,14 +28,14 @@ class TestMappedFiles(unittest.TestCase):
                 os.environ[key] = orig
 
     def _write_app(self, name, body):
-        with open(os.path.join(self.apps_dir, f"{name}.cfg"), "w") as handle:
-            handle.write(f"[application]\nname = {name}\n\n{body}")
+        with open(os.path.join(self.apps_dir, f"{name}.toml"), "w") as handle:
+            handle.write(f'name = "{name}"\n{body}')
 
     def test_maps_local_to_backup(self):
         self._write_app(
             "demo",
-            "[mapped_files]\n"
-            ".config/app/grisa.profile/user.js = .config/app/profile/user.js\n",
+            "\n[mapped_files]\n"
+            '".config/app/grisa.profile/user.js" = ".config/app/profile/user.js"\n',
         )
         mappings = ApplicationsDatabase().get_file_mappings("demo")
         assert (
@@ -44,14 +44,14 @@ class TestMappedFiles(unittest.TestCase):
         ) in mappings
 
     def test_plain_section_still_direct(self):
-        self._write_app("demo", "[configuration_files]\n.plainfile\n")
+        self._write_app("demo", 'files = [".plainfile"]\n')
         mappings = ApplicationsDatabase().get_file_mappings("demo")
         assert (".plainfile", ".plainfile") in mappings
 
     def test_mapping_with_braces_zips(self):
         self._write_app(
             "demo",
-            "[mapped_files]\n.local/{a,b}.conf = .backup/{a,b}.conf\n",
+            '\n[mapped_files]\n".local/{a,b}.conf" = ".backup/{a,b}.conf"\n',
         )
         mappings = ApplicationsDatabase().get_file_mappings("demo")
         assert (".local/a.conf", ".backup/a.conf") in mappings
@@ -61,8 +61,8 @@ class TestMappedFiles(unittest.TestCase):
         """Spaces, dashes and arrows in paths survive (only '=' is special)."""
         self._write_app(
             "demo",
-            "[mapped_files]\n"
-            ".config/My App-1/a -> b.conf = .config/shared/a -> b.conf\n",
+            "\n[mapped_files]\n"
+            '".config/My App-1/a -> b.conf" = ".config/shared/a -> b.conf"\n',
         )
         mappings = ApplicationsDatabase().get_file_mappings("demo")
         assert (
@@ -70,11 +70,49 @@ class TestMappedFiles(unittest.TestCase):
             ".config/shared/a -> b.conf",
         ) in mappings
 
+    def test_env_var_from_environment(self):
+        """A non-reserved ${VAR} resolves from the environment."""
+        os.environ["FF_PROFILE"] = "abc.default"
+        try:
+            self._write_app(
+                "demo",
+                'files = ["${MACKUP_XDG_CONFIG}/ff/${FF_PROFILE}/prefs.js"]\n',
+            )
+            files = ApplicationsDatabase().get_files("demo")
+            assert ".config/ff/abc.default/prefs.js" in files
+        finally:
+            os.environ.pop("FF_PROFILE", None)
+
+    def test_env_var_from_source_env_file(self):
+        """A ${VAR} resolves from a source_env file when not in the environment."""
+        env_file = os.path.join(self.home, "mackup-env")
+        with open(env_file, "w") as handle:
+            handle.write('# comment\nFF_PROFILE = "xyz.default"\n')
+        os.environ.pop("FF_PROFILE", None)
+        self._write_app(
+            "demo",
+            f'source_env = ["{env_file}"]\n'
+            'files = ["${MACKUP_XDG_CONFIG}/ff/${FF_PROFILE}/prefs.js"]\n',
+        )
+        files = ApplicationsDatabase().get_files("demo")
+        assert ".config/ff/xyz.default/prefs.js" in files
+
+    def test_unresolved_env_var_skips_entry(self):
+        """An unresolved ${VAR} skips just that entry, not the whole app."""
+        os.environ.pop("NOPE", None)
+        self._write_app(
+            "demo",
+            'files = ["${MACKUP_XDG_CONFIG}/a", "${NOPE}/b"]\n',
+        )
+        files = ApplicationsDatabase().get_files("demo")
+        assert ".config/a" in files
+        assert not any("NOPE" in f or f.endswith("/b") for f in files)
+
     def test_both_sections_merge(self):
         self._write_app(
             "demo",
-            "[configuration_files]\n.direct.conf\n\n"
-            "[mapped_files]\n.local.conf = .stored.conf\n",
+            'files = [".direct.conf"]\n\n'
+            '[mapped_files]\n".local.conf" = ".stored.conf"\n',
         )
         mappings = ApplicationsDatabase().get_file_mappings("demo")
         assert (".direct.conf", ".direct.conf") in mappings

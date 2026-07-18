@@ -1,0 +1,4 @@
+name = "SketchyBar"
+files = [
+    "${MACKUP_XDG_CONFIG}/sketchybar/{plugins,sketchybarrc}",
+]

@@ -1,0 +1,4 @@
+name = "LunarVim"
+files = [
+    "${MACKUP_XDG_CONFIG}/lvim/config.lua",
+]

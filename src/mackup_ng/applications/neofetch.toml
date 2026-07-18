@@ -1,0 +1,4 @@
+name = "Neofetch"
+files = [
+    "${MACKUP_XDG_CONFIG}/neofetch/config.conf",
+]

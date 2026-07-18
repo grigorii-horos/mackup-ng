@@ -1,0 +1,5 @@
+name = "Moom"
+files = [
+    "Library/Preferences/com.manytricks.Moom.plist",
+    "${MACKUP_XDG_CONFIG}/Many Tricks",
+]

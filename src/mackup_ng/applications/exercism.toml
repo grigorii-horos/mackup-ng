@@ -1,0 +1,6 @@
+name = "Exercism"
+files = [
+    ".exercism",
+    ".exercism.json",
+    "${MACKUP_XDG_CONFIG}/exercism",
+]

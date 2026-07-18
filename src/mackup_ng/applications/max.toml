@@ -1,0 +1,4 @@
+name = "Max"
+files = [
+    "Library/Preferences/org.sbooth.Max.plist",
+]

@@ -1,0 +1,5 @@
+name = "Ansible"
+files = [
+    ".ansible",
+    ".ansible.cfg",
+]

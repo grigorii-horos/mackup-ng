@@ -1,0 +1,4 @@
+name = "Jupyter"
+files = [
+    ".jupyter",
+]

@@ -1,0 +1,4 @@
+name = "Rectangle"
+files = [
+    "Library/Preferences/com.knollsoft.Rectangle.plist",
+]

@@ -1,0 +1,4 @@
+name = "GnuPG"
+files = [
+    ".gnupg/{gpg-agent.conf,gpg.conf}",
+]

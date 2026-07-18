@@ -1,0 +1,4 @@
+name = "Zabbix CLI"
+files = [
+    ".zabbix-cli/zabbix-cli.conf",
+]

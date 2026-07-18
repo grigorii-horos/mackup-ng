@@ -1,0 +1,5 @@
+name = "proselint"
+files = [
+    ".proselintrc",
+    "${MACKUP_XDG_CONFIG}/proselint/config",
+]

@@ -1,0 +1,5 @@
+name = "AppCode 3.1"
+files = [
+    "${MACKUP_XDG_CONFIG}/appCode31",
+    "Library/Preferences/appCode31",
+]

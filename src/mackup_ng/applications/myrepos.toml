@@ -1,0 +1,4 @@
+name = "myrepos"
+files = [
+    ".mrconfig",
+]

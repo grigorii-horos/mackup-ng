@@ -1,0 +1,4 @@
+name = "Spark"
+files = [
+    "${MACKUP_XDG_CONFIG}/Spark",
+]

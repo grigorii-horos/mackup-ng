@@ -1,0 +1,4 @@
+name = "MuteSpotifyAds"
+files = [
+    "Library/Preferences/de.simonmeusel.MuteSpotifyAds.plist",
+]

@@ -1,0 +1,4 @@
+name = "LimeChat"
+files = [
+    "Library/Preferences/net.limechat.LimeChat-AppStore.plist",
+]

@@ -1,0 +1,5 @@
+name = "aerospace"
+files = [
+    ".aerospace.toml",
+    "${MACKUP_XDG_CONFIG}/aerospace/aerospace.toml",
+]

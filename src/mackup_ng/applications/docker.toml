@@ -1,0 +1,4 @@
+name = "Docker"
+files = [
+    ".docker/{config.json,daemon.json}",
+]

@@ -1,0 +1,5 @@
+name = "nvALT"
+files = [
+    "Library/Preferences/net.elasticthreads.nv.plist",
+    "${MACKUP_XDG_CONFIG}/Notational Velocity",
+]

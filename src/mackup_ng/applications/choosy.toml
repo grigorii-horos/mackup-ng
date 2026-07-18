@@ -1,0 +1,4 @@
+name = "Choosy"
+files = [
+    "${MACKUP_XDG_CONFIG}/Choosy/behaviours.plist",
+]

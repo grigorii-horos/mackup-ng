@@ -1,0 +1,5 @@
+name = "Coda 2"
+files = [
+    "${MACKUP_XDG_CONFIG}/Coda 2",
+    "Library/Preferences/com.panic.Coda2.plist",
+]

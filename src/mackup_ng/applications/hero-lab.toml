@@ -1,0 +1,4 @@
+name = "Hero Lab"
+files = [
+    "${MACKUP_XDG_CONFIG}/Hero Lab/{customoutput,data,docs}",
+]

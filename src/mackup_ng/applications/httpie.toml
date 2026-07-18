@@ -1,0 +1,4 @@
+name = "HTTPie"
+files = [
+    ".httpie/config.json",
+]

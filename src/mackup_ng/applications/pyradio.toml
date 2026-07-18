@@ -1,0 +1,4 @@
+name = "PyRadio"
+files = [
+    ".pyradio/stations.csv",
+]

@@ -1,0 +1,5 @@
+name = "Path Finder"
+files = [
+    "Library/Preferences/com.cocoatech.PathFinder.plist",
+    "${MACKUP_XDG_CONFIG}/Path Finder",
+]

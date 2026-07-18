@@ -1,0 +1,4 @@
+name = "Typora"
+files = [
+    "${MACKUP_XDG_CONFIG}/[mac:abnerworks.Typora,Typora]/themes",
+]

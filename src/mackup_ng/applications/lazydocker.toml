@@ -1,0 +1,4 @@
+name = "lazydocker"
+files = [
+    "${MACKUP_XDG_CONFIG}/jesseduffield/lazydocker/config.yml",
+]

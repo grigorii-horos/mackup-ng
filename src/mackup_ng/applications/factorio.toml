@@ -1,0 +1,4 @@
+name = "Factorio"
+files = [
+    "${MACKUP_XDG_CONFIG}/factorio/{blueprint-storage.dat,config,mods,player-data.json,saves}",
+]

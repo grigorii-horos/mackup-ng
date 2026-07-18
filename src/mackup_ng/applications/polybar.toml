@@ -1,0 +1,5 @@
+name = "polybar"
+files = [
+    ".polybar/{config,launch.sh}",
+    "${MACKUP_XDG_CONFIG}/polybar/{config,launch.sh,scripts}",
+]

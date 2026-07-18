@@ -1,0 +1,4 @@
+name = "Enjoyable"
+files = [
+    "Library/Preferences/com.yukkurigames.Enjoyable.plist",
+]

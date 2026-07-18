@@ -1,0 +1,5 @@
+name = "LaunchBar"
+files = [
+    "Library/Preferences/at.obdev.LaunchBar.plist",
+    "${MACKUP_XDG_CONFIG}/LaunchBar/{Actions,Configuration.plist,CustomShortcuts.plist,Snippets}",
+]

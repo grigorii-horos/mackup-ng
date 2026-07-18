@@ -1,0 +1,4 @@
+name = "helix"
+files = [
+    "${MACKUP_XDG_CONFIG}/helix/{config.toml,languages.toml,themes}",
+]

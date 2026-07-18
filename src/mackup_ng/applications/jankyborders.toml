@@ -1,0 +1,4 @@
+name = "Janky Borders"
+files = [
+    "${MACKUP_XDG_CONFIG}/borders/bordersrc",
+]

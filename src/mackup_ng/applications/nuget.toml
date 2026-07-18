@@ -1,0 +1,4 @@
+name = "nuget"
+files = [
+    ".nuget/NuGet/NuGet.Config",
+]

@@ -297,7 +297,7 @@ class ApplicationsDatabase:
         def repl(match: re.Match) -> str:
             name = match.group(1)
             if name in cls._RESERVED_VARS:
-                return match.group(0)
+                return str(match.group(0))
             value = os.environ.get(name)
             if value is None:
                 value = cls._lookup_source_env(name, env_files)
@@ -434,7 +434,7 @@ class ApplicationsDatabase:
             self.apps[app_name]["configuration_files"] = config_files
             self.app_file_mappings[app_name] = config_mappings
 
-            config_paths = next(
+            config_paths: list[str] = next(
                 (
                     v
                     for v in (

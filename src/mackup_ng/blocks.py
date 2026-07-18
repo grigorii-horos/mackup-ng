@@ -19,8 +19,12 @@ import subprocess
 import tempfile
 import xml.etree.ElementTree as ET
 from collections import Counter
+from typing import TYPE_CHECKING
 
 from . import conditions, hooks, utils
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 
 def _msg(text: str) -> None:
@@ -264,7 +268,7 @@ def _parse_mode(spec: str, current: int) -> int:
     return int(spec, 8)
 
 
-def _chmod_targets(block: dict, env: dict[str, str]):
+def _chmod_targets(block: dict, env: dict[str, str]) -> Iterator[tuple[str, str]]:
     """Yield (path, mode_spec) the chmod block wants to set."""
     roots = block.get("paths")
     if roots is None:
@@ -424,14 +428,14 @@ def apply_block(block: dict, env_files: list[str], dry_run: bool) -> tuple[str, 
     if action is None:
         _msg(f"Warning: block has no (single) action sub-table, skip: {block!r}")
         return ("", 0)
-    svc = block.get("restart_service")
+    svc: str | None = block.get("restart_service")
     was_active = svc_is_active(svc) if svc else False
-    if was_active and not dry_run:
+    if was_active and svc and not dry_run:
         svc_stop(svc)
     try:
         count = _HANDLERS[action](block[action], env_files, dry_run)
     finally:
-        if was_active and not dry_run:
+        if was_active and svc and not dry_run:
             svc_start(svc)
     return (action, count)
 

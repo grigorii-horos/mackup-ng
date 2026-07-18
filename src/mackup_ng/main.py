@@ -425,10 +425,10 @@ def main() -> None:
             app = ApplicationProfile(mckp, {matching_mapping}, dry_run, verbose)
             print_app_header(matching_app_name, pretty_name)
             app_stats = app.remove_file(*matching_mapping)
-            action = get_action_label(app_stats)
-            if action is not None:
+            rm_action = get_action_label(app_stats)
+            if rm_action is not None:
                 print(
                     utils.colorize_message(
-                        f"{action} {matching_mapping[0]} ({pretty_name})",
+                        f"{rm_action} {matching_mapping[0]} ({pretty_name})",
                     ),
                 )

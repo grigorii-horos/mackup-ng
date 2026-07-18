@@ -228,5 +228,3 @@ def hook_env(phase: str) -> dict[str, str]:
         },
     )
     return env
-
-

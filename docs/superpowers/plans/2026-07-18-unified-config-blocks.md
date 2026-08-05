@@ -499,7 +499,7 @@ class TestAppsdbBlocks(unittest.TestCase):
         self._write(
             "10-linger",
             'type = "run"\nrequire_os = ["linux"]\nrequire_command = ["loginctl"]\n'
-            'script = "loginctl enable-linger $(id -un)"\n',
+            'script = "sudo loginctl enable-linger $(id -un)"\n',
         )
         db = ApplicationsDatabase()
         assert "10-linger" in db.get_app_names()

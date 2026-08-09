@@ -79,6 +79,89 @@ class ApplicationProfile:
             os.path.join(self.mackup.mackup_folder, backup_filename or local_filename),
         )
 
+    def member_paths(self, source: str, dests: list[str]) -> list[str]:
+        """Absolute paths of a fanout group: the backup source, then dests."""
+        return [
+            os.path.join(self.mackup.mackup_folder, source),
+            *(os.path.join(os.environ["HOME"], dest) for dest in dests),
+        ]
+
+    @staticmethod
+    def new_stats() -> dict[str, int]:
+        """A zeroed statistics dict with every key the reporter expects."""
+        return {
+            "backed_up": 0, "restored": 0, "synchronized": 0,
+            "deleted": 0, "skipped": 0, "errors": 0,
+        }
+
+    def sync_group(self, source: str, dests: list[str]) -> dict[str, int]:
+        """Sync one fanout group: newest member wins and reaches every other.
+
+        Members are peers — the backup side has no special authority. A group
+        of two members is the ordinary 1:1 case.
+        """
+        stats = self.new_stats()
+        members = self.member_paths(source, dests)
+        backup_path = members[0]
+        existing = [
+            path for path in members
+            if os.path.isfile(path) or os.path.isdir(path)
+        ]
+        if not existing:
+            return stats
+
+        if any(os.path.isdir(path) for path in existing):
+            return self.sync_members_directory(members)
+
+        winner = max(existing, key=self.get_effective_mtime)
+        winner_mtime = self.get_effective_mtime(winner)
+
+        for member in members:
+            if member == winner:
+                continue
+            if os.path.exists(member):
+                if os.path.samefile(member, winner):
+                    if self.verbose:
+                        self._print(
+                            f"Skipping {member}\n  already linked to\n  {winner}",
+                        )
+                    stats["skipped"] += 1
+                    continue
+                if self.get_effective_mtime(member) >= winner_mtime:
+                    if self.verbose:
+                        self._print(
+                            f"Skipping {member}\n  not older than\n  {winner}",
+                        )
+                    stats["skipped"] += 1
+                    continue
+
+            if self.verbose:
+                self._print(f"Copying\n  {winner}\n  to\n  {member} ...")
+
+            if not self.dry_run:
+                try:
+                    if os.path.lexists(member):
+                        utils.delete(member)
+                    utils.copy(winner, member)
+                except PermissionError as e:
+                    self._print(
+                        f"Error: Unable to copy file from {winner} to "
+                        f"{member} due to permission issue: {e}",
+                    )
+                    stats["errors"] += 1
+                    continue
+
+            if member == backup_path:
+                stats["backed_up"] += 1
+            else:
+                stats["restored"] += 1
+
+        return stats
+
+    def sync_members_directory(self, members: list[str]) -> dict[str, int]:
+        """Merge N directory members entry by entry (implemented in Task 4)."""
+        raise NotImplementedError
+
     def get_deletions_filepath(self) -> str:
         """Return the backup-side file that records explicit removals."""
         return os.path.join(self.mackup.mackup_folder, DELETIONS_FILENAME)

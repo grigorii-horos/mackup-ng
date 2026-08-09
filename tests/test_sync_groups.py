@@ -80,3 +80,68 @@ class TestSyncGroupFiles(unittest.TestCase):
         stats = profile.sync_group(".config/app/user.js", [".config/work/user.js"])
         assert stats["restored"] == 1
         assert not os.path.exists(os.path.join(self.home, ".config/work/user.js"))
+
+
+class TestSyncGroupDirectories(unittest.TestCase):
+    def setUp(self):
+        self.mackup = Mock(spec=Mackup)
+        self.mackup.mackup_folder = tempfile.mkdtemp(prefix="mackup_gdir_backup_")
+        self.home = tempfile.mkdtemp(prefix="mackup_gdir_home_")
+        self._orig_home = os.environ.get("HOME")
+        os.environ["HOME"] = self.home
+        self.profile = ApplicationProfile(
+            mackup=self.mackup, files=set(), dry_run=False, verbose=False,
+        )
+
+    def tearDown(self):
+        if self._orig_home is None:
+            os.environ.pop("HOME", None)
+        else:
+            os.environ["HOME"] = self._orig_home
+        shutil.rmtree(self.home, ignore_errors=True)
+        shutil.rmtree(self.mackup.mackup_folder, ignore_errors=True)
+
+    def _write(self, path, content, mtime):
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w") as handle:
+            handle.write(content)
+        os.utime(path, (mtime, mtime))
+
+    def test_entries_union_across_all_members(self):
+        backup = os.path.join(self.mackup.mackup_folder, "profile")
+        work = os.path.join(self.home, "work")
+        personal = os.path.join(self.home, "personal")
+        self._write(os.path.join(backup, "shared.txt"), "backup", 1000)
+        self._write(os.path.join(work, "only-work.txt"), "work", 2000)
+        self._write(os.path.join(personal, "shared.txt"), "newest", 5000)
+
+        stats = self.profile.sync_group("profile", ["work", "personal"])
+
+        for root in (backup, work, personal):
+            with open(os.path.join(root, "shared.txt")) as handle:
+                assert handle.read() == "newest"
+            with open(os.path.join(root, "only-work.txt")) as handle:
+                assert handle.read() == "work"
+        assert stats["synchronized"] == 1
+
+    def test_nested_entries_are_created_in_every_member(self):
+        backup = os.path.join(self.mackup.mackup_folder, "profile")
+        self._write(os.path.join(backup, "nested", "deep.txt"), "deep", 4000)
+
+        self.profile.sync_group("profile", ["work", "personal"])
+
+        for name in ("work", "personal"):
+            nested = os.path.join(self.home, name, "nested", "deep.txt")
+            with open(nested) as handle:
+                assert handle.read() == "deep"
+
+    def test_unchanged_group_reports_skipped(self):
+        backup = os.path.join(self.mackup.mackup_folder, "profile")
+        work = os.path.join(self.home, "work")
+        self._write(os.path.join(backup, "same.txt"), "same", 4000)
+        self._write(os.path.join(work, "same.txt"), "same", 4000)
+
+        stats = self.profile.sync_group("profile", ["work"])
+
+        assert stats["synchronized"] == 0
+        assert stats["skipped"] == 1

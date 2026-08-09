@@ -159,8 +159,73 @@ class ApplicationProfile:
         return stats
 
     def sync_members_directory(self, members: list[str]) -> dict[str, int]:
-        """Merge N directory members entry by entry (implemented in Task 4)."""
-        raise NotImplementedError
+        """Merge N directory members entry by entry; newest entry wins.
+
+        Every member ends up holding the union of the group's entries. A
+        member that does not exist yet is created, so a backup directory can
+        fan out to fresh destinations.
+        """
+        stats = self.new_stats()
+        present = [path for path in members if os.path.isdir(path)]
+        if not present:
+            return stats
+
+        root_source = max(present, key=os.path.getmtime)
+        if not self.dry_run:
+            for member in members:
+                self.ensure_directory(member, root_source)
+
+        entries: list[str] = []
+        for member in present:
+            for entry in sorted(self.collect_relative_entries(member)):
+                if entry not in entries:
+                    entries.append(entry)
+
+        changed = False
+        for entry in entries:
+            targets = [os.path.join(member, entry) for member in members]
+            holders = [path for path in targets if os.path.exists(path)]
+            if not holders:
+                continue
+            winner = max(holders, key=self.get_effective_mtime)
+            winner_mtime = self.get_effective_mtime(winner)
+            winner_is_dir = os.path.isdir(winner)
+
+            for target in targets:
+                if target == winner:
+                    continue
+                if (
+                    os.path.exists(target)
+                    and os.path.isdir(target) == winner_is_dir
+                    and self.get_effective_mtime(target) >= winner_mtime
+                ):
+                    continue
+                if self.dry_run:
+                    changed = True
+                    continue
+                try:
+                    if winner_is_dir:
+                        if os.path.lexists(target) and not os.path.isdir(target):
+                            utils.delete(target)
+                        self.ensure_directory(target, winner)
+                    else:
+                        if self.verbose:
+                            self._print(f"Copying {entry} to {target}")
+                        self.copy_item(winner, target)
+                except PermissionError as e:
+                    self._print(
+                        f"Error: Unable to copy {winner} to {target} "
+                        f"due to permission issue: {e}",
+                    )
+                    stats["errors"] += 1
+                    continue
+                changed = True
+
+        if changed:
+            stats["synchronized"] += 1
+        else:
+            stats["skipped"] += 1
+        return stats
 
     def get_deletions_filepath(self) -> str:
         """Return the backup-side file that records explicit removals."""

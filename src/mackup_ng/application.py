@@ -362,6 +362,44 @@ class ApplicationProfile:
 
         return stats
 
+    def remove_destination(
+        self, source: str, dest: str, siblings: int,
+    ) -> dict[str, int]:
+        """Remove one destination; drop the source only when nothing else uses it.
+
+        ``siblings`` is the number of other live destinations fed by ``source``.
+        """
+        stats = self.new_stats()
+        home_filepath = os.path.join(os.environ["HOME"], dest)
+        targets = [home_filepath]
+        if siblings == 0:
+            targets.append(os.path.join(self.mackup.mackup_folder, source))
+
+        if self.verbose:
+            for filepath in targets:
+                self._print(f"Deleting\n  {filepath} ...")
+
+        if self.dry_run:
+            stats["deleted"] += 1
+            return stats
+
+        for filepath in targets:
+            if not os.path.lexists(filepath):
+                continue
+            try:
+                utils.delete(filepath)
+            except PermissionError as e:
+                self._print(
+                    f"Error: Unable to delete file {filepath} "
+                    f"due to permission issue: {e}",
+                )
+                stats["errors"] += 1
+
+        if stats["errors"] == 0:
+            self.record_deleted_file(dest)
+            stats["deleted"] += 1
+        return stats
+
     def remove_file(self, local_filename: str, backup_filename: str) -> dict[str, int]:
         """Explicitly remove one managed file locally and from backup storage."""
         stats: dict[str, int] = {"deleted": 0, "errors": 0}

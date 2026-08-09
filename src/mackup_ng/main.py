@@ -450,15 +450,20 @@ def main() -> None:
     elif args["rm"]:
         mckp.check_for_usable_backup_env()
 
+        rm_pairs, _ = build_sync_plan(app_db, mckp.get_apps_to_backup())
         managed_paths: dict[str, tuple[str, tuple[str, str]]] = {}
-        for app_name in sorted(mckp.get_apps_to_backup()):
-            for local_filename, backup_filename in sorted(
-                app_db.get_file_mappings(app_name),
-            ):
-                managed_paths.setdefault(
-                    ApplicationProfile.normalize_relative_path(local_filename),
-                    (app_name, (local_filename, backup_filename)),
-                )
+        for pair in rm_pairs:
+            managed_paths.setdefault(
+                ApplicationProfile.normalize_relative_path(pair.dest),
+                (pair.owner_app, (pair.dest, pair.source)),
+            )
+
+        # Siblings are recomputed against the *live* (non-tombstoned) pairs on
+        # every iteration, since an earlier <path> argument in this same `rm`
+        # invocation may have just tombstoned the last other destination
+        # feeding a shared source.
+        rm_tombstones = ApplicationProfile(mckp, set(), dry_run, verbose)
+        tombstoned = rm_tombstones.read_tombstones()
 
         for requested_arg in args["<path>"]:
             requested_paths = get_requested_path_candidates(requested_arg)
@@ -498,14 +503,38 @@ def main() -> None:
                 match = descendant_match
 
             matching_app_name, matching_mapping = match
+            local_filename, backup_filename = matching_mapping
             pretty_name = app_db.get_name(matching_app_name)
-            app = ApplicationProfile(mckp, {matching_mapping}, dry_run, verbose)
+            live_pairs = [
+                pair for pair in rm_pairs
+                if ApplicationProfile.normalize_relative_path(pair.dest)
+                not in tombstoned
+            ]
+            rm_groups, _ = mapping.group_by_source(live_pairs)
+            siblings = [
+                dest for dest in rm_groups.get(backup_filename, [])
+                if dest != local_filename
+            ]
+            app = ApplicationProfile(mckp, set(), dry_run, verbose)
             print_app_header(matching_app_name, pretty_name)
-            app_stats = app.remove_file(*matching_mapping)
+            app_stats = app.remove_destination(
+                backup_filename, local_filename, len(siblings),
+            )
+            if app_stats["errors"] == 0 and app_stats["deleted"]:
+                tombstoned.add(
+                    ApplicationProfile.normalize_relative_path(local_filename),
+                )
             rm_action = get_action_label(app_stats)
             if rm_action is not None:
                 print(
                     utils.colorize_message(
-                        f"{rm_action} {matching_mapping[0]} ({pretty_name})",
+                        f"{rm_action} {local_filename} ({pretty_name})",
+                    ),
+                )
+            if siblings:
+                print(
+                    utils.colorize_message(
+                        f"{backup_filename} still feeds "
+                        f"{len(siblings)} destination(s)",
                     ),
                 )

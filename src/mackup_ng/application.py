@@ -20,7 +20,7 @@ class ApplicationProfile:
     def __init__(
         self,
         mackup: Mackup,
-        files: set[str] | set[tuple[str, str]],
+        files: set[str] | set[tuple[str, str]] | list[str] | list[tuple[str, str]],
         dry_run: bool,
         verbose: bool,
     ) -> None:
@@ -32,16 +32,17 @@ class ApplicationProfile:
             files (list)
         """
         assert isinstance(mackup, Mackup)
-        assert isinstance(files, set)
+        assert isinstance(files, set | list)
+        entries = cast("set[str] | set[tuple[str, str]]", set(files))
 
         self.mackup: Mackup = mackup
         self.file_entries: list[tuple[str, str]]
-        if all(isinstance(item, str) for item in files):
-            raw_files = cast("set[str]", files)
+        if all(isinstance(item, str) for item in entries):
+            raw_files = cast("set[str]", entries)
             self.files = sorted(raw_files)
             self.file_entries = [(path, path) for path in self.files]
         else:
-            raw_mappings = cast("set[tuple[str, str]]", files)
+            raw_mappings = cast("set[tuple[str, str]]", entries)
             pair_len = 2
             assert all(
                 isinstance(item, tuple) and len(item) == pair_len

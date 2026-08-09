@@ -145,3 +145,46 @@ class TestSyncGroupDirectories(unittest.TestCase):
 
         assert stats["synchronized"] == 0
         assert stats["skipped"] == 1
+
+
+class TestSyncGroupDirectoryPermissionErrors(unittest.TestCase):
+    def setUp(self):
+        self.mackup = Mock(spec=Mackup)
+        self.mackup.mackup_folder = tempfile.mkdtemp(prefix="mackup_gdir_perm_backup_")
+        self.home = tempfile.mkdtemp(prefix="mackup_gdir_perm_home_")
+        self._orig_home = os.environ.get("HOME")
+        os.environ["HOME"] = self.home
+        self.profile = ApplicationProfile(
+            mackup=self.mackup, files=set(), dry_run=False, verbose=False,
+        )
+        self.locked_parent = os.path.join(self.home, "locked")
+        os.makedirs(self.locked_parent)
+
+    def tearDown(self):
+        os.chmod(self.locked_parent, 0o700)
+        if self._orig_home is None:
+            os.environ.pop("HOME", None)
+        else:
+            os.environ["HOME"] = self._orig_home
+        shutil.rmtree(self.home, ignore_errors=True)
+        shutil.rmtree(self.mackup.mackup_folder, ignore_errors=True)
+
+    def _write(self, path, content, mtime):
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w") as handle:
+            handle.write(content)
+        os.utime(path, (mtime, mtime))
+
+    @unittest.skipIf(os.geteuid() == 0, "root ignores permission bits")
+    def test_unwritable_member_parent_reports_error_without_aborting(self):
+        backup = os.path.join(self.mackup.mackup_folder, "profile")
+        work = os.path.join(self.home, "work")
+        self._write(os.path.join(backup, "shared.txt"), "backup", 1000)
+        os.chmod(self.locked_parent, 0o500)
+
+        stats = self.profile.sync_group("profile", ["work", "locked/dest"])
+
+        with open(os.path.join(work, "shared.txt")) as handle:
+            assert handle.read() == "backup"
+        assert stats["errors"] > 0
+        assert not os.path.exists(os.path.join(self.locked_parent, "dest"))

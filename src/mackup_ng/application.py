@@ -171,9 +171,18 @@ class ApplicationProfile:
             return stats
 
         root_source = max(present, key=os.path.getmtime)
+        failed_members: set[str] = set()
         if not self.dry_run:
             for member in members:
-                self.ensure_directory(member, root_source)
+                try:
+                    self.ensure_directory(member, root_source)
+                except PermissionError as e:
+                    self._print(
+                        f"Error: Unable to create directory {member} "
+                        f"due to permission issue: {e}",
+                    )
+                    stats["errors"] += 1
+                    failed_members.add(member)
 
         entries: list[str] = []
         for member in present:
@@ -191,8 +200,10 @@ class ApplicationProfile:
             winner_mtime = self.get_effective_mtime(winner)
             winner_is_dir = os.path.isdir(winner)
 
-            for target in targets:
+            for target, member in zip(targets, members, strict=True):
                 if target == winner:
+                    continue
+                if member in failed_members:
                     continue
                 if (
                     os.path.exists(target)

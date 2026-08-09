@@ -56,7 +56,7 @@ from typing import Any, NoReturn
 
 from docopt import docopt
 
-from . import blocks, dconf, hooks, utils
+from . import blocks, dconf, hooks, mapping, utils
 from .application import ApplicationProfile
 from .appsdb import ApplicationsDatabase
 from .constants import VERSION
@@ -114,6 +114,20 @@ def get_action_label(stats: dict[str, int]) -> str | None:
     if synchronized > 0:
         return "Synchronized"
     return "Skipped"
+
+
+def build_sync_plan(
+    app_db: ApplicationsDatabase,
+    apps_to_sync: set[str],
+) -> tuple[list[mapping.Pair], list[mapping.Eviction]]:
+    """Collect every selected app's pairs in read order and resolve them."""
+    entries = [
+        mapping.Pair(source=backup, dest=local, owner_app=app_name)
+        for app_name in app_db.get_app_order()
+        if app_name in apps_to_sync and app_db.app_has_sync(app_name)
+        for local, backup in app_db.get_file_mappings(app_name)
+    ]
+    return mapping.build_pairs(entries)
 
 
 def main() -> None:
@@ -296,7 +310,28 @@ def main() -> None:
         # Per config (sorted by id): pre-blocks -> file sync -> post-blocks,
         # then ONE summary line per config. Iterate ALL configs so block-only
         # files (hooks) run too; file sync is limited to selected configs.
+        # The sync plan itself is resolved ONCE, globally, across every
+        # selected app (in config read order), so an override in one config
+        # can displace a pair declared by another.
         to_backup = mckp.get_apps_to_backup()
+        pairs, evictions = build_sync_plan(app_db, to_backup)
+        all_groups, _orphans = mapping.group_by_source(pairs, evictions)
+        owners = mapping.group_owners(pairs)
+
+        planner = ApplicationProfile(mckp, set(), dry_run, verbose)
+        tombstoned = planner.read_tombstones()
+        deletion_stats = planner.apply_tombstones(all_groups, tombstoned)
+
+        live_pairs = [
+            pair for pair in pairs
+            if ApplicationProfile.normalize_relative_path(pair.dest)
+            not in tombstoned
+        ]
+        groups, _ = mapping.group_by_source(live_pairs)
+        groups_by_owner: dict[str, list[tuple[str, list[str]]]] = {}
+        for source, dests in groups.items():
+            groups_by_owner.setdefault(owners[source], []).append((source, dests))
+
         for app_name in sorted(app_db.get_app_names()):
             env_files = app_db.get_env_files(app_name)
             cfg_blocks = app_db.get_blocks(app_name)
@@ -305,18 +340,24 @@ def main() -> None:
             tally = blocks.apply_blocks(cfg_blocks, "pre", env_files, dry_run)
 
             stats: dict[str, int] | None = None
-            if app_name in to_backup and app_db.app_has_sync(app_name):
-                app = ApplicationProfile(
-                    mckp,
-                    app_db.get_file_mappings(app_name),
-                    dry_run,
-                    verbose,
-                )
+            owned = groups_by_owner.get(app_name)
+            if owned:
+                app = ApplicationProfile(mckp, set(), dry_run, verbose)
                 print_app_header(app_name, pretty_name)
-                stats = app.sync_files()
+                stats = ApplicationProfile.new_stats()
+                for source, dests in owned:
+                    for key, value in app.sync_group(source, dests).items():
+                        stats[key] += value
 
             tally += blocks.apply_blocks(cfg_blocks, "post", env_files, dry_run)
             report_config(pretty_name, stats, tally)
+
+        if deletion_stats["deleted"]:
+            print(
+                utils.colorize_message(
+                    f"Deleted {deletion_stats['deleted']} tombstoned path(s)",
+                ),
+            )
 
         # On consumer machines, load the synced dconf dumps into dconf.
         if role == "restore" and dconf_enabled:

@@ -284,6 +284,47 @@ class ApplicationProfile:
         deleted_files.add(self.normalize_relative_path(local_filename))
         self.write_deleted_files(deleted_files)
 
+    def read_tombstones(self) -> set[str]:
+        """Normalized destinations recorded as explicitly removed."""
+        return self.read_deleted_files()
+
+    def apply_tombstones(
+        self, groups: dict[str, list[str]], tombstoned: set[str],
+    ) -> dict[str, int]:
+        """Delete tombstoned destinations, and sources left with no destination.
+
+        ``groups`` is the unfiltered plan: it still contains the tombstoned
+        destinations, so a source can tell whether any live destination
+        remains before it is deleted.
+        """
+        stats = self.new_stats()
+        for source, dests in groups.items():
+            dead = [dest for dest in dests if
+                    self.normalize_relative_path(dest) in tombstoned]
+            if not dead:
+                continue
+            victims = [os.path.join(os.environ["HOME"], dest) for dest in dead]
+            if len(dead) == len(dests):
+                victims.append(os.path.join(self.mackup.mackup_folder, source))
+            for filepath in victims:
+                if not os.path.lexists(filepath):
+                    continue
+                if self.verbose:
+                    self._print(f"Deleting\n  {filepath} ...")
+                if self.dry_run:
+                    stats["deleted"] += 1
+                    continue
+                try:
+                    utils.delete(filepath)
+                    stats["deleted"] += 1
+                except PermissionError as e:
+                    self._print(
+                        f"Error: Unable to delete file {filepath} "
+                        f"due to permission issue: {e}",
+                    )
+                    stats["errors"] += 1
+        return stats
+
     def apply_deleted_files(self) -> dict[str, int]:
         """Apply deletion tombstones for this app before normal sync."""
         stats: dict[str, int] = {"deleted": 0, "errors": 0}

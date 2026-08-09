@@ -339,6 +339,75 @@ class TestCLI(unittest.TestCase):
             main()
         assert os.path.isfile(out)
 
+    def _write_custom_app(self, app_id, body):
+        path = os.path.join(self.custom_apps_dir, f"{app_id}.toml")
+        with open(path, "w") as handle:
+            handle.write(f'name = "{app_id}"\n{body}')
+        with open(self.config_path, "a") as handle:
+            handle.write(f"{app_id}\n")
+
+    def test_sync_fans_backup_out_to_two_destinations(self):
+        self._write_custom_app(
+            "fanout",
+            '[mapped_files]\n'
+            '".work.rc" = ".shared.rc"\n'
+            '".home.rc" = ".shared.rc"\n',
+        )
+        source = os.path.join(self.mackup_folder, ".shared.rc")
+        os.makedirs(self.mackup_folder, exist_ok=True)
+        with open(source, "w") as handle:
+            handle.write("shared=1\n")
+
+        with patch("sys.argv", ["mackup", "sync"]):
+            main()
+
+        for name in (".work.rc", ".home.rc"):
+            with open(os.path.join(self.test_home, name)) as handle:
+                assert handle.read() == "shared=1\n"
+
+    def test_later_config_overrides_the_destination(self):
+        self._write_custom_app("aaa-base", 'files = [".overridden"]\n')
+        self._write_custom_app(
+            "zzz-override",
+            '[mapped_files]\n".overridden" = ".from-work"\n',
+        )
+        os.makedirs(self.mackup_folder, exist_ok=True)
+        with open(os.path.join(self.mackup_folder, ".from-work"), "w") as handle:
+            handle.write("work\n")
+        with open(os.path.join(self.mackup_folder, ".overridden"), "w") as handle:
+            handle.write("base\n")
+
+        with patch("sys.argv", ["mackup", "sync"]):
+            main()
+
+        with open(os.path.join(self.test_home, ".overridden")) as handle:
+            assert handle.read() == "work\n"
+        # the evicted source keeps its content and is left alone
+        with open(os.path.join(self.mackup_folder, ".overridden")) as handle:
+            assert handle.read() == "base\n"
+
+    def test_tombstoned_destination_stays_removed_but_group_survives(self):
+        self._write_custom_app(
+            "fanout",
+            '[mapped_files]\n'
+            '".work.rc" = ".shared.rc"\n'
+            '".home.rc" = ".shared.rc"\n',
+        )
+        os.makedirs(self.mackup_folder, exist_ok=True)
+        with open(os.path.join(self.mackup_folder, ".shared.rc"), "w") as handle:
+            handle.write("shared=1\n")
+        with open(
+            os.path.join(self.mackup_folder, ".mackup-deletions"), "w",
+        ) as handle:
+            handle.write(".work.rc\n")
+
+        with patch("sys.argv", ["mackup", "sync"]):
+            main()
+
+        assert not os.path.exists(os.path.join(self.test_home, ".work.rc"))
+        assert os.path.exists(os.path.join(self.test_home, ".home.rc"))
+        assert os.path.exists(os.path.join(self.mackup_folder, ".shared.rc"))
+
 
 if __name__ == "__main__":
     unittest.main()

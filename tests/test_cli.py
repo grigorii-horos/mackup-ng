@@ -396,6 +396,8 @@ class TestCLI(unittest.TestCase):
         os.makedirs(self.mackup_folder, exist_ok=True)
         with open(os.path.join(self.mackup_folder, ".shared.rc"), "w") as handle:
             handle.write("shared=1\n")
+        with open(os.path.join(self.test_home, ".work.rc"), "w") as handle:
+            handle.write("local-work=1\n")
         with open(
             os.path.join(self.mackup_folder, ".mackup-deletions"), "w",
         ) as handle:
@@ -407,6 +409,59 @@ class TestCLI(unittest.TestCase):
         assert not os.path.exists(os.path.join(self.test_home, ".work.rc"))
         assert os.path.exists(os.path.join(self.test_home, ".home.rc"))
         assert os.path.exists(os.path.join(self.mackup_folder, ".shared.rc"))
+
+    def test_verbose_sync_reports_evictions_and_orphans(self):
+        self._write_custom_app("aaa-base", 'files = [".overridden"]\n')
+        self._write_custom_app(
+            "zzz-override",
+            '[mapped_files]\n".overridden" = ".from-work"\n',
+        )
+        os.makedirs(self.mackup_folder, exist_ok=True)
+        with open(os.path.join(self.mackup_folder, ".from-work"), "w") as handle:
+            handle.write("work\n")
+
+        buffer = io.StringIO()
+        with patch("sys.stdout", buffer), patch(
+            "sys.argv", ["mackup", "-v", "sync"],
+        ):
+            main()
+        output = buffer.getvalue()
+        assert "evicted by zz" in output or "evicted by" in output
+        assert ".overridden" in output
+        assert "no destination" in output
+
+    def test_show_reports_fanout_destinations(self):
+        self._write_custom_app(
+            "fanout",
+            '[mapped_files]\n'
+            '".work.rc" = ".shared.rc"\n'
+            '".home.rc" = ".shared.rc"\n',
+        )
+        buffer = io.StringIO()
+        with patch("sys.stdout", buffer), patch(
+            "sys.argv", ["mackup", "show", "fanout"],
+        ):
+            main()
+        output = buffer.getvalue()
+        assert ".work.rc <- .shared.rc" in output
+        assert "fanout: 2 destinations" in output
+
+    def test_sync_reports_skipped_for_config_fully_evicted(self):
+        """A selected config whose only pair loses its destination still reports."""
+        self._write_custom_app("aaa-base", 'files = [".overridden"]\n')
+        self._write_custom_app(
+            "zzz-override",
+            '[mapped_files]\n".overridden" = ".from-work"\n',
+        )
+        os.makedirs(self.mackup_folder, exist_ok=True)
+        with open(os.path.join(self.mackup_folder, ".from-work"), "w") as handle:
+            handle.write("work\n")
+
+        buffer = io.StringIO()
+        with patch("sys.stdout", buffer), patch("sys.argv", ["mackup", "sync"]):
+            main()
+        output = buffer.getvalue()
+        assert "Skipped aaa-base" in output
 
 
 if __name__ == "__main__":

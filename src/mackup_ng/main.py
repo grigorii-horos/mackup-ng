@@ -52,6 +52,7 @@ See https://github.com/grigorii-horos/mackup-ng/tree/master/doc for more informa
 
 import os
 import sys
+from collections import Counter
 from typing import Any, NoReturn
 
 from docopt import docopt
@@ -279,11 +280,29 @@ def main() -> None:
             app_db.get_name(requested_app_name), color=utils.AnsiColor.CYAN, bold=True,
         )
         print(f"{bold('Name:')} {pretty}")
-        files = app_db.get_files(requested_app_name)
-        if files:
+        mappings = app_db.get_file_mappings(requested_app_name)
+        if mappings:
+            pairs, _ = build_sync_plan(app_db, set(app_db.get_app_names()))
+            winners = {pair.dest: pair for pair in pairs}
+            fanout = Counter(pair.source for pair in pairs)
             print(bold("Configuration files:"))
-            for file in sorted(files):
-                print(f"{dash} {file}")
+            for local, backup in mappings:
+                winner = winners.get(local)
+                if winner is None or winner.source != backup:
+                    lost = utils.style_text(
+                        f"(overridden by {winner.owner_app})" if winner else
+                        "(overridden)",
+                        color=utils.AnsiColor.GRAY,
+                    )
+                    print(f"{dash} {local} <- {backup} {lost}")
+                    continue
+                extra = ""
+                if fanout[backup] > 1:
+                    extra = " " + utils.style_text(
+                        f"(fanout: {fanout[backup]} destinations)",
+                        color=utils.AnsiColor.GRAY,
+                    )
+                print(f"{dash} {local} <- {backup}{extra}")
         cfg_blocks = app_db.get_blocks(requested_app_name)
         if cfg_blocks:
             print(bold("Action blocks:"))
@@ -315,8 +334,24 @@ def main() -> None:
         # can displace a pair declared by another.
         to_backup = mckp.get_apps_to_backup()
         pairs, evictions = build_sync_plan(app_db, to_backup)
-        all_groups, _orphans = mapping.group_by_source(pairs, evictions)
+        all_groups, orphans = mapping.group_by_source(pairs, evictions)
         owners = mapping.group_owners(pairs)
+
+        if verbose:
+            for eviction in evictions:
+                print(
+                    utils.colorize_message(
+                        f"{eviction.evicted.dest} <- {eviction.evicted.source} "
+                        f"({eviction.evicted.owner_app}) evicted by "
+                        f"{eviction.winner.owner_app}",
+                    ),
+                )
+            for orphan in orphans:
+                print(
+                    utils.colorize_message(
+                        f"{orphan} has no destination, left untouched",
+                    ),
+                )
 
         planner = ApplicationProfile(mckp, set(), dry_run, verbose)
         tombstoned = planner.read_tombstones()
@@ -341,13 +376,14 @@ def main() -> None:
 
             stats: dict[str, int] | None = None
             owned = groups_by_owner.get(app_name)
-            if owned:
-                app = ApplicationProfile(mckp, set(), dry_run, verbose)
-                print_app_header(app_name, pretty_name)
+            if app_name in to_backup and app_db.app_has_sync(app_name):
                 stats = ApplicationProfile.new_stats()
-                for source, dests in owned:
-                    for key, value in app.sync_group(source, dests).items():
-                        stats[key] += value
+                if owned:
+                    app = ApplicationProfile(mckp, set(), dry_run, verbose)
+                    print_app_header(app_name, pretty_name)
+                    for source, dests in owned:
+                        for key, value in app.sync_group(source, dests).items():
+                            stats[key] += value
 
             tally += blocks.apply_blocks(cfg_blocks, "post", env_files, dry_run)
             report_config(pretty_name, stats, tally)

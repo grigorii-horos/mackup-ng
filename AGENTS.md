@@ -125,7 +125,10 @@ path is the source. Two consequences:
   declaration order. A backup file left with no destination is untouched and
   reported by `mackup sync -v`.
 - `mackup rm <path>` removes one destination and tombstones it; the backup
-  source is deleted only when no destination is left.
+  source is deleted only when no destination is left. Removing a path *inside*
+  a managed directory removes it from every member of that directory's group
+  (source and sibling destinations), otherwise the next merge would copy it
+  back from a sibling.
 
 ## Processing Order
 

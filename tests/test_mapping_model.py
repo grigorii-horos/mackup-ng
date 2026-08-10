@@ -29,6 +29,14 @@ class TestBuildPairs(unittest.TestCase):
         assert evictions[0].evicted == first
         assert evictions[0].winner == second
 
+    def test_redeclaring_the_same_source_is_not_an_eviction(self):
+        """An identical re-declaration changes nothing, so it is not reported."""
+        first = Pair(".config/x", ".config/x", "app-a")
+        again = Pair(".config/x", ".config/x", "zz-work")
+        pairs, evictions = build_pairs([first, again])
+        assert pairs == [again]
+        assert evictions == []
+
     def test_winner_moves_to_the_end_of_the_list(self):
         first = Pair(".config/a", ".config/a", "app-a")
         second = Pair(".config/b", ".config/b", "app-b")
@@ -73,9 +81,19 @@ class TestGroupBySource(unittest.TestCase):
 
 
 class TestGroupOwners(unittest.TestCase):
-    def test_owner_is_the_first_pair_of_the_group(self):
+    def test_owner_is_the_last_pair_of_the_group(self):
+        """The config that won the last destination owns the group."""
         pairs = [
             Pair(".config/p", ".config/work", "app-a"),
             Pair(".config/p", ".config/home", "zz-work"),
         ]
-        assert group_owners(pairs) == {".config/p": "app-a"}
+        assert group_owners(pairs) == {".config/p": "zz-work"}
+
+    def test_owner_ignores_pairs_the_caller_filtered_out(self):
+        """Feeding only the live pairs never attributes a group to a dead one."""
+        pairs = [
+            Pair(".config/p", ".config/work", "app-a"),
+            Pair(".config/p", ".config/home", "zz-work"),
+        ]
+        live = [pair for pair in pairs if pair.dest != ".config/home"]
+        assert group_owners(live) == {".config/p": "app-a"}

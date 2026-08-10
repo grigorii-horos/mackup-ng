@@ -39,13 +39,15 @@ def build_pairs(entries: Iterable[Pair]) -> tuple[list[Pair], list[Eviction]]:
     """Resolve entries in read order; later pairs win their destination.
 
     Returns the surviving pairs (in final order, winners last) and the list
-    of evictions, in the order they happened.
+    of evictions, in the order they happened. Re-declaring a destination with
+    the *same* source is not an eviction: nothing about the plan changes, so
+    reporting it would be noise.
     """
     by_dest: dict[str, Pair] = {}
     evictions: list[Eviction] = []
     for pair in entries:
         previous = by_dest.pop(pair.dest, None)
-        if previous is not None:
+        if previous is not None and previous.source != pair.source:
             evictions.append(Eviction(previous, pair))
         by_dest[pair.dest] = pair
     return list(by_dest.values()), evictions
@@ -72,8 +74,12 @@ def group_by_source(
 
 
 def group_owners(pairs: Sequence[Pair]) -> dict[str, str]:
-    """Map each source to the app that first claimed it (for statistics)."""
-    owners: dict[str, str] = {}
-    for pair in pairs:
-        owners.setdefault(pair.source, pair.owner_app)
-    return owners
+    """Map each source to the app that owns its last pair.
+
+    A fanout group can gather destinations declared by several configs. It is
+    attributed to the config that claimed the *last* destination in read order
+    — the strongest one, since read order is also override order. Feed this
+    the live (non-tombstoned) pairs so a group is never attributed to a config
+    that contributes no destination.
+    """
+    return {pair.source: pair.owner_app for pair in pairs}

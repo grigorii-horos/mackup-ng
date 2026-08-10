@@ -352,9 +352,10 @@ def _apply_run(spec: dict, env_files: list[str], dry_run: bool) -> int:
         return 0
     if dry_run:
         return 1
+    shell = str(spec.get("shell", "bash"))
     for cmd in commands or [script]:  # stop at first failure (like set -e)
         result = subprocess.run(
-            [spec.get("shell", "bash"), "-c", cmd], env=env, check=False,
+            [shell, "-c", str(cmd)], env=env, check=False,
         )
         if result.returncode != 0:
             _msg(f"Warning: block run failed (code {result.returncode})")

@@ -126,13 +126,29 @@ class TestConfigLevelConditions(unittest.TestCase):
         assert not os.path.exists(touched)
 
     def test_source_orphaned_by_a_gated_out_config_is_untouched(self):
-        self._write_palette_configs()
+        # Set up only zzz-override to claim .colors <- .palette-eink.
+        # With the gate in place, zzz-override is disabled, so .palette-eink
+        # has no destination and is an orphan.
+        # Without the gate, .palette-eink would be synced to/from .colors.
         self._write_app(
             "zzz-override",
             '[when]\nmarker = ["eink"]\n\n'
             '[mapped_files]\n".colors" = ".palette-eink"\n',
         )
+        self._write_backup(".palette-eink", "eink\n")
+        # Create ~/.colors locally with different content and a newer mtime.
+        # If zzz-override claims .colors, the newer local file would be backed up,
+        # overwriting .palette-eink.
+        colors_path = os.path.join(self.home, ".colors")
+        with open(colors_path, "w") as handle:
+            handle.write("local\n")
+        backup_eink_path = os.path.join(self.mackup_folder, ".palette-eink")
+        backup_mtime = os.path.getmtime(backup_eink_path)
+        os.utime(colors_path, (backup_mtime + 10, backup_mtime + 10))
         with patch("sys.argv", ["mackup", "sync"]):
             main()
-        with open(os.path.join(self.mackup_folder, ".palette-eink")) as handle:
+        # With the gate in place, .palette-eink is never claimed or synced,
+        # so it remains untouched with its original content.
+        assert os.path.exists(backup_eink_path)
+        with open(backup_eink_path) as handle:
             assert handle.read() == "eink\n"

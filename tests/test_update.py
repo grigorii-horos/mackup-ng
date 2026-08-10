@@ -133,3 +133,85 @@ class TestCache(unittest.TestCase):
         os.environ.pop("XDG_CACHE_HOME", None)
         update.write_cache("2.2.0", 1000.0)  # must not raise
         assert update.read_cache(1000.0) is None
+
+
+class TestCheck(unittest.TestCase):
+    def setUp(self):
+        self.home = tempfile.mkdtemp(prefix="mackup_check_home_")
+        self._orig = {
+            key: os.environ.get(key)
+            for key in ("HOME", "XDG_CACHE_HOME", "XDG_STATE_HOME")
+        }
+        os.environ["HOME"] = self.home
+        os.environ["XDG_CACHE_HOME"] = os.path.join(self.home, ".cache")
+        os.environ["XDG_STATE_HOME"] = os.path.join(self.home, ".local", "state")
+        self.calls = 0
+
+    def tearDown(self):
+        for key, orig in self._orig.items():
+            if orig is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = orig
+        shutil.rmtree(self.home, ignore_errors=True)
+
+    def _fetch(self, value):
+        def fetch():
+            self.calls += 1
+            return value
+        return fetch
+
+    def _set_marker(self, name):
+        markers = os.path.join(os.environ["XDG_STATE_HOME"], "mackup", "markers")
+        os.makedirs(markers, exist_ok=True)
+        open(os.path.join(markers, name), "a").close()
+
+    def test_newer_version_produces_a_line(self):
+        line = update.check("2.1.0", fetch=self._fetch("2.2.0"), now=1000.0)
+        assert line is not None
+        assert "2.1.0" in line
+        assert "2.2.0" in line
+
+    def test_same_version_says_nothing(self):
+        assert update.check("2.1.0", fetch=self._fetch("2.1.0"), now=1000.0) is None
+
+    def test_older_remote_version_says_nothing(self):
+        assert update.check("2.1.0", fetch=self._fetch("2.0.0"), now=1000.0) is None
+
+    def test_pre_release_is_ignored(self):
+        assert update.check("2.1.0", fetch=self._fetch("2.2.0rc1"), now=1000.0) is None
+
+    def test_failed_fetch_says_nothing(self):
+        assert update.check("2.1.0", fetch=self._fetch(None), now=1000.0) is None
+
+    def test_raising_fetch_says_nothing(self):
+        def boom():
+            raise OSError("network down")
+
+        assert update.check("2.1.0", fetch=boom, now=1000.0) is None
+
+    def test_fresh_cache_suppresses_the_fetch(self):
+        update.write_cache("2.2.0", 1000.0)
+        line = update.check("2.1.0", fetch=self._fetch("9.9.9"), now=1000.0)
+        assert self.calls == 0
+        assert line is not None
+        assert "2.2.0" in line
+
+    def test_expired_cache_triggers_a_fetch_and_is_rewritten(self):
+        update.write_cache("2.1.5", 1000.0)
+        later = 1000.0 + update.CACHE_TTL_SECONDS + 1
+        line = update.check("2.1.0", fetch=self._fetch("2.3.0"), now=later)
+        assert self.calls == 1
+        assert line is not None
+        assert "2.3.0" in line
+        assert update.read_cache(later) == "2.3.0"
+
+    def test_marker_suppresses_everything(self):
+        self._set_marker("no-update-check")
+        update.write_cache("2.2.0", 1000.0)
+        assert update.check("2.1.0", fetch=self._fetch("2.2.0"), now=1000.0) is None
+        assert self.calls == 0
+
+    def test_line_carries_the_upgrade_command(self):
+        line = update.check("2.1.0", fetch=self._fetch("2.2.0"), now=1000.0)
+        assert "Upgrade:" in line

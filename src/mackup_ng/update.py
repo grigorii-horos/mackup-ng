@@ -11,8 +11,20 @@ from __future__ import annotations
 import json
 import os
 import re
+import sys
+import time
+import urllib.request
+from typing import TYPE_CHECKING
+
+from . import hooks, utils
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 CACHE_TTL_SECONDS: int = 24 * 60 * 60
+
+PYPI_URL: str = "https://pypi.org/pypi/mackup-ng/json"
+NO_UPDATE_CHECK_MARKER: str = "no-update-check"
 
 _NUMERIC_VERSION_RE = re.compile(r"^\d+(?:\.\d+)*$")
 
@@ -88,3 +100,56 @@ def write_cache(latest: str, now: float) -> None:
             json.dump({"checked_at": now, "latest": latest}, handle)
     except (OSError, KeyError):
         return
+
+
+def fetch_latest(timeout: float = 2.0) -> str | None:
+    """Ask PyPI for the latest published version, or None if we cannot.
+
+    The only network call in mackup. Every failure mode — offline, timeout,
+    an error status, malformed JSON, a missing field — collapses to None.
+    """
+    try:
+        with urllib.request.urlopen(PYPI_URL, timeout=timeout) as response:
+            payload = json.load(response)
+        return str(payload["info"]["version"])
+    except (OSError, ValueError, TypeError, KeyError):
+        return None
+
+
+def check(
+    current: str,
+    *,
+    fetch: Callable[[], str | None] | None = None,
+    now: float | None = None,
+    verbose: bool = False,
+) -> str | None:
+    """Return the line to print about a newer release, or None.
+
+    Consults the ``no-update-check`` marker first, then the cache, and only
+    then the network. Never raises: a check that cannot answer says nothing.
+    """
+    if hooks.has_marker(NO_UPDATE_CHECK_MARKER):
+        return None
+
+    moment = time.time() if now is None else now
+    latest = read_cache(moment)
+    if latest is None:
+        fetcher = fetch if fetch is not None else fetch_latest
+        try:
+            latest = fetcher()
+        except Exception:  # a broken fetch must not break sync
+            latest = None
+        if latest is None:
+            if verbose:
+                print(utils.colorize_message("Update check skipped: PyPI unreachable"))
+            return None
+        write_cache(latest, moment)
+
+    if not is_newer(latest, current):
+        return None
+
+    command = upgrade_command(sys.argv[0] if sys.argv else "")
+    line = f"mackup-ng {current} -> {latest} available."
+    if command is None:
+        return line
+    return f"{line} Upgrade: {command}"

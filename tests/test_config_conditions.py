@@ -214,3 +214,55 @@ class TestConfigLevelConditions(unittest.TestCase):
         assert "not_marker=" not in output
         # Should still have the standard phrase
         assert "conditions not met on this machine" in output
+
+    def test_verbose_sync_reports_gated_out_configs_unclaimed_source(self):
+        # zzz-override is gated out (no marker set) and nothing else declares
+        # .palette-eink, so it is an ordinary orphan: reported under -v.
+        self._write_palette_configs()
+        buffer = io.StringIO()
+        with patch("sys.stdout", buffer), patch(
+            "sys.argv", ["mackup", "-v", "sync"],
+        ):
+            main()
+        assert ".palette-eink has no destination, left untouched" in buffer.getvalue()
+
+    def test_source_claimed_by_an_enabled_config_is_not_reported_as_orphan(self):
+        # aaa-base and zzz-override both declare .palette-default; aaa-base is
+        # always enabled, so .palette-default is claimed and must NOT be
+        # reported as an orphan even though zzz-override (which shares it) is
+        # gated out.
+        self._write_app(
+            "aaa-base",
+            '[mapped_files]\n".colors" = ".palette-default"\n',
+        )
+        self._write_app(
+            "zzz-override",
+            '[when]\nmarker = ["eink"]\n\n'
+            '[mapped_files]\n".other-colors" = ".palette-default"\n',
+        )
+        self._write_backup(".palette-default", "default\n")
+        buffer = io.StringIO()
+        with patch("sys.stdout", buffer), patch(
+            "sys.argv", ["mackup", "-v", "sync"],
+        ):
+            main()
+        assert ".palette-default has no destination" not in buffer.getvalue()
+
+    def test_gated_out_configs_orphan_not_reported_without_verbose(self):
+        self._write_palette_configs()
+        buffer = io.StringIO()
+        with patch("sys.stdout", buffer), patch("sys.argv", ["mackup", "sync"]):
+            main()
+        assert "has no destination" not in buffer.getvalue()
+
+    def test_gated_out_configs_orphaned_backup_file_stays_on_disk(self):
+        self._write_palette_configs()
+        buffer = io.StringIO()
+        with patch("sys.stdout", buffer), patch(
+            "sys.argv", ["mackup", "-v", "sync"],
+        ):
+            main()
+        backup_eink_path = os.path.join(self.mackup_folder, ".palette-eink")
+        assert os.path.exists(backup_eink_path)
+        with open(backup_eink_path) as handle:
+            assert handle.read() == "eink\n"

@@ -370,12 +370,31 @@ def main() -> None:
                         f"{eviction.winner.owner_app}",
                     ),
                 )
+            reported_orphans = set(orphans)
             for orphan in orphans:
                 print(
                     utils.colorize_message(
                         f"{orphan} has no destination, left untouched",
                     ),
                 )
+            # A gated-out config's sources never entered the plan above (they
+            # were never candidate pairs), so they cannot show up as evicted
+            # orphans. They are an ordinary orphan all the same, unless some
+            # other (enabled) config still claims the same source.
+            for app_name in sorted(app_db.get_app_names()):
+                if app_name not in to_backup or not app_db.app_has_sync(app_name):
+                    continue
+                if app_db.config_enabled(app_name):
+                    continue
+                for _local, backup in app_db.get_file_mappings(app_name):
+                    if backup in all_groups or backup in reported_orphans:
+                        continue
+                    reported_orphans.add(backup)
+                    print(
+                        utils.colorize_message(
+                            f"{backup} has no destination, left untouched",
+                        ),
+                    )
 
         planner = ApplicationProfile(mckp, dry_run, verbose)
         tombstoned = planner.read_tombstones()

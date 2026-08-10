@@ -116,3 +116,20 @@ class TestCache(unittest.TestCase):
             handle.write("in the way\n")
         update.write_cache("2.2.0", 1000.0)  # must not raise
         assert update.read_cache(1000.0) is None
+
+    def test_xdg_set_home_unset_cache_path_works(self):
+        # With XDG_CACHE_HOME set and HOME removed from the environment:
+        # cache_path() returns a path under XDG_CACHE_HOME,
+        # and write_cache/read_cache work normally.
+        os.environ.pop("HOME", None)
+        update.write_cache("2.2.0", 1000.0)
+        assert update.read_cache(1000.0) == "2.2.0"
+
+    def test_both_xdg_and_home_unset_write_cache_does_not_raise(self):
+        # With BOTH XDG_CACHE_HOME and HOME removed:
+        # write_cache("2.2.0", 1000.0) does not raise,
+        # and read_cache(1000.0) returns None.
+        os.environ.pop("HOME", None)
+        os.environ.pop("XDG_CACHE_HOME", None)
+        update.write_cache("2.2.0", 1000.0)  # must not raise
+        assert update.read_cache(1000.0) is None

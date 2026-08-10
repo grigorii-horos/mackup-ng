@@ -56,8 +56,8 @@ def upgrade_command(executable: str) -> str | None:
 
 def cache_path() -> str:
     """Path of the update-check cache file under ``$XDG_CACHE_HOME``."""
-    base = os.environ.get(
-        "XDG_CACHE_HOME", os.path.join(os.environ["HOME"], ".cache"),
+    base = os.environ.get("XDG_CACHE_HOME") or os.path.join(
+        os.environ["HOME"], ".cache",
     )
     return os.path.join(base, "mackup", "update-check.json")
 
@@ -81,10 +81,10 @@ def read_cache(now: float) -> str | None:
 
 def write_cache(latest: str, now: float) -> None:
     """Store the fetched version. A cache we cannot write is not an error."""
-    path = cache_path()
     try:
+        path = cache_path()
         os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, "w") as handle:
             json.dump({"checked_at": now, "latest": latest}, handle)
-    except OSError:
+    except (OSError, KeyError):
         return

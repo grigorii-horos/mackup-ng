@@ -504,4 +504,3 @@ class ApplicationProfile:
         os.makedirs(path, exist_ok=True)
         dir_mtime = os.path.getmtime(mode_from)
         os.utime(path, (dir_mtime, dir_mtime))
-

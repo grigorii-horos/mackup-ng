@@ -18,7 +18,7 @@ class TestSyncGroupFiles(unittest.TestCase):
         self._orig_home = os.environ.get("HOME")
         os.environ["HOME"] = self.home
         self.profile = ApplicationProfile(
-            mackup=self.mackup, files=set(), dry_run=False, verbose=False,
+            mackup=self.mackup, dry_run=False, verbose=False,
         )
 
     def tearDown(self):
@@ -75,7 +75,7 @@ class TestSyncGroupFiles(unittest.TestCase):
         source = os.path.join(self.mackup.mackup_folder, ".config/app/user.js")
         self._write(source, "from-backup", 3000)
         profile = ApplicationProfile(
-            mackup=self.mackup, files=set(), dry_run=True, verbose=False,
+            mackup=self.mackup, dry_run=True, verbose=False,
         )
         stats = profile.sync_group(".config/app/user.js", [".config/work/user.js"])
         assert stats["restored"] == 1
@@ -90,7 +90,7 @@ class TestSyncGroupDirectories(unittest.TestCase):
         self._orig_home = os.environ.get("HOME")
         os.environ["HOME"] = self.home
         self.profile = ApplicationProfile(
-            mackup=self.mackup, files=set(), dry_run=False, verbose=False,
+            mackup=self.mackup, dry_run=False, verbose=False,
         )
 
     def tearDown(self):
@@ -147,6 +147,113 @@ class TestSyncGroupDirectories(unittest.TestCase):
         assert stats["skipped"] == 1
 
 
+class TestSyncGroupTypeConflicts(unittest.TestCase):
+    """A member that is a file where another is a directory must not abort."""
+
+    def setUp(self):
+        self.mackup = Mock(spec=Mackup)
+        self.mackup.mackup_folder = tempfile.mkdtemp(prefix="mackup_gclash_backup_")
+        self.home = tempfile.mkdtemp(prefix="mackup_gclash_home_")
+        self._orig_home = os.environ.get("HOME")
+        os.environ["HOME"] = self.home
+        self.profile = ApplicationProfile(
+            mackup=self.mackup, dry_run=False, verbose=False,
+        )
+
+    def tearDown(self):
+        if self._orig_home is None:
+            os.environ.pop("HOME", None)
+        else:
+            os.environ["HOME"] = self._orig_home
+        shutil.rmtree(self.home, ignore_errors=True)
+        shutil.rmtree(self.mackup.mackup_folder, ignore_errors=True)
+
+    def _write_file(self, path, content, mtime):
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w") as handle:
+            handle.write(content)
+        os.utime(path, (mtime, mtime))
+
+    def _write_dir(self, path, content, mtime):
+        os.makedirs(path, exist_ok=True)
+        self._write_file(os.path.join(path, "inside.txt"), content, mtime)
+        os.utime(path, (mtime, mtime))
+
+    def test_backup_directory_replaces_older_destination_file(self):
+        backup = os.path.join(self.mackup.mackup_folder, ".cfgdir")
+        dest = os.path.join(self.home, ".cfgdir")
+        self._write_dir(backup, "from-backup", 5000)
+        self._write_file(dest, "stale-local", 1000)
+
+        stats = self.profile.sync_group(".cfgdir", [".cfgdir"])
+
+        assert os.path.isdir(dest)
+        with open(os.path.join(dest, "inside.txt")) as handle:
+            assert handle.read() == "from-backup"
+        assert stats["errors"] == 0
+        assert stats["restored"] == 1
+
+    def test_newer_destination_file_replaces_backup_directory(self):
+        backup = os.path.join(self.mackup.mackup_folder, ".cfgdir")
+        dest = os.path.join(self.home, ".cfgdir")
+        self._write_dir(backup, "stale-backup", 1000)
+        self._write_file(dest, "fresh-local", 5000)
+
+        stats = self.profile.sync_group(".cfgdir", [".cfgdir"])
+
+        assert os.path.isfile(backup)
+        with open(backup) as handle:
+            assert handle.read() == "fresh-local"
+        assert stats["errors"] == 0
+        assert stats["backed_up"] == 1
+
+    def test_backup_file_replaces_older_destination_directory(self):
+        backup = os.path.join(self.mackup.mackup_folder, ".cfgdir")
+        dest = os.path.join(self.home, ".cfgdir")
+        self._write_file(backup, "fresh-backup", 5000)
+        self._write_dir(dest, "stale-local", 1000)
+
+        stats = self.profile.sync_group(".cfgdir", [".cfgdir"])
+
+        assert os.path.isfile(dest)
+        with open(dest) as handle:
+            assert handle.read() == "fresh-backup"
+        assert stats["errors"] == 0
+        assert stats["restored"] == 1
+
+    def test_newer_destination_directory_replaces_backup_file(self):
+        backup = os.path.join(self.mackup.mackup_folder, ".cfgdir")
+        dest = os.path.join(self.home, ".cfgdir")
+        self._write_file(backup, "stale-backup", 1000)
+        self._write_dir(dest, "fresh-local", 5000)
+
+        stats = self.profile.sync_group(".cfgdir", [".cfgdir"])
+
+        assert os.path.isdir(backup)
+        with open(os.path.join(backup, "inside.txt")) as handle:
+            assert handle.read() == "fresh-local"
+        assert stats["errors"] == 0
+        assert stats["backed_up"] == 1
+
+    def test_only_the_clashing_member_is_replaced_wholesale(self):
+        """A same-type sibling still merges entry by entry."""
+        backup = os.path.join(self.mackup.mackup_folder, ".cfgdir")
+        clash = os.path.join(self.home, ".work.d")
+        peer = os.path.join(self.home, ".home.d")
+        self._write_dir(backup, "from-backup", 5000)
+        self._write_file(clash, "stale-local", 1000)
+        self._write_file(os.path.join(peer, "peer-only.txt"), "peer", 4000)
+
+        stats = self.profile.sync_group(".cfgdir", [".work.d", ".home.d"])
+
+        assert stats["errors"] == 0
+        for root in (backup, clash, peer):
+            with open(os.path.join(root, "inside.txt")) as handle:
+                assert handle.read() == "from-backup"
+            with open(os.path.join(root, "peer-only.txt")) as handle:
+                assert handle.read() == "peer"
+
+
 class TestSyncGroupDirectoryPermissionErrors(unittest.TestCase):
     def setUp(self):
         self.mackup = Mock(spec=Mackup)
@@ -155,7 +262,7 @@ class TestSyncGroupDirectoryPermissionErrors(unittest.TestCase):
         self._orig_home = os.environ.get("HOME")
         os.environ["HOME"] = self.home
         self.profile = ApplicationProfile(
-            mackup=self.mackup, files=set(), dry_run=False, verbose=False,
+            mackup=self.mackup, dry_run=False, verbose=False,
         )
         self.locked_parent = os.path.join(self.home, "locked")
         os.makedirs(self.locked_parent)

@@ -88,6 +88,55 @@ class TestRemoveDestination(unittest.TestCase):
         assert not os.path.exists(os.path.join(self.test_home, ".home.rc"))
         assert not os.path.exists(os.path.join(self.mackup_folder, ".shared.rc"))
 
+    def test_rm_of_a_file_inside_a_fanout_directory_stays_removed(self):
+        """A descendant removal must not be undone by the next sync."""
+        apps_dir = os.path.join(self.test_home, ".mackup", "applications")
+        with open(os.path.join(apps_dir, "fanout.toml"), "w") as handle:
+            handle.write(
+                'name = "fanout"\n\n[mapped_files]\n'
+                '".work.d" = ".shared.d"\n'
+                '".home.d" = ".shared.d"\n',
+            )
+        shared = os.path.join(self.mackup_folder, ".shared.d")
+        os.makedirs(shared, exist_ok=True)
+        for name in ("doomed.txt", "keeper.txt"):
+            with open(os.path.join(shared, name), "w") as handle:
+                handle.write(f"{name}\n")
+
+        with patch("sys.argv", ["mackup", "sync"]):
+            main()
+        for root in (".work.d", ".home.d"):
+            assert os.path.exists(
+                os.path.join(self.test_home, root, "doomed.txt"),
+            )
+
+        with patch("sys.argv", ["mackup", "rm", ".work.d/doomed.txt"]):
+            main()
+
+        # The removal reaches every member of the group right away...
+        gone = [
+            os.path.join(self.test_home, ".work.d", "doomed.txt"),
+            os.path.join(self.test_home, ".home.d", "doomed.txt"),
+            os.path.join(shared, "doomed.txt"),
+        ]
+        for path in gone:
+            assert not os.path.exists(path)
+
+        # ...and a second sync does not resurrect it from a sibling.
+        with patch("sys.argv", ["mackup", "sync"]):
+            main()
+        for path in gone:
+            assert not os.path.exists(path)
+
+        # The rest of the group is untouched.
+        for root in (os.path.join(self.test_home, ".work.d"),
+                     os.path.join(self.test_home, ".home.d"), shared):
+            with open(os.path.join(root, "keeper.txt")) as handle:
+                assert handle.read() == "keeper.txt\n"
+
+        with open(os.path.join(self.mackup_folder, ".mackup-deletions")) as handle:
+            assert handle.read().split() == [".work.d/doomed.txt"]
+
     def test_tombstone_records_the_destination(self):
         with patch("sys.argv", ["mackup", "sync"]):
             main()

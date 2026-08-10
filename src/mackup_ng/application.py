@@ -19,18 +19,16 @@ class ApplicationProfile:
     def __init__(
         self,
         mackup: Mackup,
-        files: set[str] | set[tuple[str, str]] | list[str] | list[tuple[str, str]],
         dry_run: bool,
         verbose: bool,
     ) -> None:
         """Create an ApplicationProfile bound to a Mackup storage folder.
 
-        ``files`` is kept for callers that still pass a declaration list; the
-        sync engine works on groups handed to :meth:`sync_group`.
+        The sync engine works on the groups handed to :meth:`sync_group`, so
+        the profile itself carries no file list.
         """
         assert isinstance(mackup, Mackup)
         self.mackup: Mackup = mackup
-        self.files = sorted(str(item) for item in files)
         self.dry_run: bool = dry_run
         self.verbose: bool = verbose
 
@@ -63,15 +61,87 @@ class ApplicationProfile:
         stats = self.new_stats()
         members = self.member_paths(source, dests)
         backup_path = members[0]
-        existing = [
-            path for path in members
-            if os.path.isfile(path) or os.path.isdir(path)
-        ]
+        existing = self.existing_members(members)
         if not existing:
             return stats
 
+        if len({os.path.isdir(path) for path in existing}) > 1:
+            # Members disagree on file vs. directory. Resolve the clash first:
+            # the newest member replaces every member of the other type, the
+            # way the pairwise engine did. Otherwise a directory merge would
+            # try to makedirs() over a regular file and blow up the whole run.
+            for key, value in self.replace_clashing_members(
+                existing, backup_path,
+            ).items():
+                stats[key] += value
+            existing = self.existing_members(members)
+            if not existing or len({os.path.isdir(p) for p in existing}) > 1:
+                # Dry run (nothing was written) or a failed replacement.
+                return stats
+
         if any(os.path.isdir(path) for path in existing):
-            return self.sync_members_directory(members)
+            for key, value in self.sync_members_directory(members).items():
+                stats[key] += value
+            return stats
+
+        for key, value in self.sync_members_file(members, backup_path).items():
+            stats[key] += value
+        return stats
+
+    @staticmethod
+    def existing_members(members: list[str]) -> list[str]:
+        """The members that currently exist as a regular file or a directory."""
+        return [
+            path for path in members
+            if os.path.isfile(path) or os.path.isdir(path)
+        ]
+
+    def replace_clashing_members(
+        self, existing: list[str], backup_path: str,
+    ) -> dict[str, int]:
+        """Replace members whose type differs from the newest member's.
+
+        The newest member wins wholesale: a loser of the other type is deleted
+        and replaced by a copy of the winner. Members of the winner's type are
+        left to the normal entry-by-entry sync.
+        """
+        stats = self.new_stats()
+        winner = max(existing, key=self.get_effective_mtime)
+        winner_is_dir = os.path.isdir(winner)
+
+        for member in existing:
+            if member == winner or os.path.isdir(member) == winner_is_dir:
+                continue
+            if self.verbose:
+                self._print(
+                    f"Replacing\n  {member}\n  with\n  {winner}\n"
+                    "  (file/directory type conflict)",
+                )
+            if not self.dry_run:
+                try:
+                    utils.delete(member)
+                    utils.copy(winner, member)
+                except OSError as e:
+                    self._print(
+                        f"Error: Unable to replace {member} with "
+                        f"{winner}: {e}",
+                    )
+                    stats["errors"] += 1
+                    continue
+            if member == backup_path:
+                stats["backed_up"] += 1
+            else:
+                stats["restored"] += 1
+        return stats
+
+    def sync_members_file(
+        self, members: list[str], backup_path: str,
+    ) -> dict[str, int]:
+        """Sync a group whose members are all regular files."""
+        stats = self.new_stats()
+        existing = self.existing_members(members)
+        if not existing:
+            return stats
 
         winner = max(existing, key=self.get_effective_mtime)
         winner_mtime = self.get_effective_mtime(winner)
@@ -136,10 +206,11 @@ class ApplicationProfile:
             for member in members:
                 try:
                     self.ensure_directory(member, root_source)
-                except PermissionError as e:
+                except OSError as e:
+                    # Any OSError (no permission, but also a plain file where
+                    # the directory should go) disqualifies just this member.
                     self._print(
-                        f"Error: Unable to create directory {member} "
-                        f"due to permission issue: {e}",
+                        f"Error: Unable to create directory {member}: {e}",
                     )
                     stats["errors"] += 1
                     failed_members.add(member)
@@ -183,10 +254,9 @@ class ApplicationProfile:
                         if self.verbose:
                             self._print(f"Copying {entry} to {target}")
                         self.copy_item(winner, target)
-                except PermissionError as e:
+                except OSError as e:
                     self._print(
-                        f"Error: Unable to copy {winner} to {target} "
-                        f"due to permission issue: {e}",
+                        f"Error: Unable to copy {winner} to {target}: {e}",
                     )
                     stats["errors"] += 1
                     continue
@@ -248,6 +318,33 @@ class ApplicationProfile:
         """Normalized destinations recorded as explicitly removed."""
         return self.read_deleted_files()
 
+    @staticmethod
+    def relative_tombstone(tombstone: str, root: str) -> str | None:
+        """The part of ``tombstone`` below ``root``, or None if not below it."""
+        prefix = root + os.sep
+        if tombstone.startswith(prefix) and len(tombstone) > len(prefix):
+            return tombstone[len(prefix):]
+        return None
+
+    def group_tombstoned_relatives(
+        self, live_dests: list[str], tombstoned: set[str],
+    ) -> list[str]:
+        """Relative paths tombstoned *inside* one of the group's destinations.
+
+        `mackup rm ~/.work.d/foo` tombstones `.work.d/foo`, a path below a
+        managed destination rather than a destination itself. Group members
+        mirror each other, so such a removal applies to the whole group.
+        """
+        relatives: list[str] = []
+        ordered = sorted(tombstoned)
+        for dest in live_dests:
+            root = self.normalize_relative_path(dest)
+            for tombstone in ordered:
+                relative = self.relative_tombstone(tombstone, root)
+                if relative is not None and relative not in relatives:
+                    relatives.append(relative)
+        return relatives
+
     def apply_tombstones(
         self, groups: dict[str, list[str]], tombstoned: set[str],
     ) -> dict[str, int]:
@@ -256,16 +353,30 @@ class ApplicationProfile:
         ``groups`` is the unfiltered plan: it still contains the tombstoned
         destinations, so a source can tell whether any live destination
         remains before it is deleted.
+
+        A tombstone recorded *below* a destination (a single file inside a
+        managed directory) is enforced across every member of the group — the
+        source and each sibling destination — so the directory merge that runs
+        afterwards finds no copy left to resurrect.
         """
         stats = self.new_stats()
+        if not tombstoned:
+            return stats
         for source, dests in groups.items():
             dead = [dest for dest in dests if
                     self.normalize_relative_path(dest) in tombstoned]
-            if not dead:
-                continue
+            live = [dest for dest in dests if dest not in dead]
             victims = [os.path.join(os.environ["HOME"], dest) for dest in dead]
-            if len(dead) == len(dests):
+            if dead and not live:
                 victims.append(os.path.join(self.mackup.mackup_folder, source))
+            for relative in self.group_tombstoned_relatives(live, tombstoned):
+                victims.extend(
+                    os.path.join(os.environ["HOME"], dest, relative)
+                    for dest in live
+                )
+                victims.append(
+                    os.path.join(self.mackup.mackup_folder, source, relative),
+                )
             for filepath in victims:
                 if not os.path.lexists(filepath):
                     continue
@@ -277,27 +388,18 @@ class ApplicationProfile:
                 try:
                     utils.delete(filepath)
                     stats["deleted"] += 1
-                except PermissionError as e:
+                except OSError as e:
                     self._print(
-                        f"Error: Unable to delete file {filepath} "
-                        f"due to permission issue: {e}",
+                        f"Error: Unable to delete file {filepath}: {e}",
                     )
                     stats["errors"] += 1
         return stats
 
-    def remove_destination(
-        self, source: str, dest: str, siblings: int,
+    def remove_paths(
+        self, targets: list[str], tombstone_dest: str,
     ) -> dict[str, int]:
-        """Remove one destination; drop the source only when nothing else uses it.
-
-        ``siblings`` is the number of other live destinations fed by ``source``.
-        """
+        """Delete every path in ``targets`` and record one tombstone."""
         stats = self.new_stats()
-        home_filepath = os.path.join(os.environ["HOME"], dest)
-        targets = [home_filepath]
-        if siblings == 0:
-            targets.append(os.path.join(self.mackup.mackup_folder, source))
-
         if self.verbose:
             for filepath in targets:
                 self._print(f"Deleting\n  {filepath} ...")
@@ -311,17 +413,50 @@ class ApplicationProfile:
                 continue
             try:
                 utils.delete(filepath)
-            except PermissionError as e:
+            except OSError as e:
                 self._print(
-                    f"Error: Unable to delete file {filepath} "
-                    f"due to permission issue: {e}",
+                    f"Error: Unable to delete file {filepath}: {e}",
                 )
                 stats["errors"] += 1
 
         if stats["errors"] == 0:
-            self.record_deleted_file(dest)
+            self.record_deleted_file(tombstone_dest)
             stats["deleted"] += 1
         return stats
+
+    def remove_destination(
+        self, source: str, dest: str, siblings: int,
+    ) -> dict[str, int]:
+        """Remove one destination; drop the source only when nothing else uses it.
+
+        ``siblings`` is the number of other live destinations fed by ``source``.
+        """
+        targets = [os.path.join(os.environ["HOME"], dest)]
+        if siblings == 0:
+            targets.append(os.path.join(self.mackup.mackup_folder, source))
+        return self.remove_paths(targets, dest)
+
+    def remove_group_descendant(
+        self,
+        source_root: str,
+        dest_roots: list[str],
+        relative_path: str,
+        tombstone_dest: str,
+    ) -> dict[str, int]:
+        """Remove one path inside a managed directory, from every group member.
+
+        The members of a fanout group mirror each other, so a file removed
+        from one of them must go from the source and the siblings too —
+        otherwise the next directory merge copies it straight back.
+        """
+        targets = [
+            os.path.join(os.environ["HOME"], dest_root, relative_path)
+            for dest_root in dest_roots
+        ]
+        targets.append(
+            os.path.join(self.mackup.mackup_folder, source_root, relative_path),
+        )
+        return self.remove_paths(targets, tombstone_dest)
 
     @staticmethod
     def get_effective_mtime(path: str) -> float:

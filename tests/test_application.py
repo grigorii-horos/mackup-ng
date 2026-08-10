@@ -30,7 +30,6 @@ class TestApplicationProfile(unittest.TestCase):
         # Create the ApplicationProfile instance
         self.app_profile = ApplicationProfile(
             mackup=self.mock_mackup,
-            files=self.test_files,
             dry_run=False,
             verbose=False,
         )
@@ -118,7 +117,6 @@ class TestApplicationProfile(unittest.TestCase):
         """Verbose sync should print nothing and report skipped when a directory is already in sync."""
         app_profile_verbose = ApplicationProfile(
             mackup=self.mock_mackup,
-            files={".testfolder"},
             dry_run=False,
             verbose=True,
         )
@@ -157,7 +155,6 @@ class TestApplicationProfile(unittest.TestCase):
         """Test sync emits one action line per file."""
         app_profile_verbose = ApplicationProfile(
             mackup=self.mock_mackup,
-            files=self.test_files,
             dry_run=False,
             verbose=True,
         )

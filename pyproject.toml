@@ -1,6 +1,6 @@
 [project]
 name = "mackup-ng"
-version = "2.0.0"
+version = "2.1.0"
 description = "Backup and keep your application settings in sync (maintained fork of mackup)."
 readme = "README.md"
 dependencies = [

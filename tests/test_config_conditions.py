@@ -190,3 +190,27 @@ class TestConfigLevelConditions(unittest.TestCase):
         with patch("sys.stdout", buffer), patch("sys.argv", ["mackup", "sync"]):
             main()
         assert "conditions not met" not in buffer.getvalue()
+
+    def test_show_reports_only_failing_conditions(self):
+        """When a config has multiple conditions, show only the ones that fail."""
+        # Set up a config with two conditions:
+        # - not_marker = ["absent"] (passes - marker "absent" is not set)
+        # - marker = ["eink"] (fails - marker "eink" is not set)
+        self._write_app(
+            "multi-condition",
+            '[when]\nnot_marker = ["absent"]\nmarker = ["eink"]\n\n'
+            '[mapped_files]\n".colors" = ".palette"\n',
+        )
+        self._write_backup(".palette", "palette\n")
+        buffer = io.StringIO()
+        with patch("sys.stdout", buffer), patch(
+            "sys.argv", ["mackup", "show", "multi-condition"],
+        ):
+            main()
+        output = buffer.getvalue()
+        # Should mention failing condition: marker
+        assert "marker=" in output
+        # Should NOT mention passing condition: not_marker
+        assert "not_marker=" not in output
+        # Should still have the standard phrase
+        assert "conditions not met on this machine" in output

@@ -285,10 +285,10 @@ def main() -> None:
         )
         print(f"{bold('Name:')} {pretty}")
         if not app_db.config_enabled(requested_app_name):
-            conditions = app_db.get_conditions(requested_app_name)
+            failing_conds = app_db.get_failing_conditions(requested_app_name)
             unmet = ", ".join(
                 f"{key}={value}"
-                for key, value in sorted(conditions.items())
+                for key, value in sorted(failing_conds.items())
             )
             print(
                 utils.style_text(

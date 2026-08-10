@@ -575,6 +575,10 @@ class ApplicationsDatabase:
         """
         return conditions.config_passes({"when": self.app_conditions.get(name, {})})
 
+    def get_failing_conditions(self, name: str) -> dict:
+        """Return only the conditions in the config's ``[when]`` that do not hold."""
+        return conditions.failing({"when": self.app_conditions.get(name, {})})
+
     def app_has_sync(self, name: str) -> bool:
         """True if the config declares files to sync (not a block-only config)."""
         return bool(self.apps.get(name, {}).get("configuration_files"))

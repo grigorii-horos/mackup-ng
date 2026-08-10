@@ -336,6 +336,18 @@ to sync those files everywhere and gate only its action. Now the file list is
 conditional too. Move the condition into `[[block]]` + `[block.when]` if the
 old behavior was what you wanted.
 
+**Top-level keys must come before any table header.** TOML assigns a bare
+`key = value` line to whichever table was most recently opened above it, not
+to the document root. If `files = [...]` is written *after* the `[when]`
+header, it parses as `when.files` instead of the config's own `files` — the
+config then silently declares no synced files at all. `appsdb.py` warns about
+this at load time: an unrecognized key inside `[when]` prints `Warning:
+{app}: unrecognized [when] key(s): ...`, and a `[when]` that isn't a table at
+all (e.g. `when = "android"`) prints `Warning: {app}: top-level [when] must
+be a table, ignoring` and is treated as no conditions. Put every top-level
+key (`name`, `files`, `configuration_files`, `mapped_files`, `source_env`)
+above the `[when]` header, or in its own table before it.
+
 ### dconf (`dconf.py`)
 
 Native dconf backup/restore (Linux/GNOME). Tracked paths are stored as

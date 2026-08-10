@@ -49,7 +49,7 @@ def _one(when: dict, key: str) -> bool:
     return True
 
 
-_CONDITION_KEYS = (
+CONDITION_KEYS = (
     "os",
     "arch",
     "marker",
@@ -60,6 +60,13 @@ _CONDITION_KEYS = (
     "not_exists",
     "env",
 )
+# Private alias kept for existing internal references.
+_CONDITION_KEYS = CONDITION_KEYS
+
+
+def unrecognized_keys(when: dict) -> list[str]:
+    """Return the keys of ``when`` outside the recognized condition vocabulary."""
+    return [key for key in when if key not in CONDITION_KEYS]
 
 
 def block_passes(block: dict) -> bool:

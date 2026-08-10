@@ -961,6 +961,14 @@ Run `mackup show <app>` to see whether a config's conditions hold here, and
 action instead of the config, put the condition inside `[[block]]` as
 `[block.when]`.
 
+Top-level keys (`files`, `mapped_files`, etc.) must come **before** the
+`[when]` header in the file. TOML assigns a bare `key = value` line to
+whichever table opened above it — write `files = [...]` after `[when]` and it
+becomes `when.files` instead of the config's own file list, so the config
+silently syncs nothing. Loading a config warns about this: an unrecognized
+key inside `[when]` or a `[when]` that isn't a table at all both print a
+`Warning:` line naming the config and the problem.
+
 ### 9. Machine-local extras (`~/.mackup/`)
 
 Beyond custom app configs, `~/.mackup/` is the home for machine-local behavior:

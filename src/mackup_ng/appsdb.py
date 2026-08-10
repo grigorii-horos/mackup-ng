@@ -404,7 +404,19 @@ class ApplicationsDatabase:
             self.apps[app_name] = {}
             self.app_order.append(app_name)
             when = data.get("when")
+            if when is not None and not isinstance(when, dict):
+                print(utils.colorize_message(
+                    f"Warning: {app_name}: top-level [when] must be a table, "
+                    "ignoring",
+                ))
             self.app_conditions[app_name] = dict(when) if isinstance(when, dict) else {}
+            if isinstance(when, dict):
+                bad_keys = conditions.unrecognized_keys(when)
+                if bad_keys:
+                    names = ", ".join(sorted(bad_keys))
+                    print(utils.colorize_message(
+                        f"Warning: {app_name}: unrecognized [when] key(s): {names}",
+                    ))
 
             # Fancy display name (falls back to the id)
             self.apps[app_name]["name"] = data.get(

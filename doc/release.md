@@ -24,3 +24,44 @@ and pushes. The workflow takes over from the tag push:
 - Builds the package with `uv build`
 - Publishes it to PyPI with `uv publish`
 - Creates the GitHub release with auto-generated notes and the built artifacts
+
+## Publishing by hand
+
+The workflow publishes through PyPI Trusted Publishing, which needs a publisher
+registered on pypi.org for `grigorii-horos/mackup-ng`, workflow `release.yaml`,
+environment `release`. Until that exists, `uv publish` in CI fails with
+`Missing credentials for https://upload.pypi.org/legacy/` and the release has to
+be published from a workstation.
+
+**Pass the token through the environment — never on the command line and never
+pasted into a chat, an issue or a commit.** A token on the command line lands in
+the shell history and in the process list, where any other process on the
+machine can read it.
+
+Keep it in an environment variable exported by your shell profile, or in a
+file only you can read:
+
+```sh
+umask 077; printf '%s' 'pypi-...' > ~/.pypi-token   # once, by hand
+```
+
+Then, from a clean checkout of the tag:
+
+```sh
+rm -rf dist
+uv build
+UV_PUBLISH_TOKEN=$(cat ~/.pypi-token) uv publish
+rm -rf dist
+```
+
+`uv publish` reads `UV_PUBLISH_TOKEN` on its own; there is no `--token` flag to
+type. Verify the upload before announcing it — PyPI's JSON API caches for a few
+seconds, so check twice if the first call still shows the old version:
+
+```sh
+curl -s https://pypi.org/pypi/mackup-ng/json |
+  python3 -c "import json,sys; print(json.load(sys.stdin)['info']['version'])"
+```
+
+A published version can never be reused, even after deleting the release. If a
+token is ever exposed, revoke it on pypi.org and issue a new one.

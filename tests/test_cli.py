@@ -339,6 +339,259 @@ class TestCLI(unittest.TestCase):
             main()
         assert os.path.isfile(out)
 
+    def _write_custom_app(self, app_id, body):
+        path = os.path.join(self.custom_apps_dir, f"{app_id}.toml")
+        with open(path, "w") as handle:
+            handle.write(f'name = "{app_id}"\n{body}')
+        with open(self.config_path, "a") as handle:
+            handle.write(f"{app_id}\n")
+
+    def test_sync_fans_backup_out_to_two_destinations(self):
+        self._write_custom_app(
+            "fanout",
+            '[mapped_files]\n'
+            '".work.rc" = ".shared.rc"\n'
+            '".home.rc" = ".shared.rc"\n',
+        )
+        source = os.path.join(self.mackup_folder, ".shared.rc")
+        os.makedirs(self.mackup_folder, exist_ok=True)
+        with open(source, "w") as handle:
+            handle.write("shared=1\n")
+
+        with patch("sys.argv", ["mackup", "sync"]):
+            main()
+
+        for name in (".work.rc", ".home.rc"):
+            with open(os.path.join(self.test_home, name)) as handle:
+                assert handle.read() == "shared=1\n"
+
+    def test_later_config_overrides_the_destination(self):
+        self._write_custom_app("aaa-base", 'files = [".overridden"]\n')
+        self._write_custom_app(
+            "zzz-override",
+            '[mapped_files]\n".overridden" = ".from-work"\n',
+        )
+        os.makedirs(self.mackup_folder, exist_ok=True)
+        with open(os.path.join(self.mackup_folder, ".from-work"), "w") as handle:
+            handle.write("work\n")
+        with open(os.path.join(self.mackup_folder, ".overridden"), "w") as handle:
+            handle.write("base\n")
+
+        with patch("sys.argv", ["mackup", "sync"]):
+            main()
+
+        with open(os.path.join(self.test_home, ".overridden")) as handle:
+            assert handle.read() == "work\n"
+        # the evicted source keeps its content and is left alone
+        with open(os.path.join(self.mackup_folder, ".overridden")) as handle:
+            assert handle.read() == "base\n"
+
+    def test_tombstoned_destination_stays_removed_but_group_survives(self):
+        self._write_custom_app(
+            "fanout",
+            '[mapped_files]\n'
+            '".work.rc" = ".shared.rc"\n'
+            '".home.rc" = ".shared.rc"\n',
+        )
+        os.makedirs(self.mackup_folder, exist_ok=True)
+        with open(os.path.join(self.mackup_folder, ".shared.rc"), "w") as handle:
+            handle.write("shared=1\n")
+        with open(os.path.join(self.test_home, ".work.rc"), "w") as handle:
+            handle.write("local-work=1\n")
+        with open(
+            os.path.join(self.mackup_folder, ".mackup-deletions"), "w",
+        ) as handle:
+            handle.write(".work.rc\n")
+
+        with patch("sys.argv", ["mackup", "sync"]):
+            main()
+
+        assert not os.path.exists(os.path.join(self.test_home, ".work.rc"))
+        assert os.path.exists(os.path.join(self.test_home, ".home.rc"))
+        assert os.path.exists(os.path.join(self.mackup_folder, ".shared.rc"))
+
+    def test_verbose_sync_reports_evictions_and_orphans(self):
+        self._write_custom_app("aaa-base", 'files = [".overridden"]\n')
+        self._write_custom_app(
+            "zzz-override",
+            '[mapped_files]\n".overridden" = ".from-work"\n',
+        )
+        os.makedirs(self.mackup_folder, exist_ok=True)
+        with open(os.path.join(self.mackup_folder, ".from-work"), "w") as handle:
+            handle.write("work\n")
+
+        buffer = io.StringIO()
+        with patch("sys.stdout", buffer), patch(
+            "sys.argv", ["mackup", "-v", "sync"],
+        ):
+            main()
+        output = buffer.getvalue()
+        assert (
+            ".overridden <- .overridden (aaa-base) evicted by zzz-override"
+            in output
+        )
+        assert ".overridden has no destination, left untouched" in output
+
+    def test_verbose_sync_does_not_report_identical_redeclarations(self):
+        """Re-declaring the same mapping changes nothing, so it is not noise."""
+        self._write_custom_app("aaa-base", 'files = [".dupfile"]\n')
+        self._write_custom_app("zzz-same", 'files = [".dupfile"]\n')
+        with open(os.path.join(self.test_home, ".dupfile"), "w") as handle:
+            handle.write("dup\n")
+
+        buffer = io.StringIO()
+        with patch("sys.stdout", buffer), patch(
+            "sys.argv", ["mackup", "-v", "sync"],
+        ):
+            main()
+        output = buffer.getvalue()
+        assert "evicted by" not in output
+        assert "no destination" not in output
+
+    def test_fanout_group_is_synced_in_the_slot_of_the_winning_config(self):
+        """A group shared by two configs belongs to the one that won it."""
+        self._write_custom_app(
+            "aaa-first", '[mapped_files]\n".work.rc" = ".shared.rc"\n',
+        )
+        self._write_custom_app(
+            "zzz-last", '[mapped_files]\n".home.rc" = ".shared.rc"\n',
+        )
+        os.makedirs(self.mackup_folder, exist_ok=True)
+        with open(os.path.join(self.mackup_folder, ".shared.rc"), "w") as handle:
+            handle.write("shared=1\n")
+
+        buffer = io.StringIO()
+        with patch("sys.stdout", buffer), patch("sys.argv", ["mackup", "sync"]):
+            main()
+        output = buffer.getvalue()
+
+        for name in (".work.rc", ".home.rc"):
+            assert os.path.exists(os.path.join(self.test_home, name))
+        assert "Restored zzz-last" in output
+        assert "Skipped aaa-first" in output
+
+    def test_sync_reports_failed_tombstone_deletions(self):
+        """A tombstone that cannot be deleted is not swallowed by the summary."""
+        if os.geteuid() == 0:
+            self.skipTest("root ignores permission bits")
+        locked_dir = os.path.join(self.test_home, ".locked")
+        os.makedirs(locked_dir, exist_ok=True)
+        with open(os.path.join(locked_dir, "rc"), "w") as handle:
+            handle.write("locked\n")
+        self._write_custom_app("locked", 'files = [".locked/rc"]\n')
+
+        with patch("sys.argv", ["mackup", "sync"]):
+            main()
+        with open(
+            os.path.join(self.mackup_folder, ".mackup-deletions"), "w",
+        ) as handle:
+            handle.write(".locked/rc\n")
+
+        os.chmod(locked_dir, 0o500)
+        buffer = io.StringIO()
+        try:
+            with patch("sys.stdout", buffer), patch("sys.argv", ["mackup", "sync"]):
+                main()
+        finally:
+            os.chmod(locked_dir, 0o700)
+
+        assert "Failed to delete 1 tombstoned path(s)" in buffer.getvalue()
+
+    def test_sync_survives_a_file_directory_type_clash(self):
+        """A type clash resolves in place instead of aborting the whole run."""
+        self._write_custom_app("aaa-clash", 'files = [".cfgdir"]\n')
+        self._write_custom_app("zzz-after", 'files = [".afterrc"]\n')
+        os.makedirs(self.mackup_folder, exist_ok=True)
+        backup_dir = os.path.join(self.mackup_folder, ".cfgdir")
+        os.makedirs(backup_dir, exist_ok=True)
+        with open(os.path.join(backup_dir, "inside.txt"), "w") as handle:
+            handle.write("from-backup\n")
+        os.utime(os.path.join(backup_dir, "inside.txt"), (5000, 5000))
+        os.utime(backup_dir, (5000, 5000))
+        local_file = os.path.join(self.test_home, ".cfgdir")
+        with open(local_file, "w") as handle:
+            handle.write("stale\n")
+        os.utime(local_file, (1000, 1000))
+        with open(os.path.join(self.test_home, ".afterrc"), "w") as handle:
+            handle.write("after\n")
+
+        with patch("sys.argv", ["mackup", "sync"]):
+            main()
+
+        assert os.path.isdir(local_file)
+        with open(os.path.join(local_file, "inside.txt")) as handle:
+            assert handle.read() == "from-backup\n"
+        # The app sorted after the clash still got its turn.
+        assert os.path.exists(os.path.join(self.mackup_folder, ".afterrc"))
+
+    def test_show_reports_the_config_that_overrode_a_destination(self):
+        self._write_custom_app("aaa-base", 'files = [".overridden"]\n')
+        self._write_custom_app(
+            "zzz-override",
+            '[mapped_files]\n".overridden" = ".from-work"\n',
+        )
+        buffer = io.StringIO()
+        with patch("sys.stdout", buffer), patch(
+            "sys.argv", ["mackup", "show", "aaa-base"],
+        ):
+            main()
+        assert (
+            ".overridden <- .overridden (overridden by zzz-override)"
+            in buffer.getvalue()
+        )
+
+    def test_show_marks_a_config_excluded_from_sync(self):
+        """`show` resolves the sync plan, which holds nothing for a skipped app."""
+        path = os.path.join(self.custom_apps_dir, "unselected.toml")
+        with open(path, "w") as handle:
+            handle.write('name = "unselected"\nfiles = [".unselectedrc"]\n')
+        buffer = io.StringIO()
+        with patch("sys.stdout", buffer), patch(
+            "sys.argv", ["mackup", "show", "unselected"],
+        ):
+            main()
+        assert (
+            ".unselectedrc <- .unselectedrc (not selected for sync)"
+            in buffer.getvalue()
+        )
+
+    def test_show_reports_fanout_destinations(self):
+        self._write_custom_app(
+            "fanout",
+            '[mapped_files]\n'
+            '".work.rc" = ".shared.rc"\n'
+            '".home.rc" = ".shared.rc"\n',
+        )
+        buffer = io.StringIO()
+        with patch("sys.stdout", buffer), patch(
+            "sys.argv", ["mackup", "show", "fanout"],
+        ):
+            main()
+        output = buffer.getvalue()
+        assert ".work.rc <- .shared.rc" in output
+        assert "fanout: 2 destinations" in output
+
+    def test_sync_reports_skipped_for_config_fully_evicted(self):
+        """A selected config whose only pair loses its destination still reports."""
+        self._write_custom_app("aaa-base", 'files = [".overridden"]\n')
+        self._write_custom_app(
+            "zzz-override",
+            '[mapped_files]\n".overridden" = ".from-work"\n',
+        )
+        os.makedirs(self.mackup_folder, exist_ok=True)
+        with open(os.path.join(self.mackup_folder, ".from-work"), "w") as handle:
+            handle.write("work\n")
+        # Without a real source the config would report Skipped anyway, which
+        # would make the assertion below prove nothing.
+        with open(os.path.join(self.mackup_folder, ".overridden"), "w") as handle:
+            handle.write("base\n")
+
+        buffer = io.StringIO()
+        with patch("sys.stdout", buffer), patch("sys.argv", ["mackup", "sync"]):
+            main()
+        output = buffer.getvalue()
+        assert "Skipped aaa-base" in output
+
 
 if __name__ == "__main__":
     unittest.main()

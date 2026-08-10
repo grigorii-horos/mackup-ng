@@ -111,6 +111,25 @@ use a `[mapped_files]` table of `LOCAL = BACKUP` pairs (TOML quoted keys/values)
   share one canonical backup path. Parsed from the `[mapped_files]` table in
   `appsdb.__init__` + `_pair_to_exprs`.
 
+The model is destination-keyed: the local path is the unique key, the backup
+path is the source. Two consequences:
+
+- **Fanout** — several keys may share one backup value, so one backup file
+  feeds several local files. All members of the group are peers: the newest
+  mtime wins and is copied to every other member; directories merge entry by
+  entry, so all members converge to the union of their contents.
+- **Override** — when a later config claims a destination already claimed by
+  an earlier one, the earlier pair is dropped. Read order decides: stock
+  configs (alphabetical), then `$XDG_CONFIG_HOME/mackup/applications`, then
+  `~/.mackup/applications`; within a file, `files` then `[mapped_files]` in
+  declaration order. A backup file left with no destination is untouched and
+  reported by `mackup sync -v`.
+- `mackup rm <path>` removes one destination and tombstones it; the backup
+  source is deleted only when no destination is left. Removing a path *inside*
+  a managed directory removes it from every member of that directory's group
+  (source and sibling destinations), otherwise the next merge would copy it
+  back from a sibling.
+
 ## Processing Order
 
 Paths are resolved in this order:

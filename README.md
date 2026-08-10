@@ -883,6 +883,36 @@ them. Both sides honor selectors, built-in vars and braces (brace groups zip
 pairwise). Handy when a machine-specific local path (e.g. a per-machine Firefox
 profile dir) should share one canonical path in the backup folder.
 
+One backup file can feed several local files — repeat the value:
+
+```toml
+[mapped_files]
+".config/app/work.profile/user.js"     = ".config/app/profile/user.js"
+".config/app/personal.profile/user.js" = ".config/app/profile/user.js"
+```
+
+All members of such a group are peers: whichever copy you edited last wins and
+is propagated to the others on the next `mackup sync`.
+
+Destinations are unique. If a later config maps the same local path to a
+different backup file, the earlier mapping is dropped — that is how you
+overwrite a stock config with your own. Configs are read stock first, then
+`$XDG_CONFIG_HOME/mackup/applications`, then `~/.mackup/applications`, so your
+own files always win. Run `mackup sync -v` to see which mappings were
+overridden and which backup files are left without a destination.
+
+An orphaned backup file (no destination maps to it) is left untouched; it is
+only reported by `mackup sync -v`, never deleted on its own. `mackup rm <path>`
+removes one destination and tombstones it — the shared backup source survives
+as long as another destination still feeds from it, and is only deleted once
+the last destination is removed. Re-declaring a destination with the *same*
+backup file is not an override and is not reported.
+
+`mackup rm` also accepts a path *inside* a managed directory. Because the
+members of a group mirror each other, such a removal is applied to the whole
+group: the file goes from the backup source and from every destination, and
+the tombstone keeps it from coming back on the next sync.
+
 ### 8. Action blocks
 
 A config file can also carry **action blocks** — imperative steps run around its

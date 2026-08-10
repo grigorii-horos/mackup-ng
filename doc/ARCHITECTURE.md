@@ -142,14 +142,23 @@ main.py parses command
     ↓
 config.py loads .mackup.cfg
     ↓
-appsdb.py loads application definitions
+appsdb.py loads application definitions in precedence order
     ↓
-mackup.py iterates through applications
+mapping.py resolves (source, destination) pairs — later pairs win the
+destination, sources group into fanout groups
     ↓
-application.py for each app:
-    - Compares config files in home and Mackup storage
-    - Copies the newer side to the older side
-    - Preserves permissions and timestamps
+application.py once, globally, before any group is synced:
+    - apply_tombstones() deletes every destination listed in
+      .mackup-deletions, plus any source left with no live destination,
+      plus any path tombstoned *inside* a live destination (from every
+      member of its group, so the merge below cannot resurrect it)
+    ↓
+application.py for each remaining group, in the slot of the config that
+won the group's last live destination:
+    - Resolves a file/directory type clash first: the newest member
+      replaces every member of the other type wholesale
+    - Picks the newest member and copies it to the others
+    - Merges directory members entry by entry
     ↓
 Files now in: ~/Dropbox/Mackup/ (or chosen storage)
 ```
@@ -165,11 +174,21 @@ config.py loads .mackup.cfg
     ↓
 appsdb.py loads application definitions
     ↓
-mackup.py iterates through applications
+mapping.py resolves the same plan `sync` uses, minus tombstoned pairs
     ↓
-application.py for each app:
-    - Deletes the managed path in home and Mackup storage
-    - Records the path in .mackup-deletions
+main.py matches <path> against the plan:
+
+  a destination of a group          a path inside a managed directory
+    ↓                                 ↓
+  application.py:                   application.py:
+    - Deletes that ONE destination    - Deletes that relative path from
+      in home                           every destination of the group
+    - Deletes the shared backup         and from the backup source
+      source only when no other       - Records the requested destination
+      destination still feeds           path in .mackup-deletions
+      from it
+    - Records the destination in
+      .mackup-deletions
     ↓
 Future syncs remove the same path on other machines
 ```
@@ -209,6 +228,7 @@ mackup/
 ├── mackup.py           # Core orchestration engine
 ├── config.py           # Configuration management
 ├── appsdb.py           # Application database
+├── mapping.py          # (source, destination) pair resolution and fanout grouping
 ├── application.py      # Per-application operations
 ├── utils.py            # Utility functions
 ├── constants.py        # Constants and defaults

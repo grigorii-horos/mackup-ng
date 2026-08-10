@@ -6,7 +6,6 @@ Mackup. Name, files, ...
 """
 
 import os
-from typing import cast
 
 from . import utils
 from .mackup import Mackup
@@ -20,36 +19,16 @@ class ApplicationProfile:
     def __init__(
         self,
         mackup: Mackup,
-        files: set[str] | set[tuple[str, str]],
         dry_run: bool,
         verbose: bool,
     ) -> None:
-        """
-        Create an ApplicationProfile instance.
+        """Create an ApplicationProfile bound to a Mackup storage folder.
 
-        Args:
-            mackup (Mackup)
-            files (list)
+        The sync engine works on the groups handed to :meth:`sync_group`, so
+        the profile itself carries no file list.
         """
         assert isinstance(mackup, Mackup)
-        assert isinstance(files, set)
-
         self.mackup: Mackup = mackup
-        self.file_entries: list[tuple[str, str]]
-        if all(isinstance(item, str) for item in files):
-            raw_files = cast("set[str]", files)
-            self.files = sorted(raw_files)
-            self.file_entries = [(path, path) for path in self.files]
-        else:
-            raw_mappings = cast("set[tuple[str, str]]", files)
-            pair_len = 2
-            assert all(
-                isinstance(item, tuple) and len(item) == pair_len
-                for item in raw_mappings
-            )
-            mappings = {(str(local), str(backup)) for (local, backup) in raw_mappings}
-            self.file_entries = sorted(mappings)
-            self.files = [local for (local, _backup) in self.file_entries]
         self.dry_run: bool = dry_run
         self.verbose: bool = verbose
 
@@ -58,25 +37,236 @@ class ApplicationProfile:
         """Print a user-facing message with terminal color highlighting."""
         print(utils.colorize_message(message))
 
-    def get_filepaths(
-        self,
-        local_filename: str,
-        backup_filename: str | None = None,
-    ) -> tuple[str, str]:
-        """
-        Get home and mackup filepaths for given file
+    def member_paths(self, source: str, dests: list[str]) -> list[str]:
+        """Absolute paths of a fanout group: the backup source, then dests."""
+        return [
+            os.path.join(self.mackup.mackup_folder, source),
+            *(os.path.join(os.environ["HOME"], dest) for dest in dests),
+        ]
 
-        Args:
-            local_filename (str)
-            backup_filename (str|None)
+    @staticmethod
+    def new_stats() -> dict[str, int]:
+        """A zeroed statistics dict with every key the reporter expects."""
+        return {
+            "backed_up": 0, "restored": 0, "synchronized": 0,
+            "deleted": 0, "skipped": 0, "errors": 0,
+        }
 
-        Returns:
-            home_filepath, mackup_filepath (str, str)
+    def sync_group(self, source: str, dests: list[str]) -> dict[str, int]:
+        """Sync one fanout group: newest member wins and reaches every other.
+
+        Members are peers — the backup side has no special authority. A group
+        of two members is the ordinary 1:1 case.
         """
-        return (
-            os.path.join(os.environ["HOME"], local_filename),
-            os.path.join(self.mackup.mackup_folder, backup_filename or local_filename),
-        )
+        stats = self.new_stats()
+        members = self.member_paths(source, dests)
+        backup_path = members[0]
+        existing = self.existing_members(members)
+        if not existing:
+            return stats
+
+        if len({os.path.isdir(path) for path in existing}) > 1:
+            # Members disagree on file vs. directory. Resolve the clash first:
+            # the newest member replaces every member of the other type, the
+            # way the pairwise engine did. Otherwise a directory merge would
+            # try to makedirs() over a regular file and blow up the whole run.
+            for key, value in self.replace_clashing_members(
+                existing, backup_path,
+            ).items():
+                stats[key] += value
+            existing = self.existing_members(members)
+            if not existing or len({os.path.isdir(p) for p in existing}) > 1:
+                # Dry run (nothing was written) or a failed replacement.
+                return stats
+
+        if any(os.path.isdir(path) for path in existing):
+            for key, value in self.sync_members_directory(members).items():
+                stats[key] += value
+            return stats
+
+        for key, value in self.sync_members_file(members, backup_path).items():
+            stats[key] += value
+        return stats
+
+    @staticmethod
+    def existing_members(members: list[str]) -> list[str]:
+        """The members that currently exist as a regular file or a directory."""
+        return [
+            path for path in members
+            if os.path.isfile(path) or os.path.isdir(path)
+        ]
+
+    def replace_clashing_members(
+        self, existing: list[str], backup_path: str,
+    ) -> dict[str, int]:
+        """Replace members whose type differs from the newest member's.
+
+        The newest member wins wholesale: a loser of the other type is deleted
+        and replaced by a copy of the winner. Members of the winner's type are
+        left to the normal entry-by-entry sync.
+        """
+        stats = self.new_stats()
+        winner = max(existing, key=self.get_effective_mtime)
+        winner_is_dir = os.path.isdir(winner)
+
+        for member in existing:
+            if member == winner or os.path.isdir(member) == winner_is_dir:
+                continue
+            if self.verbose:
+                self._print(
+                    f"Replacing\n  {member}\n  with\n  {winner}\n"
+                    "  (file/directory type conflict)",
+                )
+            if not self.dry_run:
+                try:
+                    utils.delete(member)
+                    utils.copy(winner, member)
+                except OSError as e:
+                    self._print(
+                        f"Error: Unable to replace {member} with "
+                        f"{winner}: {e}",
+                    )
+                    stats["errors"] += 1
+                    continue
+            if member == backup_path:
+                stats["backed_up"] += 1
+            else:
+                stats["restored"] += 1
+        return stats
+
+    def sync_members_file(
+        self, members: list[str], backup_path: str,
+    ) -> dict[str, int]:
+        """Sync a group whose members are all regular files."""
+        stats = self.new_stats()
+        existing = self.existing_members(members)
+        if not existing:
+            return stats
+
+        winner = max(existing, key=self.get_effective_mtime)
+        winner_mtime = self.get_effective_mtime(winner)
+
+        for member in members:
+            if member == winner:
+                continue
+            if os.path.exists(member):
+                if os.path.samefile(member, winner):
+                    if self.verbose:
+                        self._print(
+                            f"Skipping {member}\n  already linked to\n  {winner}",
+                        )
+                    stats["skipped"] += 1
+                    continue
+                if self.get_effective_mtime(member) >= winner_mtime:
+                    if self.verbose:
+                        self._print(
+                            f"Skipping {member}\n  not older than\n  {winner}",
+                        )
+                    stats["skipped"] += 1
+                    continue
+
+            if self.verbose:
+                self._print(f"Copying\n  {winner}\n  to\n  {member} ...")
+
+            if not self.dry_run:
+                try:
+                    if os.path.lexists(member):
+                        utils.delete(member)
+                    utils.copy(winner, member)
+                except PermissionError as e:
+                    self._print(
+                        f"Error: Unable to copy file from {winner} to "
+                        f"{member} due to permission issue: {e}",
+                    )
+                    stats["errors"] += 1
+                    continue
+
+            if member == backup_path:
+                stats["backed_up"] += 1
+            else:
+                stats["restored"] += 1
+
+        return stats
+
+    def sync_members_directory(self, members: list[str]) -> dict[str, int]:
+        """Merge N directory members entry by entry; newest entry wins.
+
+        Every member ends up holding the union of the group's entries. A
+        member that does not exist yet is created, so a backup directory can
+        fan out to fresh destinations.
+        """
+        stats = self.new_stats()
+        present = [path for path in members if os.path.isdir(path)]
+        if not present:
+            return stats
+
+        root_source = max(present, key=os.path.getmtime)
+        failed_members: set[str] = set()
+        if not self.dry_run:
+            for member in members:
+                try:
+                    self.ensure_directory(member, root_source)
+                except OSError as e:
+                    # Any OSError (no permission, but also a plain file where
+                    # the directory should go) disqualifies just this member.
+                    self._print(
+                        f"Error: Unable to create directory {member}: {e}",
+                    )
+                    stats["errors"] += 1
+                    failed_members.add(member)
+
+        entries: list[str] = []
+        for member in present:
+            for entry in sorted(self.collect_relative_entries(member)):
+                if entry not in entries:
+                    entries.append(entry)
+
+        changed = False
+        for entry in entries:
+            targets = [os.path.join(member, entry) for member in members]
+            holders = [path for path in targets if os.path.exists(path)]
+            if not holders:
+                continue
+            winner = max(holders, key=self.get_effective_mtime)
+            winner_mtime = self.get_effective_mtime(winner)
+            winner_is_dir = os.path.isdir(winner)
+
+            for target, member in zip(targets, members, strict=True):
+                if target == winner:
+                    continue
+                if member in failed_members:
+                    continue
+                if (
+                    os.path.exists(target)
+                    and os.path.isdir(target) == winner_is_dir
+                    and self.get_effective_mtime(target) >= winner_mtime
+                ):
+                    continue
+                if self.dry_run:
+                    changed = True
+                    continue
+                try:
+                    if winner_is_dir:
+                        if os.path.lexists(target) and not os.path.isdir(target):
+                            utils.delete(target)
+                        self.ensure_directory(target, winner)
+                    else:
+                        if self.verbose:
+                            self._print(f"Copying {entry} to {target}")
+                        self.copy_item(winner, target)
+                except OSError as e:
+                    self._print(
+                        f"Error: Unable to copy {winner} to {target}: {e}",
+                    )
+                    stats["errors"] += 1
+                    continue
+                changed = True
+
+        if changed:
+            stats["synchronized"] += 1
+        else:
+            stats["skipped"] += 1
+        return stats
 
     def get_deletions_filepath(self) -> str:
         """Return the backup-side file that records explicit removals."""
@@ -124,76 +314,149 @@ class ApplicationProfile:
         deleted_files.add(self.normalize_relative_path(local_filename))
         self.write_deleted_files(deleted_files)
 
-    def apply_deleted_files(self) -> dict[str, int]:
-        """Apply deletion tombstones for this app before normal sync."""
-        stats: dict[str, int] = {"deleted": 0, "errors": 0}
-        deleted_files = self.read_deleted_files()
-        if not deleted_files:
+    def read_tombstones(self) -> set[str]:
+        """Normalized destinations recorded as explicitly removed."""
+        return self.read_deleted_files()
+
+    @staticmethod
+    def relative_tombstone(tombstone: str, root: str) -> str | None:
+        """The part of ``tombstone`` below ``root``, or None if not below it."""
+        prefix = root + os.sep
+        if tombstone.startswith(prefix) and len(tombstone) > len(prefix):
+            return tombstone[len(prefix):]
+        return None
+
+    def group_tombstoned_relatives(
+        self, live_dests: list[str], tombstoned: set[str],
+    ) -> list[str]:
+        """Relative paths tombstoned *inside* one of the group's destinations.
+
+        `mackup rm ~/.work.d/foo` tombstones `.work.d/foo`, a path below a
+        managed destination rather than a destination itself. Group members
+        mirror each other, so such a removal applies to the whole group.
+        """
+        relatives: list[str] = []
+        ordered = sorted(tombstoned)
+        for dest in live_dests:
+            root = self.normalize_relative_path(dest)
+            for tombstone in ordered:
+                relative = self.relative_tombstone(tombstone, root)
+                if relative is not None and relative not in relatives:
+                    relatives.append(relative)
+        return relatives
+
+    def apply_tombstones(
+        self, groups: dict[str, list[str]], tombstoned: set[str],
+    ) -> dict[str, int]:
+        """Delete tombstoned destinations, and sources left with no destination.
+
+        ``groups`` is the unfiltered plan: it still contains the tombstoned
+        destinations, so a source can tell whether any live destination
+        remains before it is deleted.
+
+        A tombstone recorded *below* a destination (a single file inside a
+        managed directory) is enforced across every member of the group — the
+        source and each sibling destination — so the directory merge that runs
+        afterwards finds no copy left to resurrect.
+        """
+        stats = self.new_stats()
+        if not tombstoned:
             return stats
-
-        for local_filename, backup_filename in self.file_entries:
-            if self.normalize_relative_path(local_filename) not in deleted_files:
-                continue
-
-            home_filepath, mackup_filepath = self.get_filepaths(
-                local_filename, backup_filename,
-            )
-            deleted_any = False
-            for filepath in (home_filepath, mackup_filepath):
+        for source, dests in groups.items():
+            dead = [dest for dest in dests if
+                    self.normalize_relative_path(dest) in tombstoned]
+            live = [dest for dest in dests if dest not in dead]
+            victims = [os.path.join(os.environ["HOME"], dest) for dest in dead]
+            if dead and not live:
+                victims.append(os.path.join(self.mackup.mackup_folder, source))
+            for relative in self.group_tombstoned_relatives(live, tombstoned):
+                victims.extend(
+                    os.path.join(os.environ["HOME"], dest, relative)
+                    for dest in live
+                )
+                victims.append(
+                    os.path.join(self.mackup.mackup_folder, source, relative),
+                )
+            for filepath in victims:
                 if not os.path.lexists(filepath):
                     continue
                 if self.verbose:
                     self._print(f"Deleting\n  {filepath} ...")
                 if self.dry_run:
-                    deleted_any = True
+                    stats["deleted"] += 1
                     continue
                 try:
                     utils.delete(filepath)
-                    deleted_any = True
-                except PermissionError as e:
+                    stats["deleted"] += 1
+                except OSError as e:
                     self._print(
-                        f"Error: Unable to delete file {filepath} "
-                        f"due to permission issue: {e}",
+                        f"Error: Unable to delete file {filepath}: {e}",
                     )
                     stats["errors"] += 1
-            if deleted_any:
-                stats["deleted"] += 1
-
         return stats
 
-    def remove_file(self, local_filename: str, backup_filename: str) -> dict[str, int]:
-        """Explicitly remove one managed file locally and from backup storage."""
-        stats: dict[str, int] = {"deleted": 0, "errors": 0}
-        home_filepath, mackup_filepath = self.get_filepaths(
-            local_filename, backup_filename,
-        )
-
+    def remove_paths(
+        self, targets: list[str], tombstone_dest: str,
+    ) -> dict[str, int]:
+        """Delete every path in ``targets`` and record one tombstone."""
+        stats = self.new_stats()
         if self.verbose:
-            self._print(
-                f"Deleting\n  {home_filepath}\n  and\n  {mackup_filepath} ...",
-            )
+            for filepath in targets:
+                self._print(f"Deleting\n  {filepath} ...")
 
         if self.dry_run:
             stats["deleted"] += 1
             return stats
 
-        for filepath in (home_filepath, mackup_filepath):
+        for filepath in targets:
             if not os.path.lexists(filepath):
                 continue
             try:
                 utils.delete(filepath)
-            except PermissionError as e:
+            except OSError as e:
                 self._print(
-                    f"Error: Unable to delete file {filepath} "
-                    f"due to permission issue: {e}",
+                    f"Error: Unable to delete file {filepath}: {e}",
                 )
                 stats["errors"] += 1
 
         if stats["errors"] == 0:
-            self.record_deleted_file(local_filename)
+            self.record_deleted_file(tombstone_dest)
             stats["deleted"] += 1
-
         return stats
+
+    def remove_destination(
+        self, source: str, dest: str, siblings: int,
+    ) -> dict[str, int]:
+        """Remove one destination; drop the source only when nothing else uses it.
+
+        ``siblings`` is the number of other live destinations fed by ``source``.
+        """
+        targets = [os.path.join(os.environ["HOME"], dest)]
+        if siblings == 0:
+            targets.append(os.path.join(self.mackup.mackup_folder, source))
+        return self.remove_paths(targets, dest)
+
+    def remove_group_descendant(
+        self,
+        source_root: str,
+        dest_roots: list[str],
+        relative_path: str,
+        tombstone_dest: str,
+    ) -> dict[str, int]:
+        """Remove one path inside a managed directory, from every group member.
+
+        The members of a fanout group mirror each other, so a file removed
+        from one of them must go from the source and the siblings too —
+        otherwise the next directory merge copies it straight back.
+        """
+        targets = [
+            os.path.join(os.environ["HOME"], dest_root, relative_path)
+            for dest_root in dest_roots
+        ]
+        targets.append(
+            os.path.join(self.mackup.mackup_folder, source_root, relative_path),
+        )
+        return self.remove_paths(targets, tombstone_dest)
 
     @staticmethod
     def get_effective_mtime(path: str) -> float:
@@ -240,330 +503,3 @@ class ApplicationProfile:
         dir_mtime = os.path.getmtime(mode_from)
         os.utime(path, (dir_mtime, dir_mtime))
 
-    def sync_directory_entries_one_way(
-        self, source_dir: str, destination_dir: str, source_wins: bool, dry_run: bool,
-    ) -> bool:
-        """
-        Sync directory entries from source to destination by per-entry mtime.
-
-        When source_wins is True, newer source entries overwrite destination.
-        When source_wins is False, this still compares mtimes but never copies
-        destination back to source; useful for skip-only behavior.
-        """
-        changed = False
-        source_root_mtime = os.path.getmtime(source_dir)
-        destination_root_mtime = os.path.getmtime(destination_dir)
-        if source_wins and source_root_mtime > destination_root_mtime:
-            if not dry_run:
-                os.utime(destination_dir, (source_root_mtime, source_root_mtime))
-            changed = True
-
-        source_entries = self.collect_relative_entries(source_dir)
-        destination_entries = self.collect_relative_entries(destination_dir)
-        all_entries = sorted(source_entries | destination_entries)
-
-        for entry in all_entries:
-            source_entry = os.path.join(source_dir, entry)
-            destination_entry = os.path.join(destination_dir, entry)
-            source_exists = os.path.exists(source_entry)
-            destination_exists = os.path.exists(destination_entry)
-
-            if source_exists and destination_exists:
-                source_is_dir = os.path.isdir(source_entry)
-                destination_is_dir = os.path.isdir(destination_entry)
-
-                if source_is_dir and destination_is_dir:
-                    source_mtime = os.path.getmtime(source_entry)
-                    destination_mtime = os.path.getmtime(destination_entry)
-                    if source_wins and source_mtime > destination_mtime:
-                        if not dry_run:
-                            os.utime(destination_entry, (source_mtime, source_mtime))
-                        changed = True
-                    continue
-
-                source_mtime = self.get_effective_mtime(source_entry)
-                destination_mtime = self.get_effective_mtime(destination_entry)
-
-                if source_wins and source_mtime > destination_mtime:
-                    if not dry_run:
-                        if source_is_dir:
-                            if (
-                                os.path.lexists(destination_entry)
-                                and not destination_is_dir
-                            ):
-                                utils.delete(destination_entry)
-                            self.ensure_directory(destination_entry, source_entry)
-                        else:
-                            self.copy_item(source_entry, destination_entry)
-                    changed = True
-            elif source_exists:
-                if not dry_run:
-                    if os.path.isdir(source_entry):
-                        self.ensure_directory(destination_entry, source_entry)
-                    else:
-                        self.copy_item(source_entry, destination_entry)
-                changed = True
-
-        return changed
-
-    def sync_directory_entries(self, home_dir: str, backup_dir: str) -> bool:
-        """
-        Synchronize two directories by comparing mtime per entry.
-
-        Returns True if any files were actually copied or updated.
-        """
-        changed = False
-
-        home_root_mtime = os.path.getmtime(home_dir)
-        backup_root_mtime = os.path.getmtime(backup_dir)
-        if home_root_mtime > backup_root_mtime:
-            os.utime(backup_dir, (home_root_mtime, home_root_mtime))
-        elif backup_root_mtime > home_root_mtime:
-            os.utime(home_dir, (backup_root_mtime, backup_root_mtime))
-
-        home_entries = self.collect_relative_entries(home_dir)
-        backup_entries = self.collect_relative_entries(backup_dir)
-        all_entries = sorted(home_entries | backup_entries)
-
-        for entry in all_entries:
-            home_entry = os.path.join(home_dir, entry)
-            backup_entry = os.path.join(backup_dir, entry)
-            home_exists = os.path.exists(home_entry)
-            backup_exists = os.path.exists(backup_entry)
-
-            if home_exists and backup_exists:
-                home_is_dir = os.path.isdir(home_entry)
-                backup_is_dir = os.path.isdir(backup_entry)
-
-                if home_is_dir and backup_is_dir:
-                    home_mtime = os.path.getmtime(home_entry)
-                    backup_mtime = os.path.getmtime(backup_entry)
-                    if home_mtime > backup_mtime:
-                        os.utime(backup_entry, (home_mtime, home_mtime))
-                    elif backup_mtime > home_mtime:
-                        os.utime(home_entry, (backup_mtime, backup_mtime))
-                    continue
-
-                if (not home_is_dir) and (not backup_is_dir):
-                    home_mtime = os.path.getmtime(home_entry)
-                    backup_mtime = os.path.getmtime(backup_entry)
-                    if home_mtime > backup_mtime:
-                        if self.verbose:
-                            self._print(f"Backing up {entry}")
-                        self.copy_item(home_entry, backup_entry)
-                        changed = True
-                    elif backup_mtime > home_mtime:
-                        if self.verbose:
-                            self._print(f"Restoring {entry}")
-                        self.copy_item(backup_entry, home_entry)
-                        changed = True
-                    continue
-
-                home_mtime = self.get_effective_mtime(home_entry)
-                backup_mtime = self.get_effective_mtime(backup_entry)
-                if home_mtime >= backup_mtime:
-                    if home_is_dir:
-                        if os.path.lexists(backup_entry) and not backup_is_dir:
-                            utils.delete(backup_entry)
-                        self.ensure_directory(backup_entry, home_entry)
-                    else:
-                        if self.verbose:
-                            self._print(f"Backing up {entry}")
-                        self.copy_item(home_entry, backup_entry)
-                    changed = True
-                else:
-                    if backup_is_dir:
-                        if os.path.lexists(home_entry) and not home_is_dir:
-                            utils.delete(home_entry)
-                        self.ensure_directory(home_entry, backup_entry)
-                    else:
-                        if self.verbose:
-                            self._print(f"Restoring {entry}")
-                        self.copy_item(backup_entry, home_entry)
-                    changed = True
-            elif home_exists:
-                if self.verbose:
-                    self._print(f"Backing up {entry}")
-                if os.path.isdir(home_entry):
-                    self.ensure_directory(backup_entry, home_entry)
-                else:
-                    self.copy_item(home_entry, backup_entry)
-                changed = True
-            elif backup_exists:
-                if self.verbose:
-                    self._print(f"Restoring {entry}")
-                if os.path.isdir(backup_entry):
-                    self.ensure_directory(home_entry, backup_entry)
-                else:
-                    self.copy_item(backup_entry, home_entry)
-                changed = True
-
-        return changed
-
-    def sync_files(self) -> dict[str, int]:
-        """Synchronize files between home and Mackup using mtime."""
-        stats: dict[str, int] = {
-            "backed_up": 0, "restored": 0, "synchronized": 0,
-            "deleted": 0, "skipped": 0, "errors": 0,
-        }
-        deletion_stats = self.apply_deleted_files()
-        stats["deleted"] += deletion_stats["deleted"]
-        stats["errors"] += deletion_stats["errors"]
-        deleted_files = self.read_deleted_files()
-
-        for local_filename, backup_filename in self.file_entries:
-            if self.normalize_relative_path(local_filename) in deleted_files:
-                continue
-
-            (home_filepath, mackup_filepath) = self.get_filepaths(
-                local_filename,
-                backup_filename,
-            )
-
-            home_exists = os.path.isfile(home_filepath) or os.path.isdir(home_filepath)
-            backup_exists = os.path.isfile(mackup_filepath) or os.path.isdir(
-                mackup_filepath,
-            )
-
-            action: str | None = None
-            if home_exists and backup_exists:
-                # Already linked/same inode, nothing to do.
-                if os.path.samefile(home_filepath, mackup_filepath):
-                    if self.verbose:
-                        self._print(
-                            f"Skipping {home_filepath}\n"
-                            f"  already linked to\n  {mackup_filepath}",
-                        )
-                    stats["skipped"] += 1
-                    continue
-
-                # For directories we merge by entry mtime, not whole-tree mtime.
-                if os.path.isdir(home_filepath) and os.path.isdir(mackup_filepath):
-                    if self.dry_run:
-                        home_to_backup_changes = self.sync_directory_entries_one_way(
-                            home_filepath,
-                            mackup_filepath,
-                            source_wins=True,
-                            dry_run=True,
-                        )
-                        backup_to_home_changes = self.sync_directory_entries_one_way(
-                            mackup_filepath,
-                            home_filepath,
-                            source_wins=True,
-                            dry_run=True,
-                        )
-                        dir_changed = home_to_backup_changes or backup_to_home_changes
-                        if self.verbose:
-                            if dir_changed:
-                                self._print(
-                                    f"Synchronizing\n  {home_filepath}\n"
-                                    f"  with\n  {mackup_filepath} ...",
-                                )
-                            else:
-                                self._print(
-                                    f"Skipping {home_filepath}\n"
-                                    f"  already in sync with\n  {mackup_filepath}",
-                                )
-                        if dir_changed:
-                            stats["synchronized"] += 1
-                        else:
-                            stats["skipped"] += 1
-                        continue
-
-                    try:
-                        dir_changed = self.sync_directory_entries(
-                            home_filepath,
-                            mackup_filepath,
-                        )
-                        if dir_changed:
-                            if self.verbose:
-                                self._print(
-                                    f"Synchronizing\n  {home_filepath}\n"
-                                    f"  with\n  {mackup_filepath} ...",
-                                )
-                            stats["synchronized"] += 1
-                        else:
-                            if self.verbose:
-                                self._print(
-                                    f"Skipping {home_filepath}\n"
-                                    f"  already in sync with\n  {mackup_filepath}",
-                                )
-                            stats["skipped"] += 1
-                    except PermissionError as e:
-                        self._print(
-                            "Error: Unable to sync directory entries between "
-                            f"{home_filepath} and {mackup_filepath} "
-                            f"due to permission issue: {e}",
-                        )
-                        stats["errors"] += 1
-                    continue
-
-                home_mtime = self.get_effective_mtime(home_filepath)
-                backup_mtime = self.get_effective_mtime(mackup_filepath)
-                if home_mtime > backup_mtime:
-                    action = "backup"
-                elif backup_mtime > home_mtime:
-                    action = "restore"
-            elif home_exists:
-                action = "backup"
-            elif backup_exists:
-                action = "restore"
-            else:
-                # Missing on both sides: no-op, do not count as a user-visible skip.
-                continue
-
-            if action is None:
-                if self.verbose:
-                    self._print(
-                        f"Skipping {home_filepath}\n"
-                        f"  same mtime as\n  {mackup_filepath}",
-                    )
-                stats["skipped"] += 1
-                continue
-
-            if action == "backup":
-                if self.verbose:
-                    self._print(
-                        f"Backing up\n  {home_filepath}\n  to\n  {mackup_filepath} ...",
-                    )
-
-                if self.dry_run:
-                    stats["backed_up"] += 1
-                    continue
-
-                if os.path.lexists(mackup_filepath):
-                    utils.delete(mackup_filepath)
-
-                try:
-                    utils.copy(home_filepath, mackup_filepath)
-                    stats["backed_up"] += 1
-                except PermissionError as e:
-                    self._print(
-                        f"Error: Unable to copy file from {home_filepath} to "
-                        f"{mackup_filepath} due to permission issue: {e}",
-                    )
-                    stats["errors"] += 1
-            else:
-                if self.verbose:
-                    self._print(
-                        f"Restoring\n  {mackup_filepath}\n  to\n  {home_filepath} ...",
-                    )
-
-                if self.dry_run:
-                    stats["restored"] += 1
-                    continue
-
-                if os.path.lexists(home_filepath):
-                    utils.delete(home_filepath)
-
-                try:
-                    utils.copy(mackup_filepath, home_filepath)
-                    stats["restored"] += 1
-                except PermissionError as e:
-                    self._print(
-                        f"Error: Unable to copy file from {mackup_filepath} to "
-                        f"{home_filepath} due to permission issue: {e}",
-                    )
-                    stats["errors"] += 1
-
-        return stats

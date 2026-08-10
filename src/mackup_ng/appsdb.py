@@ -248,7 +248,7 @@ class ApplicationsDatabase:
     @classmethod
     def _expand_brace_mappings(
         cls, local_expr: str, backup_expr: str,
-    ) -> set[tuple[str, str]]:
+    ) -> list[tuple[str, str]]:
         """
         Expand braces for local/backup expressions while preserving mapping intent.
         """
@@ -256,13 +256,13 @@ class ApplicationsDatabase:
         backup_expanded = sorted(cls._expand_braces(backup_expr))
 
         if len(local_expanded) == 1 and len(backup_expanded) == 1:
-            return {(local_expanded[0], backup_expanded[0])}
+            return [(local_expanded[0], backup_expanded[0])]
         if len(local_expanded) == len(backup_expanded):
-            return set(zip(local_expanded, backup_expanded, strict=True))
+            return list(zip(local_expanded, backup_expanded, strict=True))
         if len(backup_expanded) == 1:
-            return {(local_path, backup_expanded[0]) for local_path in local_expanded}
+            return [(local, backup_expanded[0]) for local in local_expanded]
         if len(local_expanded) == 1:
-            return {(local_expanded[0], backup_path) for backup_path in backup_expanded}
+            return [(local_expanded[0], backup) for backup in backup_expanded]
 
         raise ValueError(
             "Unable to pair brace expansions between local and backup paths: "
@@ -355,10 +355,10 @@ class ApplicationsDatabase:
         cls,
         local_expr: str,
         backup_expr: str,
-        files_set: set[str],
-        mappings_set: set[tuple[str, str]],
+        files: list[str],
+        mappings: list[tuple[str, str]],
     ) -> None:
-        """Brace-expand, reject absolute paths, and record local/backup pairs."""
+        """Brace-expand, reject absolute paths, and append local/backup pairs."""
         for local_path, backup_path in cls._expand_brace_mappings(
             local_expr, backup_expr,
         ):
@@ -367,16 +367,20 @@ class ApplicationsDatabase:
                     "Unsupported absolute path in mapping: "
                     f"{local_path!r} -> {backup_path!r}",
                 )
-            files_set.add(local_path)
-            mappings_set.add((local_path, backup_path))
+            if (local_path, backup_path) in mappings:
+                continue
+            if local_path not in files:
+                files.append(local_path)
+            mappings.append((local_path, backup_path))
 
     def __init__(self) -> None:
         """Create a ApplicationsDatabase instance."""
         # Build the dict that will contain the properties of each application
-        self.apps: dict[str, dict[str, str | set[str]]] = {}
-        self.app_file_mappings: dict[str, set[tuple[str, str]]] = {}
+        self.apps: dict[str, dict[str, str | list[str]]] = {}
+        self.app_file_mappings: dict[str, list[tuple[str, str]]] = {}
         self.app_blocks: dict[str, list[dict]] = {}
         self.app_env_files: dict[str, list[str]] = {}
+        self.app_order: list[str] = []
 
         for config_file in ApplicationsDatabase.get_config_files():
             with open(config_file, "rb") as handle:
@@ -397,6 +401,7 @@ class ApplicationsDatabase:
 
             # Start building a dict for this app
             self.apps[app_name] = {}
+            self.app_order.append(app_name)
 
             # Fancy display name (falls back to the id)
             self.apps[app_name]["name"] = data.get(
@@ -429,8 +434,8 @@ class ApplicationsDatabase:
             self.app_env_files[app_name] = env_files
 
             # Add the configuration files to sync
-            config_files: set[str] = set()
-            config_mappings: set[tuple[str, str]] = set()
+            config_files: list[str] = []
+            config_mappings: list[tuple[str, str]] = []
             self.apps[app_name]["configuration_files"] = config_files
             self.app_file_mappings[app_name] = config_mappings
 
@@ -477,64 +482,46 @@ class ApplicationsDatabase:
                 )
 
     @staticmethod
-    def get_config_files() -> set[str]:
+    def get_config_files() -> list[str]:
         """
-        Return the application configuration files.
+        Return the application configuration files in precedence order.
 
-        Return a list of configuration files describing the apps supported by
-        Mackup. The files returned are absolute full path to those files.
-        e.g. /usr/lib/mackup/applications/bash.toml
-
-        Only one config file per application should be returned, custom config
-        having a priority over stock config. The ~/.mackup/applications/
-        directory takes priority over the XDG location.
+        Stock files come first (alphabetical), then the XDG custom directory,
+        then ``~/.mackup/applications`` — later files win when two configs
+        claim the same destination. A custom file still shadows a stock file
+        with the same name entirely.
 
         Returns:
-            set of strings.
+            list of absolute paths, weakest first.
         """
-        # Configure the config parser
         apps_dir: str = os.path.join(
             os.path.dirname(os.path.realpath(__file__)), APPS_DIR,
         )
-
-        # Custom apps directory: ~/.mackup/applications/
         legacy_custom_apps_dir: str = os.path.join(os.environ["HOME"], CUSTOM_APPS_DIR)
-
-        # XDG custom apps directory: $XDG_CONFIG_HOME/mackup/applications/
         xdg_config_home: str = os.environ.get(
             "XDG_CONFIG_HOME", os.path.join(os.environ["HOME"], ".config"),
         )
         xdg_custom_apps_dir: str = os.path.join(xdg_config_home, CUSTOM_APPS_DIR_XDG)
 
-        # List of stock application config files
-        config_files: set[str] = set()
+        def toml_names(directory: str) -> set[str]:
+            if not os.path.isdir(directory):
+                return set()
+            return {
+                name for name in os.listdir(directory) if name.endswith(".toml")
+            }
 
-        # Temp list of user added app config file names
-        custom_files: set[str] = set()
+        legacy_names = toml_names(legacy_custom_apps_dir)
+        xdg_names = toml_names(xdg_custom_apps_dir) - legacy_names
+        stock_names = toml_names(apps_dir) - legacy_names - xdg_names
 
-        # Get the list of custom application config files from legacy directory first
-        # (legacy takes priority over XDG)
-        if os.path.isdir(legacy_custom_apps_dir):
-            for filename in os.listdir(legacy_custom_apps_dir):
-                if filename.endswith(".toml"):
-                    config_files.add(os.path.join(legacy_custom_apps_dir, filename))
-                    custom_files.add(filename)
-
-        # Get custom application config files from XDG directory
-        # (only if not already in legacy directory)
-        if os.path.isdir(xdg_custom_apps_dir):
-            for filename in os.listdir(xdg_custom_apps_dir):
-                if filename.endswith(".toml") and filename not in custom_files:
-                    config_files.add(os.path.join(xdg_custom_apps_dir, filename))
-                    custom_files.add(filename)
-
-        # Add the default provided app config files, but only if those are not
-        # customized, as we don't want to overwrite custom app config.
-        for filename in os.listdir(apps_dir):
-            if filename.endswith(".toml") and filename not in custom_files:
-                config_files.add(os.path.join(apps_dir, filename))
-
-        return config_files
+        return [
+            *(os.path.join(apps_dir, name) for name in sorted(stock_names)),
+            *(os.path.join(xdg_custom_apps_dir, name) for name in sorted(xdg_names)),
+            *(
+                os.path.join(legacy_custom_apps_dir, name)
+                for name in sorted(legacy_names)
+            ),
+        ]
 
     def get_name(self, name: str) -> str:
         """
@@ -550,23 +537,19 @@ class ApplicationsDatabase:
         assert isinstance(value, str)
         return value
 
-    def get_files(self, name: str) -> set[str]:
-        """
-        Return the list of config files of an application.
-
-        Args:
-            name (str)
-
-        Returns:
-            set of str.
-        """
+    def get_files(self, name: str) -> list[str]:
+        """Return the local config paths of an application, in read order."""
         value = self.apps[name]["configuration_files"]
-        assert isinstance(value, set)
-        return value
+        assert isinstance(value, list)
+        return list(value)
 
-    def get_file_mappings(self, name: str) -> set[tuple[str, str]]:
-        """Return local->backup path mappings for an application."""
-        return set(self.app_file_mappings[name])
+    def get_file_mappings(self, name: str) -> list[tuple[str, str]]:
+        """Return (local, backup) pairs of an application, in read order."""
+        return list(self.app_file_mappings[name])
+
+    def get_app_order(self) -> list[str]:
+        """Return app ids in config read order (weakest first)."""
+        return list(self.app_order)
 
     def get_blocks(self, name: str) -> list[dict]:
         """Return the config's action blocks in order (top-level block first)."""

@@ -73,5 +73,21 @@ class TestConditions(unittest.TestCase):
             assert not conditions.block_passes(_b(os=["linux"], arch=["aarch64"]))
 
 
+class TestConfigConditions(unittest.TestCase):
+    def test_config_without_when_passes(self):
+        assert conditions.config_passes({}) is True
+        assert conditions.config_passes({"name": "x", "files": [".rc"]}) is True
+
+    def test_config_when_is_evaluated_like_a_block(self):
+        with patch("mackup_ng.hooks.os_kind", return_value="linux"):
+            assert conditions.config_passes({"when": {"os": ["linux"]}})
+            assert not conditions.config_passes({"when": {"os": ["android"]}})
+
+    def test_config_marker_condition(self):
+        with patch("mackup_ng.hooks.has_marker", side_effect=lambda n: n == "eink"):
+            assert conditions.config_passes({"when": {"marker": ["eink"]}})
+            assert not conditions.config_passes({"when": {"marker": ["nope"]}})
+
+
 if __name__ == "__main__":
     unittest.main()

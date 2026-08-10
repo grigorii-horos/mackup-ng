@@ -1,8 +1,10 @@
 """Tests for block / source_env parsing in ApplicationsDatabase."""
 
 import os
+import shutil
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from mackup_ng import blocks
 from mackup_ng.appsdb import ApplicationsDatabase
@@ -62,7 +64,7 @@ class TestAppsdbBlocks(unittest.TestCase):
         assert not db.app_has_sync("10-linger")
         block = db.get_blocks("10-linger")[0]
         assert blocks.block_action(block) == "run"
-        assert block["when"]["os"] == ["linux"]
+        assert db.get_conditions("10-linger")["os"] == ["linux"]
 
     def test_source_env(self):
         self._write(
@@ -91,6 +93,56 @@ class TestAppsdbBlocks(unittest.TestCase):
         db = ApplicationsDatabase()
         assert db.get_name("legacy") == "Legacy"
         assert ".legacyrc" in db.get_files("legacy")
+
+
+class TestConfigLevelWhen(unittest.TestCase):
+    def setUp(self):
+        self.home = tempfile.mkdtemp(prefix="mackup_cfgwhen_home_")
+        self._orig_home = os.environ.get("HOME")
+        self._orig_xdg = os.environ.get("XDG_CONFIG_HOME")
+        os.environ["HOME"] = self.home
+        os.environ["XDG_CONFIG_HOME"] = os.path.join(self.home, ".config")
+        self.apps_dir = os.path.join(self.home, ".mackup", "applications")
+        os.makedirs(self.apps_dir, exist_ok=True)
+
+    def tearDown(self):
+        for key, orig in (
+            ("HOME", self._orig_home),
+            ("XDG_CONFIG_HOME", self._orig_xdg),
+        ):
+            if orig is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = orig
+        shutil.rmtree(self.home, ignore_errors=True)
+
+    def _write_app(self, name, body):
+        with open(os.path.join(self.apps_dir, f"{name}.toml"), "w") as handle:
+            handle.write(f'name = "{name}"\n{body}')
+
+    def test_conditions_are_recorded_and_kept_out_of_the_implicit_block(self):
+        self._write_app(
+            "gated",
+            'files = [".gatedrc"]\n\n'
+            '[when]\nos = ["android"]\n\n'
+            '[chmod]\npath = "~/.gatedrc"\nmode = "600"\n',
+        )
+        db = ApplicationsDatabase()
+        assert db.get_conditions("gated") == {"os": ["android"]}
+        cfg_blocks = db.get_blocks("gated")
+        assert len(cfg_blocks) == 1
+        assert "when" not in cfg_blocks[0]
+        assert "chmod" in cfg_blocks[0]
+
+    def test_config_enabled_follows_the_conditions(self):
+        self._write_app("gated", 'files = [".gatedrc"]\n\n[when]\nos = ["android"]\n')
+        self._write_app("plain", 'files = [".plainrc"]\n')
+        db = ApplicationsDatabase()
+        with patch("mackup_ng.hooks.os_kind", return_value="linux"):
+            assert db.config_enabled("gated") is False
+            assert db.config_enabled("plain") is True
+        with patch("mackup_ng.hooks.os_kind", return_value="android"):
+            assert db.config_enabled("gated") is True
 
 
 if __name__ == "__main__":

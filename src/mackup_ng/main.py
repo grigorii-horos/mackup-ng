@@ -511,9 +511,13 @@ def main() -> None:
                 not in tombstoned
             ]
             rm_groups, _ = mapping.group_by_source(live_pairs)
+            normalized_local = ApplicationProfile.normalize_relative_path(
+                local_filename,
+            )
             siblings = [
                 dest for dest in rm_groups.get(backup_filename, [])
-                if dest != local_filename
+                if ApplicationProfile.normalize_relative_path(dest)
+                != normalized_local
             ]
             app = ApplicationProfile(mckp, set(), dry_run, verbose)
             print_app_header(matching_app_name, pretty_name)

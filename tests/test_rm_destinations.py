@@ -76,6 +76,18 @@ class TestRemoveDestination(unittest.TestCase):
 
         assert not os.path.exists(os.path.join(self.mackup_folder, ".shared.rc"))
 
+    def test_rm_both_destinations_in_one_invocation_removes_the_source(self):
+        with patch("sys.argv", ["mackup", "sync"]):
+            main()
+        with patch(
+            "sys.argv", ["mackup", "rm", ".work.rc", ".home.rc"],
+        ):
+            main()
+
+        assert not os.path.exists(os.path.join(self.test_home, ".work.rc"))
+        assert not os.path.exists(os.path.join(self.test_home, ".home.rc"))
+        assert not os.path.exists(os.path.join(self.mackup_folder, ".shared.rc"))
+
     def test_tombstone_records_the_destination(self):
         with patch("sys.argv", ["mackup", "sync"]):
             main()

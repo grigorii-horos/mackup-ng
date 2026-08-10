@@ -356,3 +356,13 @@ Native dconf backup/restore (Linux/GNOME). Tracked paths are stored as
 dumps each path before the file sync; restore-role machines load them after.
 Gated off by the `no-dconf` marker. Register a path with
 `mackup dconf-add /org/gnome/terminal/`.
+
+## Update check
+
+`mackup sync` ends with `update.check(VERSION)` (`src/mackup_ng/update.py`),
+which prints one line when PyPI has a newer release. The network lives in
+`fetch_latest` alone; the result is cached in
+`$XDG_CACHE_HOME/mackup/update-check.json` for 24 hours. Pre-releases are
+ignored (`parse_version` accepts only dot-separated integers). Every failure is
+silent, a dry run skips the check entirely, and the `no-update-check` marker
+disables it — no fetch, no cache read, no output.

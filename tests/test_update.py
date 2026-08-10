@@ -214,4 +214,5 @@ class TestCheck(unittest.TestCase):
 
     def test_line_carries_the_upgrade_command(self):
         line = update.check("2.1.0", fetch=self._fetch("2.2.0"), now=1000.0)
+        assert line is not None
         assert "Upgrade:" in line

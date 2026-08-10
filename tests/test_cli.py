@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 import pytest
 
-from mackup_ng import utils
+from mackup_ng import update, utils
 from mackup_ng.main import main
 
 
@@ -24,10 +24,12 @@ class TestCLI(unittest.TestCase):
         # Store original HOME
         self.original_home = os.environ.get("HOME")
         self.original_xdg = os.environ.get("XDG_CONFIG_HOME")
+        self.original_xdg_cache = os.environ.get("XDG_CACHE_HOME")
 
         # Set HOME to our test directory
         os.environ["HOME"] = self.test_home
         os.environ["XDG_CONFIG_HOME"] = os.path.join(self.test_home, ".config")
+        os.environ["XDG_CACHE_HOME"] = os.path.join(self.test_home, ".cache")
 
         # Create test config file
         self.config_path = os.path.join(self.test_home, ".mackup.cfg")
@@ -79,6 +81,12 @@ class TestCLI(unittest.TestCase):
             os.environ["XDG_CONFIG_HOME"] = self.original_xdg
         else:
             os.environ.pop("XDG_CONFIG_HOME", None)
+
+        # Restore original XDG_CACHE_HOME
+        if self.original_xdg_cache:
+            os.environ["XDG_CACHE_HOME"] = self.original_xdg_cache
+        else:
+            os.environ.pop("XDG_CACHE_HOME", None)
 
         # Clean up temporary directories
         if os.path.exists(self.test_home):
@@ -591,6 +599,36 @@ class TestCLI(unittest.TestCase):
             main()
         output = buffer.getvalue()
         assert "Skipped aaa-base" in output
+
+    def test_sync_reports_a_newer_release(self):
+        buffer = io.StringIO()
+        with patch("sys.stdout", buffer), patch(
+            "mackup_ng.update.fetch_latest", return_value="99.0.0",
+        ), patch("sys.argv", ["mackup", "sync"]):
+            main()
+        assert "99.0.0 available" in buffer.getvalue()
+
+    def test_sync_says_nothing_when_up_to_date(self):
+        buffer = io.StringIO()
+        with patch("sys.stdout", buffer), patch(
+            "mackup_ng.update.fetch_latest", return_value="0.0.1",
+        ), patch("sys.argv", ["mackup", "sync"]):
+            main()
+        assert "available" not in buffer.getvalue()
+
+    def test_dry_run_neither_fetches_nor_writes_the_cache(self):
+        calls = []
+
+        def fetch(timeout=2.0):
+            calls.append(timeout)
+            return "99.0.0"
+
+        with patch("mackup_ng.update.fetch_latest", fetch), patch(
+            "sys.argv", ["mackup", "-n", "sync"],
+        ):
+            main()
+        assert calls == []
+        assert not os.path.exists(update.cache_path())
 
 
 if __name__ == "__main__":

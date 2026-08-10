@@ -132,6 +132,30 @@ To drop a single managed path everywhere, use `mackup-ng rm <path>`: it removes
 the file locally and from the Mackup folder, and records a deletion tombstone so
 future syncs remove it on your other machines too.
 
+### Update check
+
+At the end of `mackup sync`, mackup-ng checks whether a newer release is on
+PyPI and prints one line if there is:
+
+```text
+mackup-ng 2.1.0 -> 2.2.0 available. Upgrade: uv tool upgrade mackup-ng
+```
+
+The upgrade command is guessed from where the running executable lives (snap,
+uv tool, pipx, or plain pip). The result is cached under
+`$XDG_CACHE_HOME/mackup/update-check.json` for a day, so at most one request a
+day leaves the machine, and a dry run (`-n`) never checks at all. Any failure —
+offline, timeout, a bad answer — is silent.
+
+The request goes to `https://pypi.org/pypi/mackup-ng/json`. It carries nothing
+but the package name, though like any request it discloses the machine's IP
+address and the fact that mackup-ng is in use. To switch it off for good on a
+machine:
+
+```bash
+mackup-ng mark no-update-check
+```
+
 ## Supported Storages
 
 - [Dropbox](https://www.dropbox.com/)

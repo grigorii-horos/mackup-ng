@@ -121,11 +121,17 @@ def build_sync_plan(
     app_db: ApplicationsDatabase,
     apps_to_sync: set[str],
 ) -> tuple[list[mapping.Pair], list[mapping.Eviction]]:
-    """Collect every selected app's pairs in read order and resolve them."""
+    """Collect every selected app's pairs in read order and resolve them.
+
+    A config whose top-level ``[when]`` does not hold on this machine declares
+    nothing, so it never claims — or evicts — a destination.
+    """
     entries = [
         mapping.Pair(source=backup, dest=local, owner_app=app_name)
         for app_name in app_db.get_app_order()
-        if app_name in apps_to_sync and app_db.app_has_sync(app_name)
+        if app_name in apps_to_sync
+        and app_db.app_has_sync(app_name)
+        and app_db.config_enabled(app_name)
         for local, backup in app_db.get_file_mappings(app_name)
     ]
     return mapping.build_pairs(entries)
@@ -377,6 +383,8 @@ def main() -> None:
             groups_by_owner.setdefault(owners[source], []).append((source, dests))
 
         for app_name in sorted(app_db.get_app_names()):
+            if not app_db.config_enabled(app_name):
+                continue
             env_files = app_db.get_env_files(app_name)
             cfg_blocks = app_db.get_blocks(app_name)
             pretty_name = app_db.get_name(app_name)
@@ -454,6 +462,8 @@ def main() -> None:
     elif args["apply"]:
         mckp.check_for_usable_environment()
         for app_name in sorted(app_db.get_app_names()):
+            if not app_db.config_enabled(app_name):
+                continue
             env_files = app_db.get_env_files(app_name)
             cfg_blocks = app_db.get_blocks(app_name)
             tally = blocks.apply_blocks(cfg_blocks, "pre", env_files, dry_run)

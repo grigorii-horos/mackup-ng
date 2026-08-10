@@ -1,0 +1,138 @@
+"""A config's top-level [when] gates its sync entries and its blocks."""
+
+import os
+import shutil
+import tempfile
+import unittest
+from unittest.mock import patch
+
+from mackup_ng import utils
+from mackup_ng.main import main
+
+
+class TestConfigLevelConditions(unittest.TestCase):
+    def setUp(self):
+        self.home = tempfile.mkdtemp(prefix="mackup_when_home_")
+        self.storage = tempfile.mkdtemp(prefix="mackup_when_storage_")
+        self.mackup_folder = os.path.join(self.storage, "Mackup")
+        os.makedirs(self.mackup_folder, exist_ok=True)
+        self._orig = {
+            key: os.environ.get(key)
+            for key in ("HOME", "XDG_CONFIG_HOME", "XDG_STATE_HOME")
+        }
+        os.environ["HOME"] = self.home
+        os.environ["XDG_CONFIG_HOME"] = os.path.join(self.home, ".config")
+        os.environ["XDG_STATE_HOME"] = os.path.join(self.home, ".local", "state")
+
+        with open(os.path.join(self.home, ".mackup.cfg"), "w") as handle:
+            handle.write(
+                "[storage]\nengine = file_system\n"
+                f"path = {self.storage}\ndirectory = Mackup\n\n"
+                "[applications_to_sync]\naaa-base\nzzz-override\ngated-blocks\n",
+            )
+        self.apps_dir = os.path.join(self.home, ".mackup", "applications")
+        os.makedirs(self.apps_dir, exist_ok=True)
+        utils.FORCE_YES = True
+
+    def tearDown(self):
+        for key, orig in self._orig.items():
+            if orig is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = orig
+        shutil.rmtree(self.home, ignore_errors=True)
+        shutil.rmtree(self.storage, ignore_errors=True)
+        utils.FORCE_YES = False
+
+    def _write_app(self, name, body):
+        with open(os.path.join(self.apps_dir, f"{name}.toml"), "w") as handle:
+            handle.write(f'name = "{name}"\n{body}')
+
+    def _write_backup(self, relative, content):
+        path = os.path.join(self.mackup_folder, relative)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w") as handle:
+            handle.write(content)
+
+    def _set_marker(self, name):
+        markers = os.path.join(
+            os.environ["XDG_STATE_HOME"], "mackup", "markers",
+        )
+        os.makedirs(markers, exist_ok=True)
+        open(os.path.join(markers, name), "a").close()
+
+    def _write_palette_configs(self):
+        self._write_app(
+            "aaa-base",
+            '[mapped_files]\n".colors" = ".palette-default"\n',
+        )
+        self._write_app(
+            "zzz-override",
+            '[when]\nmarker = ["eink"]\n\n'
+            '[mapped_files]\n".colors" = ".palette-eink"\n',
+        )
+        self._write_backup(".palette-default", "default\n")
+        self._write_backup(".palette-eink", "eink\n")
+
+    def test_override_is_inactive_without_the_marker(self):
+        self._write_palette_configs()
+        with patch("sys.argv", ["mackup", "sync"]):
+            main()
+        with open(os.path.join(self.home, ".colors")) as handle:
+            assert handle.read() == "default\n"
+
+    def test_override_wins_when_the_marker_is_set(self):
+        self._write_palette_configs()
+        self._set_marker("eink")
+        with patch("sys.argv", ["mackup", "sync"]):
+            main()
+        with open(os.path.join(self.home, ".colors")) as handle:
+            assert handle.read() == "eink\n"
+
+    def test_gated_out_config_runs_no_blocks(self):
+        touched = os.path.join(self.home, "block-ran.txt")
+        self._write_app(
+            "gated-blocks",
+            '[when]\nmarker = ["nope"]\n\n'
+            f'[run]\nscript = "touch {touched}"\n\n'
+            '[[block]]\n'
+            f'[block.run]\nscript = "touch {touched}.two"\n',
+        )
+        with patch("sys.argv", ["mackup", "sync"]):
+            main()
+        assert not os.path.exists(touched)
+        assert not os.path.exists(f"{touched}.two")
+
+    def test_enabled_config_still_runs_its_blocks(self):
+        touched = os.path.join(self.home, "block-ran.txt")
+        self._write_app(
+            "gated-blocks",
+            '[when]\nnot_marker = ["nope"]\n\n'
+            f'[run]\nscript = "touch {touched}"\n',
+        )
+        with patch("sys.argv", ["mackup", "sync"]):
+            main()
+        assert os.path.exists(touched)
+
+    def test_apply_skips_a_gated_out_config(self):
+        touched = os.path.join(self.home, "applied.txt")
+        self._write_app(
+            "gated-blocks",
+            '[when]\nmarker = ["nope"]\n\n'
+            f'[run]\nscript = "touch {touched}"\n',
+        )
+        with patch("sys.argv", ["mackup", "apply"]):
+            main()
+        assert not os.path.exists(touched)
+
+    def test_source_orphaned_by_a_gated_out_config_is_untouched(self):
+        self._write_palette_configs()
+        self._write_app(
+            "zzz-override",
+            '[when]\nmarker = ["eink"]\n\n'
+            '[mapped_files]\n".colors" = ".palette-eink"\n',
+        )
+        with patch("sys.argv", ["mackup", "sync"]):
+            main()
+        with open(os.path.join(self.mackup_folder, ".palette-eink")) as handle:
+            assert handle.read() == "eink\n"

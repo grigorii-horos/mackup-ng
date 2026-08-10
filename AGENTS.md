@@ -299,6 +299,55 @@ prefixes (`10-`, `40-`). `${VAR}` (non-`MACKUP_*`) in block values resolves from
 the environment / a top-level `source_env` list. (The former `~/.bin/.sync-sets`
 script and the separate `sets/` directory are superseded by this model.)
 
+### Config-level conditions (top-level `[when]`)
+
+A top-level `[when]` table is the **config's** condition, evaluated with the
+same keys as a block's `[when]` (`os`, `arch`, `marker`, `not_marker`,
+`command`, `gui`, `exists`, `not_exists`, `env`). When it does not hold on
+this machine the config contributes nothing: no `files`, no `[mapped_files]`,
+and no blocks — not the implicit top-level block, not any `[[block]]` entry.
+
+That is what lets a machine-specific mapping decline to claim its
+destination, so an earlier config keeps it:
+
+```toml
+# zz-termux-colors-eink.toml — only on e-ink machines
+[when]
+os = ["android"]
+marker = ["eink"]
+
+[mapped_files]
+".termux/colors.properties" = ".termux/colors-eink.properties"
+```
+
+To gate a single action rather than the whole config, put the condition in
+the block instead:
+
+```toml
+[[block]]
+[block.when]
+os = ["linux"]
+[block.chmod]
+path = "~/.ssh"
+```
+
+**Migration:** a config that combined a top-level `[when]` with `files` used
+to sync those files everywhere and gate only its action. Now the file list is
+conditional too. Move the condition into `[[block]]` + `[block.when]` if the
+old behavior was what you wanted.
+
+**Top-level keys must come before any table header.** TOML assigns a bare
+`key = value` line to whichever table was most recently opened above it, not
+to the document root. If `files = [...]` is written *after* the `[when]`
+header, it parses as `when.files` instead of the config's own `files` — the
+config then silently declares no synced files at all. `appsdb.py` warns about
+this at load time: an unrecognized key inside `[when]` prints `Warning:
+{app}: unrecognized [when] key(s): ...`, and a `[when]` that isn't a table at
+all (e.g. `when = "android"`) prints `Warning: {app}: top-level [when] must
+be a table, ignoring` and is treated as no conditions. Put every top-level
+key (`name`, `files`, `configuration_files`, `mapped_files`, `source_env`)
+above the `[when]` header, or in its own table before it.
+
 ### dconf (`dconf.py`)
 
 Native dconf backup/restore (Linux/GNOME). Tracked paths are stored as

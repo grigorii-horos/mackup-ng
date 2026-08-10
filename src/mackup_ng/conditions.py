@@ -49,7 +49,7 @@ def _one(when: dict, key: str) -> bool:
     return True
 
 
-_CONDITION_KEYS = (
+CONDITION_KEYS = (
     "os",
     "arch",
     "marker",
@@ -60,9 +60,35 @@ _CONDITION_KEYS = (
     "not_exists",
     "env",
 )
+# Private alias kept for existing internal references.
+_CONDITION_KEYS = CONDITION_KEYS
+
+
+def unrecognized_keys(when: dict) -> list[str]:
+    """Return the keys of ``when`` outside the recognized condition vocabulary."""
+    return [key for key in when if key not in CONDITION_KEYS]
 
 
 def block_passes(block: dict) -> bool:
     """True iff every condition in the block's ``[when]`` sub-table passes."""
     when = block.get("when") or {}
     return all(_one(when, key) for key in _CONDITION_KEYS)
+
+
+def config_passes(data: dict) -> bool:
+    """True iff every condition in a config's top-level ``[when]`` passes.
+
+    A config's conditions gate everything it declares — its sync entries as
+    well as its blocks — and use the same vocabulary as a block's ``[when]``.
+    """
+    return block_passes(data)
+
+
+def failing(data: dict) -> dict:
+    """Return only the conditions in ``data``'s ``[when]`` that do not hold."""
+    when = data.get("when") or {}
+    return {
+        key: when[key]
+        for key in _CONDITION_KEYS
+        if key in when and not _one(when, key)
+    }

@@ -940,6 +940,35 @@ file_mode = "600"
 by filename; `mackup apply` runs blocks without syncing. A block-only file (no
 `files`) is a pure hook.
 
+Conditions written at the top level of a config gate the **whole** config —
+its synced files as well as its actions. A config whose conditions do not hold
+on this machine declares nothing, so a mapping from another config keeps the
+destination. That is how one machine can take a different source for the same
+local file:
+
+```toml
+# ~/.mackup/applications/zz-termux-colors-eink.toml
+[when]
+os = ["android"]
+marker = ["eink"]
+
+[mapped_files]
+".termux/colors.properties" = ".termux/colors-eink.properties"
+```
+
+Run `mackup show <app>` to see whether a config's conditions hold here, and
+`mackup sync -v` to list the configs skipped for that reason. To gate a single
+action instead of the config, put the condition inside `[[block]]` as
+`[block.when]`.
+
+Top-level keys (`files`, `mapped_files`, etc.) must come **before** the
+`[when]` header in the file. TOML assigns a bare `key = value` line to
+whichever table opened above it — write `files = [...]` after `[when]` and it
+becomes `when.files` instead of the config's own file list, so the config
+silently syncs nothing. Loading a config warns about this: an unrecognized
+key inside `[when]` or a `[when]` that isn't a table at all both print a
+`Warning:` line naming the config and the problem.
+
 ### 9. Machine-local extras (`~/.mackup/`)
 
 Beyond custom app configs, `~/.mackup/` is the home for machine-local behavior:

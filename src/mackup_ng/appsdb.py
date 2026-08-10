@@ -11,7 +11,7 @@ import re
 import tomllib
 from typing import ClassVar
 
-from . import blocks, constants, utils
+from . import blocks, conditions, constants, utils
 from .constants import APPS_DIR, CUSTOM_APPS_DIR, CUSTOM_APPS_DIR_XDG
 
 # ${VAR} token; NAME is captured. Reserved names below are the dual-path
@@ -379,6 +379,7 @@ class ApplicationsDatabase:
         self.apps: dict[str, dict[str, str | list[str]]] = {}
         self.app_file_mappings: dict[str, list[tuple[str, str]]] = {}
         self.app_blocks: dict[str, list[dict]] = {}
+        self.app_conditions: dict[str, dict] = {}
         self.app_env_files: dict[str, list[str]] = {}
         self.app_order: list[str] = []
 
@@ -402,6 +403,20 @@ class ApplicationsDatabase:
             # Start building a dict for this app
             self.apps[app_name] = {}
             self.app_order.append(app_name)
+            when = data.get("when")
+            if when is not None and not isinstance(when, dict):
+                print(utils.colorize_message(
+                    f"Warning: {app_name}: top-level [when] must be a table, "
+                    "ignoring",
+                ))
+            self.app_conditions[app_name] = dict(when) if isinstance(when, dict) else {}
+            if isinstance(when, dict):
+                bad_keys = conditions.unrecognized_keys(when)
+                if bad_keys:
+                    names = ", ".join(sorted(bad_keys))
+                    print(utils.colorize_message(
+                        f"Warning: {app_name}: unrecognized [when] key(s): {names}",
+                    ))
 
             # Fancy display name (falls back to the id)
             self.apps[app_name]["name"] = data.get(
@@ -418,6 +433,7 @@ class ApplicationsDatabase:
                 "configuration_files",
                 "mapped_files",
                 "source_env",
+                "when",
                 "block",
                 "application",
             }
@@ -558,6 +574,22 @@ class ApplicationsDatabase:
     def get_env_files(self, name: str) -> list[str]:
         """Return the config's source_env files (for ${VAR} in blocks)."""
         return list(self.app_env_files.get(name, []))
+
+    def get_conditions(self, name: str) -> dict:
+        """Return the config's top-level ``[when]`` table (empty when absent)."""
+        return dict(self.app_conditions.get(name, {}))
+
+    def config_enabled(self, name: str) -> bool:
+        """True when the config's conditions hold on this machine.
+
+        A config that is not enabled declares nothing: no sync pairs and no
+        blocks.
+        """
+        return conditions.config_passes({"when": self.app_conditions.get(name, {})})
+
+    def get_failing_conditions(self, name: str) -> dict:
+        """Return only the conditions in the config's ``[when]`` that do not hold."""
+        return conditions.failing({"when": self.app_conditions.get(name, {})})
 
     def app_has_sync(self, name: str) -> bool:
         """True if the config declares files to sync (not a block-only config)."""

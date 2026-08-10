@@ -121,11 +121,17 @@ def build_sync_plan(
     app_db: ApplicationsDatabase,
     apps_to_sync: set[str],
 ) -> tuple[list[mapping.Pair], list[mapping.Eviction]]:
-    """Collect every selected app's pairs in read order and resolve them."""
+    """Collect every selected app's pairs in read order and resolve them.
+
+    A config whose top-level ``[when]`` does not hold on this machine declares
+    nothing, so it never claims — or evicts — a destination.
+    """
     entries = [
         mapping.Pair(source=backup, dest=local, owner_app=app_name)
         for app_name in app_db.get_app_order()
-        if app_name in apps_to_sync and app_db.app_has_sync(app_name)
+        if app_name in apps_to_sync
+        and app_db.app_has_sync(app_name)
+        and app_db.config_enabled(app_name)
         for local, backup in app_db.get_file_mappings(app_name)
     ]
     return mapping.build_pairs(entries)
@@ -278,6 +284,18 @@ def main() -> None:
             app_db.get_name(requested_app_name), color=utils.AnsiColor.CYAN, bold=True,
         )
         print(f"{bold('Name:')} {pretty}")
+        if not app_db.config_enabled(requested_app_name):
+            failing_conds = app_db.get_failing_conditions(requested_app_name)
+            unmet = ", ".join(
+                f"{key}={value}"
+                for key, value in sorted(failing_conds.items())
+            )
+            print(
+                utils.style_text(
+                    f"conditions not met on this machine ({unmet})",
+                    color=utils.AnsiColor.GRAY,
+                ),
+            )
         mappings = app_db.get_file_mappings(requested_app_name)
         if mappings:
             # Resolve exactly the plan `sync` would resolve, so the overrides
@@ -352,12 +370,31 @@ def main() -> None:
                         f"{eviction.winner.owner_app}",
                     ),
                 )
+            reported_orphans = set(orphans)
             for orphan in orphans:
                 print(
                     utils.colorize_message(
                         f"{orphan} has no destination, left untouched",
                     ),
                 )
+            # A gated-out config's sources never entered the plan above (they
+            # were never candidate pairs), so they cannot show up as evicted
+            # orphans. They are an ordinary orphan all the same, unless some
+            # other (enabled) config still claims the same source.
+            for app_name in sorted(app_db.get_app_names()):
+                if app_name not in to_backup or not app_db.app_has_sync(app_name):
+                    continue
+                if app_db.config_enabled(app_name):
+                    continue
+                for _local, backup in app_db.get_file_mappings(app_name):
+                    if backup in all_groups or backup in reported_orphans:
+                        continue
+                    reported_orphans.add(backup)
+                    print(
+                        utils.colorize_message(
+                            f"{backup} has no destination, left untouched",
+                        ),
+                    )
 
         planner = ApplicationProfile(mckp, dry_run, verbose)
         tombstoned = planner.read_tombstones()
@@ -377,6 +414,14 @@ def main() -> None:
             groups_by_owner.setdefault(owners[source], []).append((source, dests))
 
         for app_name in sorted(app_db.get_app_names()):
+            if not app_db.config_enabled(app_name):
+                if verbose:
+                    print(
+                        utils.colorize_message(
+                            f"{app_name}: conditions not met on this machine",
+                        ),
+                    )
+                continue
             env_files = app_db.get_env_files(app_name)
             cfg_blocks = app_db.get_blocks(app_name)
             pretty_name = app_db.get_name(app_name)
@@ -454,6 +499,8 @@ def main() -> None:
     elif args["apply"]:
         mckp.check_for_usable_environment()
         for app_name in sorted(app_db.get_app_names()):
+            if not app_db.config_enabled(app_name):
+                continue
             env_files = app_db.get_env_files(app_name)
             cfg_blocks = app_db.get_blocks(app_name)
             tally = blocks.apply_blocks(cfg_blocks, "pre", env_files, dry_run)

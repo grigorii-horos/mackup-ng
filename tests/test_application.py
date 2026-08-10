@@ -49,17 +49,7 @@ class TestApplicationProfile(unittest.TestCase):
         if os.path.exists(self.mock_mackup.mackup_folder):
             shutil.rmtree(self.mock_mackup.mackup_folder)
 
-    def test_files_are_sorted_for_deterministic_processing(self):
-        """Application files should always be processed in sorted order."""
-        unsorted_files = {"z-last", "a-first", "m-middle"}
-        app_profile = ApplicationProfile(
-            mackup=self.mock_mackup,
-            files=unsorted_files,
-            dry_run=False,
-            verbose=False,
-        )
-        assert app_profile.files == ["a-first", "m-middle", "z-last"]
-    def test_sync_files_merges_directories_by_file_mtime(self):
+    def test_sync_group_merges_directories_by_file_mtime(self):
         """Sync should merge directories entry-by-entry based on file mtimes."""
         test_dir = ".testfolder"
         home_dirpath = os.path.join(self.temp_home, test_dir)
@@ -87,7 +77,7 @@ class TestApplicationProfile(unittest.TestCase):
         os.utime(backup_newer, (100, 100))
         os.utime(backup_backup_newer, (300, 300))
 
-        self.app_profile.sync_files()
+        self.app_profile.sync_group(".testfolder", [".testfolder"])
 
         with open(os.path.join(home_dirpath, "home_newer.txt")) as f:
             assert f.read() == "home-value"
@@ -99,7 +89,7 @@ class TestApplicationProfile(unittest.TestCase):
         with open(os.path.join(mackup_dirpath, "backup_newer.txt")) as f:
             assert f.read() == "backup-value"
 
-    def test_sync_files_updates_directory_mtime_without_copy(self):
+    def test_sync_group_updates_directory_mtime_without_copy(self):
         """Sync should align directory mtime without copying when files are equal."""
         test_dir = ".testfolder"
         home_dirpath = os.path.join(self.temp_home, test_dir)
@@ -119,13 +109,13 @@ class TestApplicationProfile(unittest.TestCase):
         os.utime(mackup_dirpath, (300, 300))
 
         with patch("mackup_ng.application.utils.copy") as mock_copy:
-            self.app_profile.sync_files()
+            self.app_profile.sync_group(".testfolder", [".testfolder"])
             mock_copy.assert_not_called()
 
         assert int(os.path.getmtime(home_dirpath)) == 300
 
-    def test_sync_files_verbose_skips_synced_directory_without_sync_message(self):
-        """Verbose sync should show skip (not synchronizing) when directory is already in sync."""
+    def test_sync_group_verbose_skips_synced_directory_without_copy_message(self):
+        """Verbose sync should print nothing and report skipped when a directory is already in sync."""
         app_profile_verbose = ApplicationProfile(
             mackup=self.mock_mackup,
             files={".testfolder"},
@@ -154,16 +144,16 @@ class TestApplicationProfile(unittest.TestCase):
         captured_output = StringIO()
         sys.stdout = captured_output
         try:
-            app_profile_verbose.sync_files()
+            stats = app_profile_verbose.sync_group(".testfolder", [".testfolder"])
         finally:
             sys.stdout = sys.__stdout__
 
         output = captured_output.getvalue()
-        assert "Synchronizing" not in output
-        assert "Skipping" in output
-        assert "already in sync with" in output
+        assert "Copying" not in output
+        assert stats["synchronized"] == 0
+        assert stats["skipped"] == 1
 
-    def test_sync_files_logs_single_action_per_file(self):
+    def test_sync_group_logs_single_action_per_file(self):
         """Test sync emits one action line per file."""
         app_profile_verbose = ApplicationProfile(
             mackup=self.mock_mackup,
@@ -186,26 +176,18 @@ class TestApplicationProfile(unittest.TestCase):
         captured_output = StringIO()
         sys.stdout = captured_output
         try:
-            app_profile_verbose.sync_files()
+            app_profile_verbose.sync_group(".testfile", [".testfile"])
         finally:
             sys.stdout = sys.__stdout__
 
         output = captured_output.getvalue()
-        assert "Backing up" in output
+        assert output.count("Copying") == 1
         assert home_filepath in output
         assert mackup_filepath in output
-        assert "Restoring\n" not in output
 
-    def test_sync_files_ignores_missing_file_on_both_sides(self):
+    def test_sync_group_ignores_missing_file_on_both_sides(self):
         """Sync should not count a file missing in both home and backup as skipped."""
-        app_profile = ApplicationProfile(
-            mackup=self.mock_mackup,
-            files={".missing-file"},
-            dry_run=False,
-            verbose=False,
-        )
-
-        stats = app_profile.sync_files()
+        stats = self.app_profile.sync_group(".testfile", [".testfile"])
 
         assert stats["backed_up"] == 0
         assert stats["restored"] == 0

@@ -142,14 +142,15 @@ main.py parses command
     ↓
 config.py loads .mackup.cfg
     ↓
-appsdb.py loads application definitions
+appsdb.py loads application definitions in precedence order
     ↓
-mackup.py iterates through applications
+mapping.py resolves (source, destination) pairs — later pairs win the
+destination, sources group into fanout groups
     ↓
-application.py for each app:
-    - Compares config files in home and Mackup storage
-    - Copies the newer side to the older side
-    - Preserves permissions and timestamps
+application.py for each group:
+    - Deletes tombstoned destinations
+    - Picks the newest member and copies it to the others
+    - Merges directory members entry by entry
     ↓
 Files now in: ~/Dropbox/Mackup/ (or chosen storage)
 ```
@@ -209,6 +210,7 @@ mackup/
 ├── mackup.py           # Core orchestration engine
 ├── config.py           # Configuration management
 ├── appsdb.py           # Application database
+├── mapping.py          # (source, destination) pair resolution and fanout grouping
 ├── application.py      # Per-application operations
 ├── utils.py            # Utility functions
 ├── constants.py        # Constants and defaults

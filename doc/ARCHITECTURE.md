@@ -144,6 +144,8 @@ config.py loads .mackup.cfg
     ↓
 appsdb.py loads application definitions in precedence order
     ↓
+configs whose top-level [when] does not hold are dropped — no pairs, no blocks
+    ↓
 mapping.py resolves (source, destination) pairs — later pairs win the
 destination, sources group into fanout groups
     ↓

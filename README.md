@@ -940,6 +940,27 @@ file_mode = "600"
 by filename; `mackup apply` runs blocks without syncing. A block-only file (no
 `files`) is a pure hook.
 
+Conditions written at the top level of a config gate the **whole** config —
+its synced files as well as its actions. A config whose conditions do not hold
+on this machine declares nothing, so a mapping from another config keeps the
+destination. That is how one machine can take a different source for the same
+local file:
+
+```toml
+# ~/.mackup/applications/zz-termux-colors-eink.toml
+[when]
+os = ["android"]
+marker = ["eink"]
+
+[mapped_files]
+".termux/colors.properties" = ".termux/colors-eink.properties"
+```
+
+Run `mackup show <app>` to see whether a config's conditions hold here, and
+`mackup sync -v` to list the configs skipped for that reason. To gate a single
+action instead of the config, put the condition inside `[[block]]` as
+`[block.when]`.
+
 ### 9. Machine-local extras (`~/.mackup/`)
 
 Beyond custom app configs, `~/.mackup/` is the home for machine-local behavior:

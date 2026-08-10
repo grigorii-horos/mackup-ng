@@ -63,6 +63,14 @@ class TestCLI(unittest.TestCase):
             f.write(f'    "{self.test_file_name}",\n')
             f.write("]\n")
 
+        # Mock the update.fetch_latest to prevent any tests from touching the network.
+        # Individual tests can override this with their own patch for testing.
+        self.fetch_patcher = patch(
+            "mackup_ng.update.fetch_latest", return_value=None,
+        )
+        self.fetch_patcher.start()
+        self.addCleanup(self.fetch_patcher.stop)
+
         # Force yes to all prompts
         utils.FORCE_YES = True
         utils.FORCE_NO = False

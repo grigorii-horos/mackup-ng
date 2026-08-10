@@ -19,11 +19,12 @@ class TestConfigLevelConditions(unittest.TestCase):
         os.makedirs(self.mackup_folder, exist_ok=True)
         self._orig = {
             key: os.environ.get(key)
-            for key in ("HOME", "XDG_CONFIG_HOME", "XDG_STATE_HOME")
+            for key in ("HOME", "XDG_CONFIG_HOME", "XDG_STATE_HOME", "XDG_CACHE_HOME")
         }
         os.environ["HOME"] = self.home
         os.environ["XDG_CONFIG_HOME"] = os.path.join(self.home, ".config")
         os.environ["XDG_STATE_HOME"] = os.path.join(self.home, ".local", "state")
+        os.environ["XDG_CACHE_HOME"] = os.path.join(self.home, ".cache")
 
         with open(os.path.join(self.home, ".mackup.cfg"), "w") as handle:
             handle.write(
@@ -34,6 +35,13 @@ class TestConfigLevelConditions(unittest.TestCase):
         self.apps_dir = os.path.join(self.home, ".mackup", "applications")
         os.makedirs(self.apps_dir, exist_ok=True)
         utils.FORCE_YES = True
+
+        # Mock the update.fetch_latest to prevent any tests from touching the network.
+        self.fetch_patcher = patch(
+            "mackup_ng.update.fetch_latest", return_value=None,
+        )
+        self.fetch_patcher.start()
+        self.addCleanup(self.fetch_patcher.stop)
 
     def tearDown(self):
         for key, orig in self._orig.items():

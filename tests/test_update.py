@@ -1,0 +1,118 @@
+"""Tests for the PyPI update check. Nothing here touches the network."""
+
+import json
+import os
+import shutil
+import tempfile
+import unittest
+
+from mackup_ng import update
+
+
+class TestParseVersion(unittest.TestCase):
+    def test_numeric_versions_parse_to_tuples(self):
+        assert update.parse_version("2.1.0") == (2, 1, 0)
+        assert update.parse_version("10") == (10,)
+        assert update.parse_version(" 2.1.0 ") == (2, 1, 0)
+
+    def test_pre_releases_and_junk_are_rejected(self):
+        for text in ("2.2.0rc1", "2.2.0.dev3", "2.2.0-1", "", "unknown", "v2.1.0"):
+            assert update.parse_version(text) is None
+
+
+class TestIsNewer(unittest.TestCase):
+    def test_newer_version_wins(self):
+        assert update.is_newer("2.2.0", "2.1.0")
+        assert update.is_newer("2.1.1", "2.1.0")
+        assert update.is_newer("2.1.0", "2.1")
+
+    def test_equal_or_older_is_not_newer(self):
+        assert not update.is_newer("2.1.0", "2.1.0")
+        assert not update.is_newer("2.0.9", "2.1.0")
+
+    def test_unparseable_sides_are_never_newer(self):
+        assert not update.is_newer("2.2.0rc1", "2.1.0")
+        assert not update.is_newer("2.2.0", "unknown")
+
+
+class TestUpgradeCommand(unittest.TestCase):
+    def test_snap_path(self):
+        assert (
+            update.upgrade_command("/snap/mackup-ng/12/bin/mackup-ng")
+            == "sudo snap refresh mackup-ng"
+        )
+
+    def test_uv_tool_path(self):
+        assert (
+            update.upgrade_command(
+                "/home/x/.local/share/uv/tools/mackup-ng/bin/mackup-ng",
+            )
+            == "uv tool upgrade mackup-ng"
+        )
+
+    def test_pipx_path(self):
+        assert (
+            update.upgrade_command("/home/x/.local/pipx/venvs/mackup-ng/bin/mackup-ng")
+            == "pipx upgrade mackup-ng"
+        )
+
+    def test_anything_else_falls_back_to_pip(self):
+        assert (
+            update.upgrade_command("/usr/local/bin/mackup-ng")
+            == "pip install --upgrade mackup-ng"
+        )
+
+    def test_missing_path_gives_no_command(self):
+        assert update.upgrade_command("") is None
+
+
+class TestCache(unittest.TestCase):
+    def setUp(self):
+        self.home = tempfile.mkdtemp(prefix="mackup_update_home_")
+        self._orig = {
+            key: os.environ.get(key) for key in ("HOME", "XDG_CACHE_HOME")
+        }
+        os.environ["HOME"] = self.home
+        os.environ["XDG_CACHE_HOME"] = os.path.join(self.home, ".cache")
+
+    def tearDown(self):
+        for key, orig in self._orig.items():
+            if orig is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = orig
+        shutil.rmtree(self.home, ignore_errors=True)
+
+    def test_absent_cache_reads_as_none(self):
+        assert update.read_cache(1000.0) is None
+
+    def test_written_value_reads_back_within_the_ttl(self):
+        update.write_cache("2.2.0", 1000.0)
+        assert update.read_cache(1000.0) == "2.2.0"
+        assert update.read_cache(1000.0 + update.CACHE_TTL_SECONDS - 1) == "2.2.0"
+
+    def test_expired_entry_reads_as_none(self):
+        update.write_cache("2.2.0", 1000.0)
+        assert update.read_cache(1000.0 + update.CACHE_TTL_SECONDS + 1) is None
+
+    def test_malformed_cache_reads_as_none(self):
+        path = update.cache_path()
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w") as handle:
+            handle.write("{not json")
+        assert update.read_cache(1000.0) is None
+
+    def test_cache_missing_keys_reads_as_none(self):
+        path = update.cache_path()
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w") as handle:
+            json.dump({"latest": "2.2.0"}, handle)
+        assert update.read_cache(1000.0) is None
+
+    def test_unwritable_cache_directory_is_swallowed(self):
+        os.makedirs(os.environ["XDG_CACHE_HOME"], exist_ok=True)
+        blocker = os.path.join(os.environ["XDG_CACHE_HOME"], "mackup")
+        with open(blocker, "w") as handle:  # a file where the directory belongs
+            handle.write("in the way\n")
+        update.write_cache("2.2.0", 1000.0)  # must not raise
+        assert update.read_cache(1000.0) is None

@@ -47,6 +47,23 @@ class TestSyncGroupFiles(unittest.TestCase):
                 assert handle.read() == "from-backup"
         assert stats["restored"] == 2
 
+    def test_unusable_destination_parent_reports_error_without_aborting(self):
+        """A file where a destination's parent directory belongs is an error."""
+        source = os.path.join(self.mackup.mackup_folder, ".config/app/user.js")
+        self._write(source, "from-backup", 3000)
+        # ~/blocker is a regular file, so ~/blocker/user.js can never be created.
+        self._write(os.path.join(self.home, "blocker"), "in the way", 1000)
+
+        stats = self.profile.sync_group(
+            ".config/app/user.js",
+            ["blocker/user.js", ".config/home/user.js"],
+        )
+
+        assert stats["errors"] == 1
+        assert stats["restored"] == 1
+        with open(os.path.join(self.home, ".config/home/user.js")) as handle:
+            assert handle.read() == "from-backup"
+
     def test_newest_destination_wins_over_the_whole_group(self):
         source = os.path.join(self.mackup.mackup_folder, ".config/app/user.js")
         work = os.path.join(self.home, ".config/work/user.js")

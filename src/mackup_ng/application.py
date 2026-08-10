@@ -173,10 +173,12 @@ class ApplicationProfile:
                     if os.path.lexists(member):
                         utils.delete(member)
                     utils.copy(winner, member)
-                except PermissionError as e:
+                except OSError as e:
+                    # Any OSError disqualifies just this member: no permission,
+                    # but also a plain file where a parent directory belongs.
                     self._print(
                         f"Error: Unable to copy file from {winner} to "
-                        f"{member} due to permission issue: {e}",
+                        f"{member}: {e}",
                     )
                     stats["errors"] += 1
                     continue

@@ -57,7 +57,7 @@ from typing import Any, NoReturn
 
 from docopt import docopt
 
-from . import blocks, dconf, hooks, mapping, utils
+from . import blocks, dconf, hooks, mapping, update, utils
 from .application import ApplicationProfile
 from .appsdb import ApplicationsDatabase
 from .constants import VERSION
@@ -461,6 +461,13 @@ def main() -> None:
         # On consumer machines, load the synced dconf dumps into dconf.
         if role == "restore" and dconf_enabled:
             dconf.load_all(dry_run)
+
+        # Last thing in a real run: one line if a newer release is out. A dry
+        # run stays side-effect free, so it neither fetches nor writes a cache.
+        if not dry_run:
+            notice = update.check(VERSION, verbose=verbose)
+            if notice:
+                print(utils.colorize_message(notice))
 
     # mackup mark <marker> / unmark <marker> / markers
     elif args["mark"] or args["unmark"] or args["markers"]:

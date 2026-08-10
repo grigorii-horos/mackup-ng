@@ -1,0 +1,3 @@
+[marker]
+name = "opt-out: do NOT check PyPI for a newer mackup-ng on sync"
+order = 60

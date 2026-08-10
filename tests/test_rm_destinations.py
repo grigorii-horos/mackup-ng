@@ -19,8 +19,10 @@ class TestRemoveDestination(unittest.TestCase):
         os.makedirs(self.mackup_folder, exist_ok=True)
         self._orig_home = os.environ.get("HOME")
         self._orig_xdg = os.environ.get("XDG_CONFIG_HOME")
+        self._orig_xdg_cache = os.environ.get("XDG_CACHE_HOME")
         os.environ["HOME"] = self.test_home
         os.environ["XDG_CONFIG_HOME"] = os.path.join(self.test_home, ".config")
+        os.environ["XDG_CACHE_HOME"] = os.path.join(self.test_home, ".cache")
 
         with open(os.path.join(self.test_home, ".mackup.cfg"), "w") as handle:
             handle.write(
@@ -40,10 +42,18 @@ class TestRemoveDestination(unittest.TestCase):
             handle.write("shared=1\n")
         utils.FORCE_YES = True
 
+        # Mock the update.fetch_latest to prevent any tests from touching the network.
+        self.fetch_patcher = patch(
+            "mackup_ng.update.fetch_latest", return_value=None,
+        )
+        self.fetch_patcher.start()
+        self.addCleanup(self.fetch_patcher.stop)
+
     def tearDown(self):
         for key, orig in (
             ("HOME", self._orig_home),
             ("XDG_CONFIG_HOME", self._orig_xdg),
+            ("XDG_CACHE_HOME", self._orig_xdg_cache),
         ):
             if orig is None:
                 os.environ.pop(key, None)

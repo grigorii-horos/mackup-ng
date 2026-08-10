@@ -1,5 +1,6 @@
 """A config's top-level [when] gates its sync entries and its blocks."""
 
+import io
 import os
 import shutil
 import tempfile
@@ -152,3 +153,40 @@ class TestConfigLevelConditions(unittest.TestCase):
         assert os.path.exists(backup_eink_path)
         with open(backup_eink_path) as handle:
             assert handle.read() == "eink\n"
+
+    def test_show_reports_unmet_conditions(self):
+        self._write_palette_configs()
+        buffer = io.StringIO()
+        with patch("sys.stdout", buffer), patch(
+            "sys.argv", ["mackup", "show", "zzz-override"],
+        ):
+            main()
+        output = buffer.getvalue()
+        assert "conditions not met on this machine" in output
+        assert "marker" in output
+
+    def test_show_says_nothing_about_conditions_when_they_hold(self):
+        self._write_palette_configs()
+        self._set_marker("eink")
+        buffer = io.StringIO()
+        with patch("sys.stdout", buffer), patch(
+            "sys.argv", ["mackup", "show", "zzz-override"],
+        ):
+            main()
+        assert "conditions not met" not in buffer.getvalue()
+
+    def test_verbose_sync_reports_the_skipped_config(self):
+        self._write_palette_configs()
+        buffer = io.StringIO()
+        with patch("sys.stdout", buffer), patch(
+            "sys.argv", ["mackup", "-v", "sync"],
+        ):
+            main()
+        assert "zzz-override: conditions not met on this machine" in buffer.getvalue()
+
+    def test_non_verbose_sync_stays_quiet_about_it(self):
+        self._write_palette_configs()
+        buffer = io.StringIO()
+        with patch("sys.stdout", buffer), patch("sys.argv", ["mackup", "sync"]):
+            main()
+        assert "conditions not met" not in buffer.getvalue()

@@ -284,6 +284,18 @@ def main() -> None:
             app_db.get_name(requested_app_name), color=utils.AnsiColor.CYAN, bold=True,
         )
         print(f"{bold('Name:')} {pretty}")
+        if not app_db.config_enabled(requested_app_name):
+            conditions = app_db.get_conditions(requested_app_name)
+            unmet = ", ".join(
+                f"{key}={value}"
+                for key, value in sorted(conditions.items())
+            )
+            print(
+                utils.style_text(
+                    f"conditions not met on this machine ({unmet})",
+                    color=utils.AnsiColor.GRAY,
+                ),
+            )
         mappings = app_db.get_file_mappings(requested_app_name)
         if mappings:
             # Resolve exactly the plan `sync` would resolve, so the overrides
@@ -384,6 +396,12 @@ def main() -> None:
 
         for app_name in sorted(app_db.get_app_names()):
             if not app_db.config_enabled(app_name):
+                if verbose:
+                    print(
+                        utils.colorize_message(
+                            f"{app_name}: conditions not met on this machine",
+                        ),
+                    )
                 continue
             env_files = app_db.get_env_files(app_name)
             cfg_blocks = app_db.get_blocks(app_name)

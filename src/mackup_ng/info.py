@@ -13,7 +13,7 @@ import os
 import time
 from typing import TYPE_CHECKING, NamedTuple
 
-from . import paths, synclog, utils
+from . import ignore, paths, synclog, utils
 from .application import ApplicationProfile
 
 if TYPE_CHECKING:
@@ -59,14 +59,16 @@ def human_size(size: int) -> str:
     return f"{size} B"
 
 
-def describe_side(path: str) -> str:
+def describe_side(path: str, globs: ignore.Globs = ()) -> str:
     """One line about what currently sits at ``path``."""
     if not os.path.lexists(path):
         return f"{path} — missing"
     try:
         stamp = time.strftime(TIME_FORMAT, time.localtime(os.path.getmtime(path)))
         if os.path.isdir(path):
-            entries = len(ApplicationProfile.collect_relative_entries(path))
+            entries = len(
+                ApplicationProfile.collect_relative_entries(path, globs),
+            )
             return f"{path} — directory, {entries} entries, {stamp}"
         if not os.path.isfile(path):
             return f"{path} — broken symlink"
@@ -83,11 +85,13 @@ def files_differ(left: str, right: str) -> bool:
         return True
 
 
-def count_differing_entries(local: str, backup: str) -> int:
+def count_differing_entries(
+    local: str, backup: str, globs: ignore.Globs = (),
+) -> int:
     """How many entries of two directory trees disagree."""
     entries = ApplicationProfile.collect_relative_entries(
-        local,
-    ) | ApplicationProfile.collect_relative_entries(backup)
+        local, globs,
+    ) | ApplicationProfile.collect_relative_entries(backup, globs)
     differing = 0
     for entry in sorted(entries):
         left = os.path.join(local, entry)
@@ -105,7 +109,7 @@ def count_differing_entries(local: str, backup: str) -> int:
     return differing
 
 
-def describe_state(local: str, backup: str) -> str:
+def describe_state(local: str, backup: str, globs: ignore.Globs = ()) -> str:
     """What the two sides hold relative to each other, and what sync would do."""
     local_here = os.path.isfile(local) or os.path.isdir(local)
     backup_here = os.path.isfile(backup) or os.path.isdir(backup)
@@ -130,7 +134,7 @@ def describe_state(local: str, backup: str) -> str:
         )
 
     if os.path.isdir(local):
-        differing = count_differing_entries(local, backup)
+        differing = count_differing_entries(local, backup, globs)
         if not differing:
             return "in sync"
         word = "entry differs" if differing == 1 else "entries differ"
@@ -139,8 +143,8 @@ def describe_state(local: str, backup: str) -> str:
     if not files_differ(local, backup):
         return "in sync"
 
-    local_mtime = ApplicationProfile.get_effective_mtime(local)
-    backup_mtime = ApplicationProfile.get_effective_mtime(backup)
+    local_mtime = ApplicationProfile.get_effective_mtime(local, globs)
+    backup_mtime = ApplicationProfile.get_effective_mtime(backup, globs)
     if local_mtime > backup_mtime:
         return "diverged — local is newer; next sync backs it up"
     if backup_mtime > local_mtime:
@@ -303,8 +307,9 @@ def report(requested: str, ctx: Context) -> tuple[list[str], bool]:
 
     local_path = os.path.join(os.environ["HOME"], match.dest)
     backup_path = os.path.join(ctx.mckp.mackup_folder, match.source)
-    lines.append(f"{label('Local:')} {describe_side(local_path)}")
-    lines.append(f"{label('Backup:')} {describe_side(backup_path)}")
+    globs = ignore.load_globs() + tuple(app_db.get_ignore_patterns(match.app))
+    lines.append(f"{label('Local:')} {describe_side(local_path, globs)}")
+    lines.append(f"{label('Backup:')} {describe_side(backup_path, globs)}")
 
     entry = synclog.lookup(ctx.journal, match.group_dest)
     if entry is None:
@@ -316,5 +321,7 @@ def report(requested: str, ctx: Context) -> tuple[list[str], bool]:
         stamp = time.strftime(TIME_FORMAT, time.localtime(float(entry.get("ts", 0))))
         lines.append(f"{label('Last sync:')} {stamp} ({entry.get('action', '?')})")
 
-    lines.append(f"{label('State:')} {describe_state(local_path, backup_path)}")
+    lines.append(
+        f"{label('State:')} {describe_state(local_path, backup_path, globs)}",
+    )
     return lines, True

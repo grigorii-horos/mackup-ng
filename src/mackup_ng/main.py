@@ -61,7 +61,18 @@ from typing import Any, NoReturn
 
 from docopt import docopt
 
-from . import blocks, dconf, hooks, info, mapping, paths, synclog, update, utils
+from . import (
+    blocks,
+    dconf,
+    hooks,
+    ignore,
+    info,
+    mapping,
+    paths,
+    synclog,
+    update,
+    utils,
+)
 from .application import ApplicationProfile
 from .appsdb import ApplicationsDatabase
 from .constants import VERSION
@@ -406,7 +417,15 @@ def main() -> None:
             if app_name in to_backup and app_db.app_has_sync(app_name):
                 stats = ApplicationProfile.new_stats()
                 if owned:
-                    app = ApplicationProfile(mckp, dry_run, verbose)
+                    # The config being synced adds its own ignores on top of
+                    # the global ignore files.
+                    app = ApplicationProfile(
+                        mckp,
+                        dry_run,
+                        verbose,
+                        ignore.load_globs()
+                        + tuple(app_db.get_ignore_patterns(app_name)),
+                    )
                     print_app_header(app_name, pretty_name)
                     for source, dests in owned:
                         group_stats = app.sync_group(source, dests)

@@ -1,0 +1,10 @@
+[ignore]
+name = "Syncthing"
+patterns = [
+    "*.sync-conflict-*",
+    "~syncthing~*.tmp",
+    ".syncthing.*.tmp",
+    ".stfolder",
+    ".stversions",
+    ".stignore",
+]

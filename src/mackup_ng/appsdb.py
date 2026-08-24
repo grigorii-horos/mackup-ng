@@ -381,6 +381,7 @@ class ApplicationsDatabase:
         self.app_blocks: dict[str, list[dict]] = {}
         self.app_conditions: dict[str, dict] = {}
         self.app_env_files: dict[str, list[str]] = {}
+        self.app_ignores: dict[str, list[str]] = {}
         self.app_order: list[str] = []
 
         for config_file in ApplicationsDatabase.get_config_files():
@@ -435,6 +436,7 @@ class ApplicationsDatabase:
                 "source_env",
                 "when",
                 "block",
+                "ignore",
                 "application",
             }
             top_block = {k: v for k, v in data.items() if k not in reserved}
@@ -442,6 +444,16 @@ class ApplicationsDatabase:
             if blocks.block_action(top_block) is not None:
                 cfg_blocks.insert(0, top_block)
             self.app_blocks[app_name] = cfg_blocks
+
+            # Names ignored inside this config's paths, on top of the global
+            # ignore files.
+            ignored = data.get("ignore", legacy.get("ignore", []))
+            if not isinstance(ignored, list):
+                print(utils.colorize_message(
+                    f"Warning: {app_name}: ignore must be a list, ignoring",
+                ))
+                ignored = []
+            self.app_ignores[app_name] = [str(pattern) for pattern in ignored]
 
             # Extra ${VAR} beyond the built-ins resolve from these files (+ env).
             env_files = list(
@@ -570,6 +582,10 @@ class ApplicationsDatabase:
     def get_blocks(self, name: str) -> list[dict]:
         """Return the config's action blocks in order (top-level block first)."""
         return list(self.app_blocks.get(name, []))
+
+    def get_ignore_patterns(self, name: str) -> list[str]:
+        """Patterns this config ignores inside its own paths."""
+        return list(self.app_ignores.get(name, []))
 
     def get_env_files(self, name: str) -> list[str]:
         """Return the config's source_env files (for ${VAR} in blocks)."""

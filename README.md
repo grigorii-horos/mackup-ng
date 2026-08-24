@@ -29,6 +29,7 @@ Backup and keep your application settings in sync.
   - [Usage](#usage)
   - [What does it do](#what-does-it-do)
     - [Sync mode](#sync-mode)
+    - [Ignored files](#ignored-files)
   - [Supported Storages](#supported-storages)
   - [Unsupported Storages](#unsupported-storages)
   - [Supported Applications](#supported-applications)
@@ -153,6 +154,44 @@ It is covered by the commands:
 To drop a single managed path everywhere, use `mackup-ng rm <path>`: it removes
 the file locally and from the Mackup folder, and records a deletion tombstone so
 future syncs remove it on your other machines too.
+
+### Ignored files
+
+Storage backends drop their own bookkeeping inside the folders they sync.
+Syncthing is the loud one: each concurrent edit leaves a `*.sync-conflict-*`
+copy next to the file. mackup-ng carries none of it in either direction, and
+deletes none of it either — those files belong to the tool that made them. A
+fresh conflict copy is skipped when picking the newer side too, so it cannot
+beat a real edit on another machine.
+
+Patterns live in `<name>.toml` files with an `[ignore]` table, read from the
+package, then `~/.mackup/ignores/`, then `$XDG_CONFIG_HOME/mackup/ignores/`:
+
+```toml
+# ~/.mackup/ignores/mine.toml
+[ignore]
+name = "My junk"
+patterns = ["*.bak", "*.orig"]
+```
+
+The built-in `syncthing.toml` covers `*.sync-conflict-*`, `~syncthing~*.tmp`,
+`.syncthing.*.tmp`, `.stfolder`, `.stversions` and `.stignore`. A local file of
+the same name replaces the built-in outright, so this turns the whole set off:
+
+```toml
+# ~/.mackup/ignores/syncthing.toml
+[ignore]
+patterns = []
+```
+
+A single application config can add patterns that apply to its own paths only:
+
+```toml
+# ~/.mackup/applications/notes.toml
+name = "notes"
+files = [".notes"]
+ignore = ["*.bak"]
+```
 
 ### Update check
 

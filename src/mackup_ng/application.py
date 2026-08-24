@@ -6,8 +6,9 @@ Mackup. Name, files, ...
 """
 
 import os
+from collections.abc import Callable
 
-from . import utils
+from . import ignore, utils
 from .mackup import Mackup
 
 DELETIONS_FILENAME = ".mackup-deletions"
@@ -21,16 +22,28 @@ class ApplicationProfile:
         mackup: Mackup,
         dry_run: bool,
         verbose: bool,
+        ignore_globs: ignore.Globs = (),
     ) -> None:
         """Create an ApplicationProfile bound to a Mackup storage folder.
 
         The sync engine works on the groups handed to :meth:`sync_group`, so
-        the profile itself carries no file list.
+        the profile itself carries no file list. ``ignore_globs`` are the names
+        this profile must leave alone in both directions: the global ignore
+        files plus whatever the config being synced adds.
         """
         assert isinstance(mackup, Mackup)
         self.mackup: Mackup = mackup
         self.dry_run: bool = dry_run
         self.verbose: bool = verbose
+        self.ignore_globs: ignore.Globs = tuple(ignore_globs)
+
+    def effective_mtime(self, path: str) -> float:
+        """This profile's :meth:`get_effective_mtime`, ignores applied."""
+        return self.get_effective_mtime(path, self.ignore_globs)
+
+    def copytree_ignore(self) -> Callable[[str, list[str]], set[str]]:
+        """This profile's ignore callable for whole-folder copies."""
+        return ignore.copytree_ignore(self.ignore_globs)
 
     @staticmethod
     def _print(message: str) -> None:
@@ -106,7 +119,7 @@ class ApplicationProfile:
         left to the normal entry-by-entry sync.
         """
         stats = self.new_stats()
-        winner = max(existing, key=self.get_effective_mtime)
+        winner = max(existing, key=self.effective_mtime)
         winner_is_dir = os.path.isdir(winner)
 
         for member in existing:
@@ -120,7 +133,7 @@ class ApplicationProfile:
             if not self.dry_run:
                 try:
                     utils.delete(member)
-                    utils.copy(winner, member)
+                    utils.copy(winner, member, self.copytree_ignore())
                 except OSError as e:
                     self._print(
                         f"Error: Unable to replace {member} with "
@@ -143,8 +156,8 @@ class ApplicationProfile:
         if not existing:
             return stats
 
-        winner = max(existing, key=self.get_effective_mtime)
-        winner_mtime = self.get_effective_mtime(winner)
+        winner = max(existing, key=self.effective_mtime)
+        winner_mtime = self.effective_mtime(winner)
 
         for member in members:
             if member == winner:
@@ -157,7 +170,7 @@ class ApplicationProfile:
                         )
                     stats["skipped"] += 1
                     continue
-                if self.get_effective_mtime(member) >= winner_mtime:
+                if self.effective_mtime(member) >= winner_mtime:
                     if self.verbose:
                         self._print(
                             f"Skipping {member}\n  not older than\n  {winner}",
@@ -172,7 +185,7 @@ class ApplicationProfile:
                 try:
                     if os.path.lexists(member):
                         utils.delete(member)
-                    utils.copy(winner, member)
+                    utils.copy(winner, member, self.copytree_ignore())
                 except OSError as e:
                     # Any OSError disqualifies just this member: no permission,
                     # but also a plain file where a parent directory belongs.
@@ -219,7 +232,9 @@ class ApplicationProfile:
 
         entries: list[str] = []
         for member in present:
-            for entry in sorted(self.collect_relative_entries(member)):
+            for entry in sorted(
+                self.collect_relative_entries(member, self.ignore_globs),
+            ):
                 if entry not in entries:
                     entries.append(entry)
 
@@ -229,8 +244,8 @@ class ApplicationProfile:
             holders = [path for path in targets if os.path.exists(path)]
             if not holders:
                 continue
-            winner = max(holders, key=self.get_effective_mtime)
-            winner_mtime = self.get_effective_mtime(winner)
+            winner = max(holders, key=self.effective_mtime)
+            winner_mtime = self.effective_mtime(winner)
             winner_is_dir = os.path.isdir(winner)
 
             for target, member in zip(targets, members, strict=True):
@@ -241,7 +256,7 @@ class ApplicationProfile:
                 if (
                     os.path.exists(target)
                     and os.path.isdir(target) == winner_is_dir
-                    and self.get_effective_mtime(target) >= winner_mtime
+                    and self.effective_mtime(target) >= winner_mtime
                 ):
                     continue
                 if self.dry_run:
@@ -461,29 +476,41 @@ class ApplicationProfile:
         return self.remove_paths(targets, tombstone_dest)
 
     @staticmethod
-    def get_effective_mtime(path: str) -> float:
+    def get_effective_mtime(path: str, globs: ignore.Globs = ()) -> float:
         """
         Return comparable mtime for a file or directory.
 
         For directories, the newest mtime in the whole tree is used so changes
-        to nested files/folders are considered during sync.
+        to nested files/folders are considered during sync. Ignored entries are
+        left out: a conflict copy Syncthing wrote a second ago would otherwise
+        make its whole side look newer than a real edit on the other machine.
         """
         latest_mtime = os.path.getmtime(path)
 
         if os.path.isdir(path):
             for root, dirs, files in os.walk(path):
+                dirs[:] = [d for d in dirs if not ignore.is_ignored(globs, d)]
                 for name in dirs + files:
+                    if ignore.is_ignored(globs, name):
+                        continue
                     entry_mtime = os.path.getmtime(os.path.join(root, name))
                     latest_mtime = max(latest_mtime, entry_mtime)
 
         return latest_mtime
 
     @staticmethod
-    def collect_relative_entries(root: str) -> set[str]:
-        """Collect all file and directory entries under root (relative paths)."""
+    def collect_relative_entries(root: str, globs: ignore.Globs = ()) -> set[str]:
+        """Collect all file and directory entries under root (relative paths).
+
+        Ignored names are left out, and ignored directories are not descended
+        into, so nothing below them can be carried anywhere either.
+        """
         entries: set[str] = set()
         for cur_root, dirs, files in os.walk(root):
+            dirs[:] = [d for d in dirs if not ignore.is_ignored(globs, d)]
             for name in dirs + files:
+                if ignore.is_ignored(globs, name):
+                    continue
                 entries.add(os.path.relpath(os.path.join(cur_root, name), root))
         return entries
 
@@ -496,7 +523,7 @@ class ApplicationProfile:
             destination_is_dir = os.path.isdir(destination)
             if source_is_dir != destination_is_dir:
                 utils.delete(destination)
-        utils.copy(source, destination)
+        utils.copy(source, destination, self.copytree_ignore())
 
     @staticmethod
     def ensure_directory(path: str, mode_from: str) -> None:

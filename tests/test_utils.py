@@ -1,4 +1,5 @@
 import os
+import shutil
 import sqlite3
 import stat
 import tempfile
@@ -7,7 +8,7 @@ from unittest.mock import patch
 
 import pytest
 
-from mackup_ng import utils
+from mackup_ng import ignore, utils
 
 
 def convert_to_octal(file_name):
@@ -481,3 +482,30 @@ class TestMackup(unittest.TestCase):
         ):
             path = os.path.join(os.environ["HOME"], "AppData/")
             assert not utils.can_file_be_synced_on_current_platform(path)
+
+
+class TestCopyIgnore(unittest.TestCase):
+    """A whole-folder copy can leave the sync backend's own files behind."""
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp(prefix="mackup_copy_ignore_")
+        self.addCleanup(shutil.rmtree, self.tmp, True)
+
+    def test_copy_skips_the_names_the_ignore_callable_returns(self):
+        src = os.path.join(self.tmp, "src")
+        os.makedirs(os.path.join(src, "sub"))
+        conflict = "notes.sync-conflict-20260824-103000-ABCDEFG.md"
+        for path in (
+            os.path.join(src, "keep.md"),
+            os.path.join(src, conflict),
+            os.path.join(src, "sub", "keep2.md"),
+        ):
+            with open(path, "w") as handle:
+                handle.write("x\n")
+        dst = os.path.join(self.tmp, "dst")
+
+        utils.copy(src, dst, ignore.copytree_ignore(("*.sync-conflict-*",)))
+
+        assert os.path.exists(os.path.join(dst, "keep.md"))
+        assert os.path.exists(os.path.join(dst, "sub", "keep2.md"))
+        assert not os.path.exists(os.path.join(dst, conflict))

@@ -41,6 +41,12 @@ CUSTOM_APPS_DIR: str = os.path.join(MACKUP_HOME_DIR, APPS_DIR)
 # XDG-compliant directory for user defined app configs (relative to XDG_CONFIG_HOME)
 CUSTOM_APPS_DIR_XDG: str = "mackup/applications"
 
+# Directories holding ignore definitions (*.toml with an [ignore] table):
+# built-ins ship in the package, local ones sit next to the custom app configs.
+IGNORES_DIRNAME: str = "ignores"
+CUSTOM_IGNORES_DIR: str = os.path.join(MACKUP_HOME_DIR, IGNORES_DIRNAME)
+IGNORES_DIR_XDG: str = "mackup/ignores"   # relative to $XDG_CONFIG_HOME
+
 # Sub-directories under the Mackup home (~/.mackup/)
 MARKERS_DIRNAME: str = "markers"          # marker definitions (and legacy state)
 DCONF_DIRNAME: str = "dconf-backup"       # dconf dumps (*.dconf)

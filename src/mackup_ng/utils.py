@@ -9,6 +9,7 @@ import sqlite3
 import stat
 import subprocess
 import sys
+from collections.abc import Callable
 from typing import NoReturn
 
 from . import constants
@@ -146,7 +147,11 @@ def delete(filepath: str) -> None:
         shutil.rmtree(filepath)
 
 
-def copy(src: str, dst: str) -> None:
+def copy(
+    src: str,
+    dst: str,
+    ignore: Callable[[str, list[str]], set[str]] | None = None,
+) -> None:
     """
     Copy a file or a folder (recursively) from src to dst.
 
@@ -163,6 +168,9 @@ def copy(src: str, dst: str) -> None:
     Args:
         src (str): Source file or folder
         dst (str): Destination file or folder
+        ignore: optional shutil.copytree() ignore callable, used to leave the
+            sync backend's own files (Syncthing conflict copies and friends)
+            out of a whole-folder copy.
     """
     assert isinstance(src, str)
     assert os.path.exists(src)
@@ -180,7 +188,13 @@ def copy(src: str, dst: str) -> None:
 
     # We need to copy a whole folder
     elif os.path.isdir(src):
-        shutil.copytree(src, dst, dirs_exist_ok=True, copy_function=shutil.copy2)
+        shutil.copytree(
+            src,
+            dst,
+            dirs_exist_ok=True,
+            copy_function=shutil.copy2,
+            ignore=ignore,
+        )
 
     # What the heck is this?
     else:

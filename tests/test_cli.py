@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 import pytest
 
-from mackup_ng import update, utils
+from mackup_ng import synclog, update, utils
 from mackup_ng.main import main
 
 
@@ -25,11 +25,15 @@ class TestCLI(unittest.TestCase):
         self.original_home = os.environ.get("HOME")
         self.original_xdg = os.environ.get("XDG_CONFIG_HOME")
         self.original_xdg_cache = os.environ.get("XDG_CACHE_HOME")
+        self.original_xdg_state = os.environ.get("XDG_STATE_HOME")
 
         # Set HOME to our test directory
         os.environ["HOME"] = self.test_home
         os.environ["XDG_CONFIG_HOME"] = os.path.join(self.test_home, ".config")
         os.environ["XDG_CACHE_HOME"] = os.path.join(self.test_home, ".cache")
+        # Marker flags and the sync log are machine-local state: without this
+        # the suite would write into the real $XDG_STATE_HOME.
+        os.environ["XDG_STATE_HOME"] = os.path.join(self.test_home, ".local", "state")
 
         # Create test config file
         self.config_path = os.path.join(self.test_home, ".mackup.cfg")
@@ -95,6 +99,12 @@ class TestCLI(unittest.TestCase):
             os.environ["XDG_CACHE_HOME"] = self.original_xdg_cache
         else:
             os.environ.pop("XDG_CACHE_HOME", None)
+
+        # Restore original XDG_STATE_HOME
+        if self.original_xdg_state:
+            os.environ["XDG_STATE_HOME"] = self.original_xdg_state
+        else:
+            os.environ.pop("XDG_STATE_HOME", None)
 
         # Clean up temporary directories
         if os.path.exists(self.test_home):
@@ -637,6 +647,22 @@ class TestCLI(unittest.TestCase):
             main()
         assert calls == []
         assert not os.path.exists(update.cache_path())
+
+    def test_sync_records_what_it_did_in_the_sync_log(self):
+        with patch("sys.argv", ["mackup", "sync"]):
+            main()
+
+        entry = synclog.lookup(synclog.read(), self.test_file_name)
+        assert entry is not None
+        assert entry["action"] == "Backed up"
+        assert entry["source"] == self.test_file_name
+        assert entry["ts"] > 0
+
+    def test_dry_run_sync_writes_no_sync_log(self):
+        with patch("sys.argv", ["mackup", "-n", "sync"]):
+            main()
+
+        assert not os.path.exists(synclog.log_path())
 
 
 if __name__ == "__main__":

@@ -20,9 +20,13 @@ class TestRemoveDestination(unittest.TestCase):
         self._orig_home = os.environ.get("HOME")
         self._orig_xdg = os.environ.get("XDG_CONFIG_HOME")
         self._orig_xdg_cache = os.environ.get("XDG_CACHE_HOME")
+        self._orig_xdg_state = os.environ.get("XDG_STATE_HOME")
         os.environ["HOME"] = self.test_home
         os.environ["XDG_CONFIG_HOME"] = os.path.join(self.test_home, ".config")
         os.environ["XDG_CACHE_HOME"] = os.path.join(self.test_home, ".cache")
+        # The sync log is machine-local state: without this the suite would
+        # write into the real $XDG_STATE_HOME.
+        os.environ["XDG_STATE_HOME"] = os.path.join(self.test_home, ".local", "state")
 
         with open(os.path.join(self.test_home, ".mackup.cfg"), "w") as handle:
             handle.write(
@@ -54,6 +58,7 @@ class TestRemoveDestination(unittest.TestCase):
             ("HOME", self._orig_home),
             ("XDG_CONFIG_HOME", self._orig_xdg),
             ("XDG_CACHE_HOME", self._orig_xdg_cache),
+            ("XDG_STATE_HOME", self._orig_xdg_state),
         ):
             if orig is None:
                 os.environ.pop(key, None)

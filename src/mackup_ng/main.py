@@ -7,6 +7,7 @@ Copyright (C) 2013-2025 Laurent Raufaste, Grigorii Horos.
 Usage:
   mackup-ng [options] list
   mackup-ng [options] show <application>
+  mackup-ng [options] info <path>...
   mackup-ng [options] sync
   mackup-ng [options] rm <path>...
   mackup-ng [options] mark <marker>
@@ -29,6 +30,8 @@ Options:
 Modes of action:
  - mackup-ng list: display a list of all supported applications.
  - mackup-ng show: display the details for a supported application.
+ - mackup-ng info: report how a path is synced: config, backup copy, last sync
+       and whether the two sides still agree.
  - mackup-ng sync: synchronize local and remote config files in both directions.
        Runs each config's action blocks (pre before / post after its file sync).
  - mackup-ng rm: remove a managed config file locally and from the remote folder.
@@ -52,12 +55,13 @@ See https://github.com/grigorii-horos/mackup-ng/tree/master/doc for more informa
 
 import os
 import sys
+import time
 from collections import Counter
 from typing import Any, NoReturn
 
 from docopt import docopt
 
-from . import blocks, dconf, hooks, mapping, update, utils
+from . import blocks, dconf, hooks, info, mapping, paths, synclog, update, utils
 from .application import ApplicationProfile
 from .appsdb import ApplicationsDatabase
 from .constants import VERSION
@@ -185,58 +189,6 @@ def main() -> None:
         elif stats is not None:
             print(utils.colorize_message(f"Skipped {pretty_name}"))
 
-    def escapes_home(rel_path: str) -> bool:
-        """Whether a relative path points outside the home folder."""
-        return rel_path == ".." or rel_path.startswith(("../", "..\\", "/"))
-
-    def get_requested_path_candidates(path: str) -> list[str]:
-        candidates = [ApplicationProfile.normalize_relative_path(path)]
-        if not os.path.isabs(os.path.expanduser(path)):
-            absolute_path = os.path.abspath(path)
-            home = os.path.abspath(os.environ["HOME"])
-            try:
-                cwd_relative = ApplicationProfile.normalize_relative_path(
-                    os.path.relpath(absolute_path, home),
-                )
-            except ValueError:
-                cwd_relative = None
-            # The current-directory interpretation is only a convenience for
-            # running rm from inside a managed folder. When the current
-            # directory is outside home it escapes and must be dropped, or it
-            # would wrongly trip the unmanaged-path guard even though the
-            # literal candidate is a valid managed home-relative path.
-            if cwd_relative is not None and not escapes_home(cwd_relative):
-                candidates.append(cwd_relative)
-        return list(dict.fromkeys(candidates))
-
-    def is_managed_directory(local_filename: str, backup_filename: str) -> bool:
-        return os.path.isdir(
-            os.path.join(os.environ["HOME"], local_filename),
-        ) or os.path.isdir(
-            os.path.join(mckp.mackup_folder, backup_filename),
-        )
-
-    def get_managed_descendant_relative(
-        requested_path: str,
-        local_filename: str,
-        backup_filename: str,
-    ) -> str | None:
-        """The path of ``requested_path`` below a managed directory, or None."""
-        local_root = ApplicationProfile.normalize_relative_path(local_filename)
-        try:
-            relative_path = os.path.relpath(requested_path, local_root)
-        except ValueError:
-            return None
-
-        if relative_path == os.curdir or relative_path.startswith(os.pardir + os.sep):
-            return None
-        if os.path.isabs(relative_path):
-            return None
-        if not is_managed_directory(local_filename, backup_filename):
-            return None
-
-        return relative_path
-
     # If we want to answer mackup with "yes" for each question
     if args["--force"]:
         utils.FORCE_YES = True
@@ -340,6 +292,26 @@ def main() -> None:
                 )
                 print(f"{dash} {phase}: {action}")
 
+    # mackup info <path>...
+    elif args["info"]:
+        mckp.check_for_usable_environment()
+        info_pairs, _ = build_sync_plan(app_db, mckp.get_apps_to_backup())
+        info_tombstones = ApplicationProfile(mckp, dry_run, verbose).read_tombstones()
+        info_ctx = info.build_context(
+            mckp, app_db, info_pairs, info_tombstones, synclog.read(),
+        )
+        unmanaged = False
+        for index, requested_path in enumerate(args["<path>"]):
+            if index:
+                print()
+            lines, managed = info.report(requested_path, info_ctx)
+            print("\n".join(lines))
+            unmanaged = unmanaged or not managed
+        if unmanaged:
+            # An unmanaged path is a question mackup cannot answer, so scripts
+            # asking "is this file synced?" get a non-zero answer.
+            sys.exit(1)
+
     # mackup sync
     elif args["sync"]:
         mckp.check_for_usable_backup_env()
@@ -413,6 +385,7 @@ def main() -> None:
         for source, dests in groups.items():
             groups_by_owner.setdefault(owners[source], []).append((source, dests))
 
+        log_entries: dict[str, dict] = {}
         for app_name in sorted(app_db.get_app_names()):
             if not app_db.config_enabled(app_name):
                 if verbose:
@@ -436,8 +409,20 @@ def main() -> None:
                     app = ApplicationProfile(mckp, dry_run, verbose)
                     print_app_header(app_name, pretty_name)
                     for source, dests in owned:
-                        for key, value in app.sync_group(source, dests).items():
+                        group_stats = app.sync_group(source, dests)
+                        for key, value in group_stats.items():
                             stats[key] += value
+                        # What `mackup info` reports as the last sync of a
+                        # destination: the outcome of the group it belongs to.
+                        group_label = get_action_label(group_stats)
+                        if group_label is not None:
+                            now = time.time()
+                            for dest in dests:
+                                log_entries[dest] = {
+                                    "ts": now,
+                                    "action": group_label,
+                                    "source": source,
+                                }
 
             tally += blocks.apply_blocks(cfg_blocks, "post", env_files, dry_run)
             report_config(pretty_name, stats, tally)
@@ -457,6 +442,10 @@ def main() -> None:
                     "tombstoned path(s)",
                 ),
             )
+
+        # A dry run reports what would happen, so it records nothing.
+        if not dry_run:
+            synclog.record(log_entries)
 
         # On consumer machines, load the synced dconf dumps into dconf.
         if role == "restore" and dconf_enabled:
@@ -546,16 +535,16 @@ def main() -> None:
                     local_root,
                     backup_root,
                 ) in managed_paths.values():
-                    relative = get_managed_descendant_relative(
-                        path, local_root, backup_root,
+                    relative = paths.managed_descendant_relative(
+                        mckp.mackup_folder, path, local_root, backup_root,
                     )
                     if relative is not None:
                         return app_name, local_root, backup_root, relative
             return None
 
         for requested_arg in args["<path>"]:
-            requested_paths = get_requested_path_candidates(requested_arg)
-            if any(escapes_home(path) for path in requested_paths):
+            requested_paths = paths.candidates(requested_arg)
+            if any(paths.escapes_home(path) for path in requested_paths):
                 die(f"Refusing to remove unmanaged path: {requested_arg}")
 
             match = next(

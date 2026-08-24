@@ -84,6 +84,28 @@ Synchronize your application files between your home folder and the Mackup folde
 Remove a managed config path locally and from the Mackup folder, and record the
 deletion so future syncs remove it on other machines too.
 
+`mackup-ng info <path>...`
+
+Report how a path relates to the backup: the config that manages it, whether it
+is synced (and why not, when it isn't), both copies with their size and mtime,
+what the last sync on this machine did to it, and whether the two sides still
+agree. Exits with status 1 when a path is managed by no config.
+
+```console
+$ mackup-ng info ~/.zshrc
+Path: .zshrc
+Config: zsh (Zsh)
+Sync: yes
+Local: /home/you/.zshrc — 8.9 KiB, 2026-08-17 13:33
+Backup: /home/you/Dropbox/Mackup/.zshrc — 8.5 KiB, 2026-08-14 09:02
+Last sync: 2026-08-14 09:02 (Backed up)
+State: diverged — local is newer; next sync backs it up
+```
+
+The "Last sync" line comes from a machine-local log that `mackup-ng sync`
+writes to `$XDG_STATE_HOME/mackup/sync-log.json`; it reads `never recorded on
+this machine` until the first sync after upgrading.
+
 `mackup-ng list`
 
 Display the list of applications supported by mackup-ng.
@@ -1007,6 +1029,11 @@ Beyond custom app configs, `~/.mackup/` is the home for machine-local behavior:
 Marker *state* (which markers are on) lives in
 `$XDG_STATE_HOME/mackup/markers/` (default `~/.local/state/mackup/markers/`), not
 under `~/.mackup/`; a pre-XDG `~/.mackup/markers/` is migrated automatically.
+
+Marker state is not the only machine-local state: `sync` also records what it
+did to each destination in `$XDG_STATE_HOME/mackup/sync-log.json`, which is what
+`mackup-ng info` reports as "Last sync". Both stay out of the synced backup
+folder, since they describe this machine only.
 
 - **Markers** (`mark`/`unmark`/`markers`) are empty flag files gating behavior on
   one machine only. `backup` marks the source machine.

@@ -190,7 +190,7 @@ def dropin_content(block: dict) -> str:
     lines.extend(f"Environment={env}" for env in block.get("Environment", []))
     lines.extend(
         f"{key}={block[key]}"
-        for key in ("MemoryMax", "CPUQuota", "Nice")
+        for key in ("MemoryMax", "CPUQuota", "Nice", "TimeoutStartSec", "TimeoutSec")
         if key in block
     )
     return "\n".join(lines) + "\n"

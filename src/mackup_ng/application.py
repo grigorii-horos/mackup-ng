@@ -61,8 +61,12 @@ class ApplicationProfile:
     def new_stats() -> dict[str, int]:
         """A zeroed statistics dict with every key the reporter expects."""
         return {
-            "backed_up": 0, "restored": 0, "synchronized": 0,
-            "deleted": 0, "skipped": 0, "errors": 0,
+            "backed_up": 0,
+            "restored": 0,
+            "synchronized": 0,
+            "deleted": 0,
+            "skipped": 0,
+            "errors": 0,
         }
 
     def sync_group(self, source: str, dests: list[str]) -> dict[str, int]:
@@ -84,7 +88,8 @@ class ApplicationProfile:
             # way the pairwise engine did. Otherwise a directory merge would
             # try to makedirs() over a regular file and blow up the whole run.
             for key, value in self.replace_clashing_members(
-                existing, backup_path,
+                existing,
+                backup_path,
             ).items():
                 stats[key] += value
             existing = self.existing_members(members)
@@ -104,13 +109,12 @@ class ApplicationProfile:
     @staticmethod
     def existing_members(members: list[str]) -> list[str]:
         """The members that currently exist as a regular file or a directory."""
-        return [
-            path for path in members
-            if os.path.isfile(path) or os.path.isdir(path)
-        ]
+        return [path for path in members if os.path.isfile(path) or os.path.isdir(path)]
 
     def replace_clashing_members(
-        self, existing: list[str], backup_path: str,
+        self,
+        existing: list[str],
+        backup_path: str,
     ) -> dict[str, int]:
         """Replace members whose type differs from the newest member's.
 
@@ -136,8 +140,7 @@ class ApplicationProfile:
                     utils.copy(winner, member, self.copytree_ignore())
                 except OSError as e:
                     self._print(
-                        f"Error: Unable to replace {member} with "
-                        f"{winner}: {e}",
+                        f"Error: Unable to replace {member} with {winner}: {e}",
                     )
                     stats["errors"] += 1
                     continue
@@ -148,7 +151,9 @@ class ApplicationProfile:
         return stats
 
     def sync_members_file(
-        self, members: list[str], backup_path: str,
+        self,
+        members: list[str],
+        backup_path: str,
     ) -> dict[str, int]:
         """Sync a group whose members are all regular files."""
         stats = self.new_stats()
@@ -190,8 +195,7 @@ class ApplicationProfile:
                     # Any OSError disqualifies just this member: no permission,
                     # but also a plain file where a parent directory belongs.
                     self._print(
-                        f"Error: Unable to copy file from {winner} to "
-                        f"{member}: {e}",
+                        f"Error: Unable to copy file from {winner} to {member}: {e}",
                     )
                     stats["errors"] += 1
                     continue
@@ -340,11 +344,13 @@ class ApplicationProfile:
         """The part of ``tombstone`` below ``root``, or None if not below it."""
         prefix = root + os.sep
         if tombstone.startswith(prefix) and len(tombstone) > len(prefix):
-            return tombstone[len(prefix):]
+            return tombstone[len(prefix) :]
         return None
 
     def group_tombstoned_relatives(
-        self, live_dests: list[str], tombstoned: set[str],
+        self,
+        live_dests: list[str],
+        tombstoned: set[str],
     ) -> list[str]:
         """Relative paths tombstoned *inside* one of the group's destinations.
 
@@ -363,7 +369,9 @@ class ApplicationProfile:
         return relatives
 
     def apply_tombstones(
-        self, groups: dict[str, list[str]], tombstoned: set[str],
+        self,
+        groups: dict[str, list[str]],
+        tombstoned: set[str],
     ) -> dict[str, int]:
         """Delete tombstoned destinations, and sources left with no destination.
 
@@ -380,16 +388,18 @@ class ApplicationProfile:
         if not tombstoned:
             return stats
         for source, dests in groups.items():
-            dead = [dest for dest in dests if
-                    self.normalize_relative_path(dest) in tombstoned]
+            dead = [
+                dest
+                for dest in dests
+                if self.normalize_relative_path(dest) in tombstoned
+            ]
             live = [dest for dest in dests if dest not in dead]
             victims = [os.path.join(os.environ["HOME"], dest) for dest in dead]
             if dead and not live:
                 victims.append(os.path.join(self.mackup.mackup_folder, source))
             for relative in self.group_tombstoned_relatives(live, tombstoned):
                 victims.extend(
-                    os.path.join(os.environ["HOME"], dest, relative)
-                    for dest in live
+                    os.path.join(os.environ["HOME"], dest, relative) for dest in live
                 )
                 victims.append(
                     os.path.join(self.mackup.mackup_folder, source, relative),
@@ -413,7 +423,9 @@ class ApplicationProfile:
         return stats
 
     def remove_paths(
-        self, targets: list[str], tombstone_dest: str,
+        self,
+        targets: list[str],
+        tombstone_dest: str,
     ) -> dict[str, int]:
         """Delete every path in ``targets`` and record one tombstone."""
         stats = self.new_stats()
@@ -442,7 +454,10 @@ class ApplicationProfile:
         return stats
 
     def remove_destination(
-        self, source: str, dest: str, siblings: int,
+        self,
+        source: str,
+        dest: str,
+        siblings: int,
     ) -> dict[str, int]:
         """Remove one destination; drop the source only when nothing else uses it.
 

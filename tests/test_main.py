@@ -18,13 +18,24 @@ class TestMain(unittest.TestCase):
             assert main.bold("blah") == "blah"
 
     def test_get_action_label_returns_none_when_no_activity(self):
-        assert main.get_action_label({"backed_up": 0, "skipped": 0, "errors": 0}) is None
+        assert (
+            main.get_action_label({"backed_up": 0, "skipped": 0, "errors": 0}) is None
+        )
 
     def test_get_action_label_returns_skipped_for_real_skip(self):
-        assert main.get_action_label({"backed_up": 0, "skipped": 1, "errors": 0}) == "Skipped"
+        assert (
+            main.get_action_label({"backed_up": 0, "skipped": 1, "errors": 0})
+            == "Skipped"
+        )
 
     def test_get_action_label_returns_failed_when_only_errors(self):
-        assert main.get_action_label({"backed_up": 0, "skipped": 0, "errors": 1}) == "Failed"
+        assert (
+            main.get_action_label({"backed_up": 0, "skipped": 0, "errors": 1})
+            == "Failed"
+        )
 
     def test_get_action_label_returns_failed_when_partial_success_has_errors(self):
-        assert main.get_action_label({"backed_up": 1, "skipped": 0, "errors": 1}) == "Failed"
+        assert (
+            main.get_action_label({"backed_up": 1, "skipped": 0, "errors": 1})
+            == "Failed"
+        )

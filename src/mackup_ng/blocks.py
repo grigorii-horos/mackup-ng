@@ -135,13 +135,19 @@ def atomic_write(path: str, tree: ET.ElementTree[ET.Element[str]]) -> None:
 # ---------------------------------------------------------------- service control
 def _sysd(*args: str) -> subprocess.CompletedProcess:
     return subprocess.run(
-        ["systemctl", "--user", *args], capture_output=True, text=True, check=False,
+        ["systemctl", "--user", *args],
+        capture_output=True,
+        text=True,
+        check=False,
     )
 
 
 def _brew(*args: str) -> subprocess.CompletedProcess:
     return subprocess.run(
-        ["brew", "services", *args], capture_output=True, text=True, check=False,
+        ["brew", "services", *args],
+        capture_output=True,
+        text=True,
+        check=False,
     )
 
 
@@ -190,7 +196,14 @@ def dropin_content(block: dict) -> str:
     lines.extend(f"Environment={env}" for env in block.get("Environment", []))
     lines.extend(
         f"{key}={block[key]}"
-        for key in ("MemoryMax", "CPUQuota", "Nice", "TimeoutStartSec", "TimeoutSec")
+        for key in (
+            "MemoryMax",
+            "CPUQuota",
+            "Nice",
+            "TimeoutStartSec",
+            "TimeoutSec",
+            "ExecStartPre",
+        )
         if key in block
     )
     return "\n".join(lines) + "\n"
@@ -200,7 +213,8 @@ def dropin_path(block: dict) -> str:
     svc = block["service"]
     name = block.get("name", "mackup-set")
     xdg = os.environ.get(
-        "XDG_CONFIG_HOME", os.path.join(os.environ["HOME"], ".config"),
+        "XDG_CONFIG_HOME",
+        os.path.join(os.environ["HOME"], ".config"),
     )
     return os.path.join(xdg, "systemd", "user", f"{svc}.service.d", f"{name}.conf")
 
@@ -355,7 +369,9 @@ def _apply_run(spec: dict, env_files: list[str], dry_run: bool) -> int:
     shell = str(spec.get("shell", "bash"))
     for cmd in commands or [script]:  # stop at first failure (like set -e)
         result = subprocess.run(
-            [shell, "-c", str(cmd)], env=env, check=False,
+            [shell, "-c", str(cmd)],
+            env=env,
+            check=False,
         )
         if result.returncode != 0:
             _msg(f"Warning: block run failed (code {result.returncode})")

@@ -72,7 +72,10 @@ class TestConditions(unittest.TestCase):
             assert conditions.block_passes({"skip_if_marker": ["nope"]})
 
     def test_require_command(self):
-        with patch("mackup_ng.conditions.shutil.which", side_effect=lambda c: "/x" if c == "git" else None):
+        with patch(
+            "mackup_ng.conditions.shutil.which",
+            side_effect=lambda c: "/x" if c == "git" else None,
+        ):
             assert conditions.block_passes({"require_command": ["git"]})
             assert not conditions.block_passes({"require_command": ["git", "nope"]})
 
@@ -98,8 +101,10 @@ class TestConditions(unittest.TestCase):
             os.environ.pop("COND_X", None)
 
     def test_multiple_conditions_all_apply(self):
-        with patch("mackup_ng.hooks.os_kind", return_value="linux"), \
-                patch("mackup_ng.conditions.platform.machine", return_value="x86_64"):
+        with (
+            patch("mackup_ng.hooks.os_kind", return_value="linux"),
+            patch("mackup_ng.conditions.platform.machine", return_value="x86_64"),
+        ):
             assert conditions.block_passes(
                 {"require_os": ["linux"], "require_arch": ["x86_64"]},
             )
@@ -252,14 +257,18 @@ class TestBlocks(unittest.TestCase):
         with open(src, "w") as f:
             f.write("hi")
         blocks.apply_block(
-            {"type": "copy", "from": src, "to": "~/d.txt"}, [], dry_run=False,
+            {"type": "copy", "from": src, "to": "~/d.txt"},
+            [],
+            dry_run=False,
         )
         assert open(os.path.join(self.home, "d.txt")).read() == "hi"
 
     def test_run_block_commands(self):
         state = os.path.join(self.home, "flag")
         blocks.apply_block(
-            {"type": "run", "commands": [f'touch "{state}"']}, [], dry_run=False,
+            {"type": "run", "commands": [f'touch "{state}"']},
+            [],
+            dry_run=False,
         )
         assert os.path.isfile(state)
 
@@ -285,7 +294,13 @@ class TestBlocks(unittest.TestCase):
     def test_apply_blocks_condition_gate(self):
         out = os.path.join(self.home, "gated")
         blocks.apply_blocks(
-            [{"type": "run", "require_marker": ["nope"], "commands": [f'touch "{out}"']}],
+            [
+                {
+                    "type": "run",
+                    "require_marker": ["nope"],
+                    "commands": [f'touch "{out}"'],
+                }
+            ],
             phase="post",
             env_files=[],
             dry_run=False,
@@ -334,7 +349,9 @@ def _apply_chmod(block: dict, env_files: list[str], dry_run: bool) -> None:
 
 
 def _apply_run(block: dict, env_files: list[str], dry_run: bool) -> None:
-    _run_scripts("block", [block], dry_run)  # reuse existing runner (require_command, commands/script)
+    _run_scripts(
+        "block", [block], dry_run
+    )  # reuse existing runner (require_command, commands/script)
 
 
 def _apply_mutate_xml(block: dict, env_files: list[str], dry_run: bool) -> None:
@@ -572,8 +589,10 @@ Keep the existing `configuration_files` / `mapped_files` loops below unchanged (
 def get_blocks(self, name: str) -> list[dict]:
     return list(self.app_blocks.get(name, []))
 
+
 def get_env_files(self, name: str) -> list[str]:
     return list(self.app_env_files.get(name, []))
+
 
 def app_has_sync(self, name: str) -> bool:
     files = self.apps.get(name, {}).get("configuration_files")
@@ -619,10 +638,10 @@ def test_sync_runs_post_block_after_files(self):
     os.chmod(target, 0o644)
     with open(self.custom_app_config, "w") as f:
         f.write(
-            '[application]\n'
+            "[application]\n"
             f'name = "{self.test_app_name}"\n'
             'configuration_files = [".secretrc"]\n'
-            '[[block]]\n'
+            "[[block]]\n"
             'type = "chmod"\n'
             'path = "~/.secretrc"\n'
             'mode = "600"\n',
@@ -704,9 +723,7 @@ def test_apply_runs_blocks_without_sync(self):
     out = os.path.join(self.test_home, ".applied")
     with open(self.custom_app_config, "w") as f:
         f.write(
-            '[[block]]\n'
-            'type = "run"\n'
-            f'commands = [\'touch "{out}"\']\n',
+            f'[[block]]\ntype = "run"\ncommands = [\'touch "{out}"\']\n',
         )
     with patch("sys.argv", ["mackup", "apply"]):
         main()
@@ -781,6 +798,7 @@ def test_list_hides_block_only(self):
         f.write('[[block]]\ntype = "run"\ncommands = ["true"]\n')
     from io import StringIO
     from contextlib import redirect_stdout
+
     buf = StringIO()
     with patch("sys.argv", ["mackup", "list"]), redirect_stdout(buf):
         main()

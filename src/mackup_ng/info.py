@@ -31,8 +31,8 @@ class Context(NamedTuple):
     mckp: Mackup
     app_db: ApplicationsDatabase
     pairs: list[Pair]
-    winners: dict[str, Pair]          # destination -> the pair sync will run
-    declared: dict[str, list[tuple[str, str]]]   # destination -> [(app, source)]
+    winners: dict[str, Pair]  # destination -> the pair sync will run
+    declared: dict[str, list[tuple[str, str]]]  # destination -> [(app, source)]
     tombstoned: set[str]
     journal: dict[str, dict]
 
@@ -40,11 +40,11 @@ class Context(NamedTuple):
 class Match(NamedTuple):
     """The managed mapping a requested path resolves to."""
 
-    dest: str            # home-relative destination path
-    source: str          # backup-relative source path
-    app: str             # the config that owns it
-    group_dest: str      # the destination that is synced as a whole
-    inside: str | None   # the managed directory it sits in, when a descendant
+    dest: str  # home-relative destination path
+    source: str  # backup-relative source path
+    app: str  # the config that owns it
+    group_dest: str  # the destination that is synced as a whole
+    inside: str | None  # the managed directory it sits in, when a descendant
 
 
 def human_size(size: int) -> str:
@@ -86,11 +86,14 @@ def files_differ(left: str, right: str) -> bool:
 
 
 def count_differing_entries(
-    local: str, backup: str, globs: ignore.Globs = (),
+    local: str,
+    backup: str,
+    globs: ignore.Globs = (),
 ) -> int:
     """How many entries of two directory trees disagree."""
     entries = ApplicationProfile.collect_relative_entries(
-        local, globs,
+        local,
+        globs,
     ) | ApplicationProfile.collect_relative_entries(backup, globs)
     differing = 0
     for entry in sorted(entries):
@@ -193,7 +196,10 @@ def find_match(requested: str, ctx: Context) -> Match | None:
             root_source = winner.source if winner is not None else source
             root_app = winner.owner_app if winner is not None else app_name
             relative = paths.managed_descendant_relative(
-                ctx.mckp.mackup_folder, candidate, dest, root_source,
+                ctx.mckp.mackup_folder,
+                candidate,
+                dest,
+                root_source,
             )
             if relative is None:
                 continue
@@ -218,9 +224,8 @@ def sync_status(match: Match, ctx: Context) -> str:
             for key, value in sorted(app_db.get_failing_conditions(match.app).items())
         )
         return f"no — conditions not met on this machine ({unmet})"
-    if (
-        match.app not in ctx.mckp.get_apps_to_backup()
-        or not app_db.app_has_sync(match.app)
+    if match.app not in ctx.mckp.get_apps_to_backup() or not app_db.app_has_sync(
+        match.app,
     ):
         return "no — not selected for sync in .mackup.cfg"
     if match.group_dest not in ctx.winners:
@@ -296,13 +301,13 @@ def report(requested: str, ctx: Context) -> tuple[list[str], bool]:
     winner = ctx.winners.get(match.group_dest)
     if winner is not None:
         siblings = [
-            pair.dest for pair in ctx.pairs
+            pair.dest
+            for pair in ctx.pairs
             if pair.source == winner.source and pair.dest != winner.dest
         ]
         if siblings:
             lines.append(
-                f"{label('Fanout:')} {winner.source} also feeds "
-                f"{', '.join(siblings)}",
+                f"{label('Fanout:')} {winner.source} also feeds {', '.join(siblings)}",
             )
 
     local_path = os.path.join(os.environ["HOME"], match.dest)

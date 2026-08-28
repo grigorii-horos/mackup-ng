@@ -35,8 +35,7 @@ class TestAppsdbBlocks(unittest.TestCase):
         # flat sync keys (name/files) + a top-level action sub-table ([chmod]).
         self._write(
             "openssh",
-            'name = "SSH"\nfiles = [".ssh"]\n'
-            '[chmod]\npath = "~/.ssh"\nmode = "700"\n',
+            'name = "SSH"\nfiles = [".ssh"]\n[chmod]\npath = "~/.ssh"\nmode = "700"\n',
         )
         db = ApplicationsDatabase()
         assert ".ssh" in db.get_files("openssh")
@@ -48,8 +47,7 @@ class TestAppsdbBlocks(unittest.TestCase):
     def test_top_level_block_precedes_block_array(self):
         self._write(
             "multi",
-            '[run]\ncommands = ["a"]\n\n'
-            '[[block]]\n[block.run]\ncommands = ["b"]\n',
+            '[run]\ncommands = ["a"]\n\n[[block]]\n[block.run]\ncommands = ["b"]\n',
         )
         cfg_blocks = ApplicationsDatabase().get_blocks("multi")
         assert [b["run"]["commands"] for b in cfg_blocks] == [["a"], ["b"]]
@@ -70,8 +68,7 @@ class TestAppsdbBlocks(unittest.TestCase):
     def test_source_env(self):
         self._write(
             "ff",
-            'name = "FF"\nsource_env = ["~/e"]\n'
-            'files = ["${MACKUP_XDG_CONFIG}/ff"]\n',
+            'name = "FF"\nsource_env = ["~/e"]\nfiles = ["${MACKUP_XDG_CONFIG}/ff"]\n',
         )
         db = ApplicationsDatabase()
         assert db.get_env_files("ff") == ["~/e"]

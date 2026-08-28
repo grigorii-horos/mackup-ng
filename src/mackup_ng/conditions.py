@@ -88,7 +88,5 @@ def failing(data: dict) -> dict:
     """Return only the conditions in ``data``'s ``[when]`` that do not hold."""
     when = data.get("when") or {}
     return {
-        key: when[key]
-        for key in _CONDITION_KEYS
-        if key in when and not _one(when, key)
+        key: when[key] for key in _CONDITION_KEYS if key in when and not _one(when, key)
     }

@@ -121,7 +121,10 @@ class TestIgnoredDuringSync(unittest.TestCase):
         self.write(os.path.join(self.local_dir, CONFLICT), "conflicted\n")
 
         buffer = io.StringIO()
-        with patch("sys.stdout", buffer), patch("sys.argv", ["mackup", "info", ".notes"]):
+        with (
+            patch("sys.stdout", buffer),
+            patch("sys.argv", ["mackup", "info", ".notes"]),
+        ):
             main()
 
         assert "State: in sync" in buffer.getvalue()

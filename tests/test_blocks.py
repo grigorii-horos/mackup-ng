@@ -26,14 +26,18 @@ class TestBlocks(unittest.TestCase):
         with open(src, "w") as f:
             f.write("hi")
         blocks.apply_block(
-            {"copy": {"from": src, "to": "~/d.txt"}}, [], dry_run=False,
+            {"copy": {"from": src, "to": "~/d.txt"}},
+            [],
+            dry_run=False,
         )
         assert open(os.path.join(self.home, "d.txt")).read() == "hi"
 
     def test_run_block_commands(self):
         state = os.path.join(self.home, "flag")
         blocks.apply_block(
-            {"run": {"commands": [f'touch "{state}"']}}, [], dry_run=False,
+            {"run": {"commands": [f'touch "{state}"']}},
+            [],
+            dry_run=False,
         )
         assert os.path.isfile(state)
 
@@ -66,12 +70,14 @@ class TestBlocks(unittest.TestCase):
         os.chmod(ssh, 0o755)
         os.chmod(cfg, 0o644)
         blocks.apply_block(
-            {"chmod": {
-                "path": "~/.ssh",
-                "recursive": True,
-                "dir_mode": "700",
-                "file_mode": "600",
-            }},
+            {
+                "chmod": {
+                    "path": "~/.ssh",
+                    "recursive": True,
+                    "dir_mode": "700",
+                    "file_mode": "600",
+                },
+            },
             [],
             dry_run=False,
         )
@@ -82,11 +88,13 @@ class TestBlocks(unittest.TestCase):
         xml_path = os.path.join(self.home, "c.xml")
         with open(xml_path, "w") as f:
             f.write("<configuration><options><a>0</a></options></configuration>")
-        block = {"xml": {
-            "paths": [xml_path],
-            "select": ["options"],
-            "set_child": {"a": "1"},
-        }}
+        block = {
+            "xml": {
+                "paths": [xml_path],
+                "select": ["options"],
+                "set_child": {"a": "1"},
+            },
+        }
         blocks.apply_block(block, [], dry_run=False)
         first = open(xml_path, "rb").read()
         assert b"<a>1</a>" in first
@@ -99,17 +107,21 @@ class TestBlocks(unittest.TestCase):
         with open(os.path.join(srcdir, "tool"), "w") as f:
             f.write("bin")
         blocks.apply_block(
-            {"copy": {"from": srcdir, "to": "~/.local/bin"}}, [], dry_run=False,
+            {"copy": {"from": srcdir, "to": "~/.local/bin"}},
+            [],
+            dry_run=False,
         )
         assert open(os.path.join(self.home, ".local/bin/tool")).read() == "bin"
 
     def test_apply_blocks_condition_gate(self):
         out = os.path.join(self.home, "gated")
         blocks.apply_blocks(
-            [{
-                "when": {"marker": ["nope"]},
-                "run": {"commands": [f'touch "{out}"']},
-            }],
+            [
+                {
+                    "when": {"marker": ["nope"]},
+                    "run": {"commands": [f'touch "{out}"']},
+                },
+            ],
             phase="post",
             env_files=[],
             dry_run=False,

@@ -45,19 +45,19 @@ CUSTOM_APPS_DIR_XDG: str = "mackup/applications"
 # built-ins ship in the package, local ones sit next to the custom app configs.
 IGNORES_DIRNAME: str = "ignores"
 CUSTOM_IGNORES_DIR: str = os.path.join(MACKUP_HOME_DIR, IGNORES_DIRNAME)
-IGNORES_DIR_XDG: str = "mackup/ignores"   # relative to $XDG_CONFIG_HOME
+IGNORES_DIR_XDG: str = "mackup/ignores"  # relative to $XDG_CONFIG_HOME
 
 # Sub-directories under the Mackup home (~/.mackup/)
-MARKERS_DIRNAME: str = "markers"          # marker definitions (and legacy state)
-DCONF_DIRNAME: str = "dconf-backup"       # dconf dumps (*.dconf)
+MARKERS_DIRNAME: str = "markers"  # marker definitions (and legacy state)
+DCONF_DIRNAME: str = "dconf-backup"  # dconf dumps (*.dconf)
 
 # Marker DEFINITIONS (name + order), one *.toml per marker, like apps:
 # built-in ones ship in the package, local ones live under ~/.mackup/markers/.
-MARKERS_DEFS_DIRNAME: str = "markers"                          # package built-ins
+MARKERS_DEFS_DIRNAME: str = "markers"  # package built-ins
 CUSTOM_MARKERS_DIR: str = os.path.join(MACKUP_HOME_DIR, MARKERS_DIRNAME)  # local defs
 
 # Marker STATE (on/off flags) is machine-local runtime state -> XDG_STATE_HOME.
-MARKERS_STATE_XDG: str = "mackup/markers"     # relative to $XDG_STATE_HOME
+MARKERS_STATE_XDG: str = "mackup/markers"  # relative to $XDG_STATE_HOME
 # Pre-XDG state lived alongside the defs in ~/.mackup/markers/ (flag files, no
 # extension); migrated out to the XDG dir, leaving *.toml definitions in place.
 LEGACY_MARKERS_STATE_DIR: str = os.path.join(MACKUP_HOME_DIR, MARKERS_DIRNAME)
@@ -68,7 +68,9 @@ ENGINE_FS: str = "file_system"
 ENGINE_GDRIVE: str = "google_drive"
 ENGINE_ICLOUD: str = "icloud"
 
-DOCUMENTATION_URL: str = "https://github.com/grigorii-horos/mackup-ng/blob/master/doc/README.md"
+DOCUMENTATION_URL: str = (
+    "https://github.com/grigorii-horos/mackup-ng/blob/master/doc/README.md"
+)
 
 # Error message displayed when mackup can't find the storage specified
 # in the config (or the default one).

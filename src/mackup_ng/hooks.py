@@ -70,7 +70,8 @@ def custom_markers_dir() -> str:
 def markers_dir() -> str:
     """Directory holding marker STATE flags: $XDG_STATE_HOME/mackup/markers/."""
     base = os.environ.get(
-        "XDG_STATE_HOME", os.path.join(os.environ["HOME"], ".local", "state"),
+        "XDG_STATE_HOME",
+        os.path.join(os.environ["HOME"], ".local", "state"),
     )
     return os.path.join(base, MARKERS_STATE_XDG)
 

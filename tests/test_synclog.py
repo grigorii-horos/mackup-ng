@@ -26,28 +26,40 @@ class TestSyncLog(unittest.TestCase):
 
     def test_log_path_lives_under_xdg_state_home(self):
         assert synclog.log_path() == os.path.join(
-            os.environ["XDG_STATE_HOME"], "mackup", "sync-log.json",
+            os.environ["XDG_STATE_HOME"],
+            "mackup",
+            "sync-log.json",
         )
 
     def test_read_returns_nothing_without_a_log(self):
         assert synclog.read() == {}
 
     def test_record_then_read_returns_the_entry(self):
-        synclog.record({".zshrc": {"ts": 42.0, "action": "Backed up", "source": ".zshrc"}})
+        synclog.record(
+            {".zshrc": {"ts": 42.0, "action": "Backed up", "source": ".zshrc"}},
+        )
 
         assert synclog.read() == {
             ".zshrc": {"ts": 42.0, "action": "Backed up", "source": ".zshrc"},
         }
 
     def test_record_merges_into_the_existing_log(self):
-        synclog.record({".zshrc": {"ts": 1.0, "action": "Backed up", "source": ".zshrc"}})
-        synclog.record({".vimrc": {"ts": 2.0, "action": "Restored", "source": ".vimrc"}})
+        synclog.record(
+            {".zshrc": {"ts": 1.0, "action": "Backed up", "source": ".zshrc"}},
+        )
+        synclog.record(
+            {".vimrc": {"ts": 2.0, "action": "Restored", "source": ".vimrc"}},
+        )
 
         assert sorted(synclog.read()) == [".vimrc", ".zshrc"]
 
     def test_record_overwrites_the_previous_entry_for_a_destination(self):
-        synclog.record({".zshrc": {"ts": 1.0, "action": "Backed up", "source": ".zshrc"}})
-        synclog.record({".zshrc": {"ts": 9.0, "action": "Restored", "source": ".zshrc"}})
+        synclog.record(
+            {".zshrc": {"ts": 1.0, "action": "Backed up", "source": ".zshrc"}},
+        )
+        synclog.record(
+            {".zshrc": {"ts": 9.0, "action": "Restored", "source": ".zshrc"}},
+        )
 
         assert synclog.read()[".zshrc"]["action"] == "Restored"
 
@@ -60,12 +72,16 @@ class TestSyncLog(unittest.TestCase):
         assert synclog.read() == {}
 
     def test_record_normalizes_the_destination_path(self):
-        synclog.record({"./.zshrc": {"ts": 1.0, "action": "Backed up", "source": ".zshrc"}})
+        synclog.record(
+            {"./.zshrc": {"ts": 1.0, "action": "Backed up", "source": ".zshrc"}},
+        )
 
         assert ".zshrc" in synclog.read()
 
     def test_lookup_finds_an_entry_by_any_spelling_of_the_path(self):
-        synclog.record({".zshrc": {"ts": 7.0, "action": "Backed up", "source": ".zshrc"}})
+        synclog.record(
+            {".zshrc": {"ts": 7.0, "action": "Backed up", "source": ".zshrc"}},
+        )
 
         entry = synclog.lookup(synclog.read(), os.path.join(self.home, ".zshrc"))
 

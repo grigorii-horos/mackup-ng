@@ -69,7 +69,8 @@ def upgrade_command(executable: str) -> str | None:
 def cache_path() -> str:
     """Path of the update-check cache file under ``$XDG_CACHE_HOME``."""
     base = os.environ.get("XDG_CACHE_HOME") or os.path.join(
-        os.environ["HOME"], ".cache",
+        os.environ["HOME"],
+        ".cache",
     )
     return os.path.join(base, "mackup", "update-check.json")
 

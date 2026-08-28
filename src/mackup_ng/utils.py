@@ -85,7 +85,7 @@ def colorize_message(message: str) -> str:
         ("Skipping", AnsiColor.WHITE, False),
         ("Doing nothing", AnsiColor.GRAY, False),
         # action-block logs
-        ("would ", AnsiColor.GRAY, False),   # dry-run previews
+        ("would ", AnsiColor.GRAY, False),  # dry-run previews
         ("copied", AnsiColor.CYAN, False),
         ("chmod", AnsiColor.CYAN, False),
         ("updated", AnsiColor.CYAN, False),
@@ -372,7 +372,8 @@ def is_process_running(process_name: str) -> bool:
     if os.path.isfile("/usr/bin/pgrep"):
         with open(os.devnull, "wb") as dev_null:
             returncode: int = subprocess.call(
-                ["/usr/bin/pgrep", process_name], stdout=dev_null,
+                ["/usr/bin/pgrep", process_name],
+                stdout=dev_null,
             )
             is_running = bool(returncode == 0)
 

@@ -159,7 +159,9 @@ class TestConfig(unittest.TestCase):
 
         assert isinstance(cfg.fullpath, str)
         assert cfg.fullpath == os.path.join(
-            os.environ["HOME"], "some/relative/folder", "Mackup",
+            os.environ["HOME"],
+            "some/relative/folder",
+            "Mackup",
         )
 
         assert cfg.apps_to_ignore == set()

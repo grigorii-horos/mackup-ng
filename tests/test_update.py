@@ -69,9 +69,7 @@ class TestUpgradeCommand(unittest.TestCase):
 class TestCache(unittest.TestCase):
     def setUp(self):
         self.home = tempfile.mkdtemp(prefix="mackup_update_home_")
-        self._orig = {
-            key: os.environ.get(key) for key in ("HOME", "XDG_CACHE_HOME")
-        }
+        self._orig = {key: os.environ.get(key) for key in ("HOME", "XDG_CACHE_HOME")}
         os.environ["HOME"] = self.home
         os.environ["XDG_CACHE_HOME"] = os.path.join(self.home, ".cache")
 
@@ -159,6 +157,7 @@ class TestCheck(unittest.TestCase):
         def fetch():
             self.calls += 1
             return value
+
         return fetch
 
     def _set_marker(self, name):

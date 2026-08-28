@@ -68,7 +68,10 @@ def dump_all(dry_run: bool = False) -> None:
         if dry_run:
             continue
         result = subprocess.run(
-            ["dconf", "dump", path], capture_output=True, text=True, check=False,
+            ["dconf", "dump", path],
+            capture_output=True,
+            text=True,
+            check=False,
         )
         if result.returncode != 0 or not result.stdout:
             print(utils.colorize_message(f"Warning: empty/missing dconf {path}"))
@@ -96,7 +99,9 @@ def load_all(dry_run: bool = False) -> None:
             continue
         with open(full, "rb") as handle:
             result = subprocess.run(
-                ["dconf", "load", path], stdin=handle, check=False,
+                ["dconf", "load", path],
+                stdin=handle,
+                check=False,
             )
         if result.returncode != 0:
             print(utils.colorize_message(f"Warning: dconf load failed: {path}"))
@@ -130,7 +135,10 @@ def add(paths: list[str], dry_run: bool = False) -> int:
             print(utils.colorize_message(f"Backing up dconf {path} -> {filename}"))
             continue
         result = subprocess.run(
-            ["dconf", "dump", path], capture_output=True, text=True, check=False,
+            ["dconf", "dump", path],
+            capture_output=True,
+            text=True,
+            check=False,
         )
         with open(full, "w") as handle:
             handle.write(result.stdout or "")

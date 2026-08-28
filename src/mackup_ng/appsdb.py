@@ -107,7 +107,7 @@ class ApplicationsDatabase:
         if end == -1:
             return (path, path)
 
-        inner = path[start + 1:end]
+        inner = path[start + 1 : end]
         items = cls._split_top_level_items(inner)
         if len(items) <= 1:
             return (path, path)
@@ -150,7 +150,7 @@ class ApplicationsDatabase:
         backup_replacement = fallback if fallback is not None else local_replacement
 
         prefix = path[:start]
-        suffix = path[end + 1:]
+        suffix = path[end + 1 :]
 
         def join_parts(replacement: str) -> str:
             suffix_part = suffix
@@ -187,7 +187,10 @@ class ApplicationsDatabase:
 
     @classmethod
     def _expand_builtin_path_vars(
-        cls, path: str, *, for_backup: bool = False,
+        cls,
+        path: str,
+        *,
+        for_backup: bool = False,
     ) -> str:
         """
         Expand Mackup-specific built-in path variables.
@@ -232,13 +235,13 @@ class ApplicationsDatabase:
         if end == -1:
             return {path}
 
-        inner = path[start + 1:end]
+        inner = path[start + 1 : end]
         items = cls._split_top_level_items(inner)
         if len(items) <= 1:
             return {path}
 
         prefix = path[:start]
-        suffix = path[end + 1:]
+        suffix = path[end + 1 :]
         expanded: set[str] = set()
         for item in items:
             for candidate in cls._expand_braces(f"{prefix}{item}{suffix}"):
@@ -247,7 +250,9 @@ class ApplicationsDatabase:
 
     @classmethod
     def _expand_brace_mappings(
-        cls, local_expr: str, backup_expr: str,
+        cls,
+        local_expr: str,
+        backup_expr: str,
     ) -> list[tuple[str, str]]:
         """
         Expand braces for local/backup expressions while preserving mapping intent.
@@ -294,6 +299,7 @@ class ApplicationsDatabase:
         Reserved built-ins (``${MACKUP_*}``) are left untouched (resolved
         elsewhere). Raises ``KeyError`` if a referenced var is unresolved.
         """
+
         def repl(match: re.Match) -> str:
             name = match.group(1)
             if name in cls._RESERVED_VARS:
@@ -309,7 +315,9 @@ class ApplicationsDatabase:
 
     @classmethod
     def _entry_to_exprs(
-        cls, entry: str, env_files: list[str] | None = None,
+        cls,
+        entry: str,
+        env_files: list[str] | None = None,
     ) -> tuple[str, str]:
         """Resolve a configuration_files entry into (local_expr, backup_expr).
 
@@ -318,16 +326,21 @@ class ApplicationsDatabase:
         env_files = env_files or []
         local_expr, backup_expr = cls._resolve_platform_selectors_with_backup(entry)
         local_expr = cls._expand_env_vars(
-            cls._expand_builtin_path_vars(local_expr), env_files,
+            cls._expand_builtin_path_vars(local_expr),
+            env_files,
         )
         backup_expr = cls._expand_env_vars(
-            cls._expand_builtin_path_vars(backup_expr, for_backup=True), env_files,
+            cls._expand_builtin_path_vars(backup_expr, for_backup=True),
+            env_files,
         )
         return local_expr, backup_expr
 
     @classmethod
     def _pair_to_exprs(
-        cls, src: str, dest: str, env_files: list[str] | None = None,
+        cls,
+        src: str,
+        dest: str,
+        env_files: list[str] | None = None,
     ) -> tuple[str, str]:
         """Resolve an explicit [mapped_files] pair into (local_expr, backup_expr).
 
@@ -360,7 +373,8 @@ class ApplicationsDatabase:
     ) -> None:
         """Brace-expand, reject absolute paths, and append local/backup pairs."""
         for local_path, backup_path in cls._expand_brace_mappings(
-            local_expr, backup_expr,
+            local_expr,
+            backup_expr,
         ):
             if any(p.startswith("/") for p in (local_path, backup_path)):
                 raise ValueError(
@@ -406,22 +420,27 @@ class ApplicationsDatabase:
             self.app_order.append(app_name)
             when = data.get("when")
             if when is not None and not isinstance(when, dict):
-                print(utils.colorize_message(
-                    f"Warning: {app_name}: top-level [when] must be a table, "
-                    "ignoring",
-                ))
+                print(
+                    utils.colorize_message(
+                        f"Warning: {app_name}: top-level [when] must be a table, "
+                        "ignoring",
+                    ),
+                )
             self.app_conditions[app_name] = dict(when) if isinstance(when, dict) else {}
             if isinstance(when, dict):
                 bad_keys = conditions.unrecognized_keys(when)
                 if bad_keys:
                     names = ", ".join(sorted(bad_keys))
-                    print(utils.colorize_message(
-                        f"Warning: {app_name}: unrecognized [when] key(s): {names}",
-                    ))
+                    print(
+                        utils.colorize_message(
+                            f"Warning: {app_name}: unrecognized [when] key(s): {names}",
+                        ),
+                    )
 
             # Fancy display name (falls back to the id)
             self.apps[app_name]["name"] = data.get(
-                "name", legacy.get("name", app_name),
+                "name",
+                legacy.get("name", app_name),
             )
 
             # The whole top level is one block: top-level keys that are not
@@ -449,9 +468,11 @@ class ApplicationsDatabase:
             # ignore files.
             ignored = data.get("ignore", legacy.get("ignore", []))
             if not isinstance(ignored, list):
-                print(utils.colorize_message(
-                    f"Warning: {app_name}: ignore must be a list, ignoring",
-                ))
+                print(
+                    utils.colorize_message(
+                        f"Warning: {app_name}: ignore must be a list, ignoring",
+                    ),
+                )
                 ignored = []
             self.app_ignores[app_name] = [str(pattern) for pattern in ignored]
 
@@ -483,30 +504,43 @@ class ApplicationsDatabase:
             for path in config_paths:
                 try:
                     local_expr, backup_expr = self._entry_to_exprs(
-                        str(path), env_files,
+                        str(path),
+                        env_files,
                     )
                 except KeyError as exc:
-                    print(utils.colorize_message(
-                        f"Warning: {app_name}: unresolved var {exc} in {path!r}, "
-                        "skipping",
-                    ))
+                    print(
+                        utils.colorize_message(
+                            f"Warning: {app_name}: unresolved var {exc} in {path!r}, "
+                            "skipping",
+                        ),
+                    )
                     continue
                 self._register_exprs(
-                    local_expr, backup_expr, config_files, config_mappings,
+                    local_expr,
+                    backup_expr,
+                    config_files,
+                    config_mappings,
                 )
             for src, dest in data.get("mapped_files", {}).items():
                 try:
                     local_expr, backup_expr = self._pair_to_exprs(
-                        str(src), str(dest), env_files,
+                        str(src),
+                        str(dest),
+                        env_files,
                     )
                 except KeyError as exc:
-                    print(utils.colorize_message(
-                        f"Warning: {app_name}: unresolved var {exc} in {src!r}, "
-                        "skipping",
-                    ))
+                    print(
+                        utils.colorize_message(
+                            f"Warning: {app_name}: unresolved var {exc} in {src!r}, "
+                            "skipping",
+                        ),
+                    )
                     continue
                 self._register_exprs(
-                    local_expr, backup_expr, config_files, config_mappings,
+                    local_expr,
+                    backup_expr,
+                    config_files,
+                    config_mappings,
                 )
 
     @staticmethod
@@ -523,20 +557,20 @@ class ApplicationsDatabase:
             list of absolute paths, weakest first.
         """
         apps_dir: str = os.path.join(
-            os.path.dirname(os.path.realpath(__file__)), APPS_DIR,
+            os.path.dirname(os.path.realpath(__file__)),
+            APPS_DIR,
         )
         legacy_custom_apps_dir: str = os.path.join(os.environ["HOME"], CUSTOM_APPS_DIR)
         xdg_config_home: str = os.environ.get(
-            "XDG_CONFIG_HOME", os.path.join(os.environ["HOME"], ".config"),
+            "XDG_CONFIG_HOME",
+            os.path.join(os.environ["HOME"], ".config"),
         )
         xdg_custom_apps_dir: str = os.path.join(xdg_config_home, CUSTOM_APPS_DIR_XDG)
 
         def toml_names(directory: str) -> set[str]:
             if not os.path.isdir(directory):
                 return set()
-            return {
-                name for name in os.listdir(directory) if name.endswith(".toml")
-            }
+            return {name for name in os.listdir(directory) if name.endswith(".toml")}
 
         legacy_names = toml_names(legacy_custom_apps_dir)
         xdg_names = toml_names(xdg_custom_apps_dir) - legacy_names

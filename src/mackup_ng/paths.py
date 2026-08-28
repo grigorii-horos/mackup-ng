@@ -41,7 +41,9 @@ def candidates(path: str) -> list[str]:
 
 
 def is_managed_directory(
-    mackup_folder: str, local_filename: str, backup_filename: str,
+    mackup_folder: str,
+    local_filename: str,
+    backup_filename: str,
 ) -> bool:
     """Whether either side of a mapping currently exists as a directory."""
     return os.path.isdir(

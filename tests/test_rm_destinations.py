@@ -48,7 +48,8 @@ class TestRemoveDestination(unittest.TestCase):
 
         # Mock the update.fetch_latest to prevent any tests from touching the network.
         self.fetch_patcher = patch(
-            "mackup_ng.update.fetch_latest", return_value=None,
+            "mackup_ng.update.fetch_latest",
+            return_value=None,
         )
         self.fetch_patcher.start()
         self.addCleanup(self.fetch_patcher.stop)
@@ -72,8 +73,12 @@ class TestRemoveDestination(unittest.TestCase):
         with patch("sys.argv", ["mackup", "sync"]):
             main()
         buffer = io.StringIO()
-        with patch("sys.stdout", buffer), patch(
-            "sys.argv", ["mackup", "rm", ".work.rc"],
+        with (
+            patch("sys.stdout", buffer),
+            patch(
+                "sys.argv",
+                ["mackup", "rm", ".work.rc"],
+            ),
         ):
             main()
 
@@ -95,7 +100,8 @@ class TestRemoveDestination(unittest.TestCase):
         with patch("sys.argv", ["mackup", "sync"]):
             main()
         with patch(
-            "sys.argv", ["mackup", "rm", ".work.rc", ".home.rc"],
+            "sys.argv",
+            ["mackup", "rm", ".work.rc", ".home.rc"],
         ):
             main()
 
@@ -144,8 +150,11 @@ class TestRemoveDestination(unittest.TestCase):
             assert not os.path.exists(path)
 
         # The rest of the group is untouched.
-        for root in (os.path.join(self.test_home, ".work.d"),
-                     os.path.join(self.test_home, ".home.d"), shared):
+        for root in (
+            os.path.join(self.test_home, ".work.d"),
+            os.path.join(self.test_home, ".home.d"),
+            shared,
+        ):
             with open(os.path.join(root, "keeper.txt")) as handle:
                 assert handle.read() == "keeper.txt\n"
 
@@ -173,7 +182,8 @@ class TestRemoveDestination(unittest.TestCase):
         # The other machine removed the entry; only its tombstone reaches us,
         # while every copy of the file is still on disk here.
         with open(
-            os.path.join(self.mackup_folder, ".mackup-deletions"), "w",
+            os.path.join(self.mackup_folder, ".mackup-deletions"),
+            "w",
         ) as handle:
             handle.write(".work.d/doomed.txt\n")
         for path in (
@@ -193,8 +203,11 @@ class TestRemoveDestination(unittest.TestCase):
         ):
             assert not os.path.exists(path)
 
-        for root in (os.path.join(self.test_home, ".work.d"),
-                     os.path.join(self.test_home, ".home.d"), shared):
+        for root in (
+            os.path.join(self.test_home, ".work.d"),
+            os.path.join(self.test_home, ".home.d"),
+            shared,
+        ):
             with open(os.path.join(root, "keeper.txt")) as handle:
                 assert handle.read() == "keeper.txt\n"
 

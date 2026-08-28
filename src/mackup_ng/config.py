@@ -126,7 +126,8 @@ class Config:
         return set(self._apps_to_sync)
 
     def _setup_parser(
-        self, filename: str | None = None,
+        self,
+        filename: str | None = None,
     ) -> configparser.ConfigParser:
         """
         Configure the ConfigParser instance the way we want it.
@@ -140,7 +141,8 @@ class Config:
         assert isinstance(filename, str) or filename is None
 
         parser = configparser.ConfigParser(
-            allow_no_value=True, inline_comment_prefixes=(";", "#"),
+            allow_no_value=True,
+            inline_comment_prefixes=(";", "#"),
         )
         parser.read(self._best_config_path(filename))
 

@@ -18,7 +18,9 @@ class TestSyncGroupFiles(unittest.TestCase):
         self._orig_home = os.environ.get("HOME")
         os.environ["HOME"] = self.home
         self.profile = ApplicationProfile(
-            mackup=self.mackup, dry_run=False, verbose=False,
+            mackup=self.mackup,
+            dry_run=False,
+            verbose=False,
         )
 
     def tearDown(self):
@@ -92,7 +94,9 @@ class TestSyncGroupFiles(unittest.TestCase):
         source = os.path.join(self.mackup.mackup_folder, ".config/app/user.js")
         self._write(source, "from-backup", 3000)
         profile = ApplicationProfile(
-            mackup=self.mackup, dry_run=True, verbose=False,
+            mackup=self.mackup,
+            dry_run=True,
+            verbose=False,
         )
         stats = profile.sync_group(".config/app/user.js", [".config/work/user.js"])
         assert stats["restored"] == 1
@@ -107,7 +111,9 @@ class TestSyncGroupDirectories(unittest.TestCase):
         self._orig_home = os.environ.get("HOME")
         os.environ["HOME"] = self.home
         self.profile = ApplicationProfile(
-            mackup=self.mackup, dry_run=False, verbose=False,
+            mackup=self.mackup,
+            dry_run=False,
+            verbose=False,
         )
 
     def tearDown(self):
@@ -174,7 +180,9 @@ class TestSyncGroupTypeConflicts(unittest.TestCase):
         self._orig_home = os.environ.get("HOME")
         os.environ["HOME"] = self.home
         self.profile = ApplicationProfile(
-            mackup=self.mackup, dry_run=False, verbose=False,
+            mackup=self.mackup,
+            dry_run=False,
+            verbose=False,
         )
 
     def tearDown(self):
@@ -279,7 +287,9 @@ class TestSyncGroupDirectoryPermissionErrors(unittest.TestCase):
         self._orig_home = os.environ.get("HOME")
         os.environ["HOME"] = self.home
         self.profile = ApplicationProfile(
-            mackup=self.mackup, dry_run=False, verbose=False,
+            mackup=self.mackup,
+            dry_run=False,
+            verbose=False,
         )
         self.locked_parent = os.path.join(self.home, "locked")
         os.makedirs(self.locked_parent)

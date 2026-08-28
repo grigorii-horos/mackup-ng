@@ -70,7 +70,8 @@ class TestCLI(unittest.TestCase):
         # Mock the update.fetch_latest to prevent any tests from touching the network.
         # Individual tests can override this with their own patch for testing.
         self.fetch_patcher = patch(
-            "mackup_ng.update.fetch_latest", return_value=None,
+            "mackup_ng.update.fetch_latest",
+            return_value=None,
         )
         self.fetch_patcher.start()
         self.addCleanup(self.fetch_patcher.stop)
@@ -245,9 +246,12 @@ class TestCLI(unittest.TestCase):
         os.chdir(nested_dir)
         try:
             stdout = io.StringIO()
-            with patch("sys.argv", ["mackup", "rm", nested_name]), patch(
-                "sys.stdout",
-                stdout,
+            with (
+                patch("sys.argv", ["mackup", "rm", nested_name]),
+                patch(
+                    "sys.stdout",
+                    stdout,
+                ),
             ):
                 main()
         finally:
@@ -351,8 +355,7 @@ class TestCLI(unittest.TestCase):
         with open(os.path.join(self.custom_apps_dir, "hookonly.toml"), "w") as f:
             f.write('[run]\ncommands = ["true"]\n')
         buf = io.StringIO()
-        with patch("sys.argv", ["mackup", "list"]), \
-                patch("sys.stdout", buf):
+        with patch("sys.argv", ["mackup", "list"]), patch("sys.stdout", buf):
             main()
         assert "hookonly" not in buf.getvalue()
 
@@ -360,7 +363,7 @@ class TestCLI(unittest.TestCase):
         """`mackup apply` runs blocks and does not sync files."""
         out = os.path.join(self.test_home, ".applied")
         with open(os.path.join(self.custom_apps_dir, "hook.toml"), "w") as f:
-            f.write(f'[run]\ncommands = [\'touch "{out}"\']\n')
+            f.write(f"[run]\ncommands = ['touch \"{out}\"']\n")
         with patch("sys.argv", ["mackup", "apply"]):
             main()
         assert os.path.isfile(out)
@@ -375,9 +378,7 @@ class TestCLI(unittest.TestCase):
     def test_sync_fans_backup_out_to_two_destinations(self):
         self._write_custom_app(
             "fanout",
-            '[mapped_files]\n'
-            '".work.rc" = ".shared.rc"\n'
-            '".home.rc" = ".shared.rc"\n',
+            '[mapped_files]\n".work.rc" = ".shared.rc"\n".home.rc" = ".shared.rc"\n',
         )
         source = os.path.join(self.mackup_folder, ".shared.rc")
         os.makedirs(self.mackup_folder, exist_ok=True)
@@ -415,9 +416,7 @@ class TestCLI(unittest.TestCase):
     def test_tombstoned_destination_stays_removed_but_group_survives(self):
         self._write_custom_app(
             "fanout",
-            '[mapped_files]\n'
-            '".work.rc" = ".shared.rc"\n'
-            '".home.rc" = ".shared.rc"\n',
+            '[mapped_files]\n".work.rc" = ".shared.rc"\n".home.rc" = ".shared.rc"\n',
         )
         os.makedirs(self.mackup_folder, exist_ok=True)
         with open(os.path.join(self.mackup_folder, ".shared.rc"), "w") as handle:
@@ -425,7 +424,8 @@ class TestCLI(unittest.TestCase):
         with open(os.path.join(self.test_home, ".work.rc"), "w") as handle:
             handle.write("local-work=1\n")
         with open(
-            os.path.join(self.mackup_folder, ".mackup-deletions"), "w",
+            os.path.join(self.mackup_folder, ".mackup-deletions"),
+            "w",
         ) as handle:
             handle.write(".work.rc\n")
 
@@ -447,15 +447,16 @@ class TestCLI(unittest.TestCase):
             handle.write("work\n")
 
         buffer = io.StringIO()
-        with patch("sys.stdout", buffer), patch(
-            "sys.argv", ["mackup", "-v", "sync"],
+        with (
+            patch("sys.stdout", buffer),
+            patch(
+                "sys.argv",
+                ["mackup", "-v", "sync"],
+            ),
         ):
             main()
         output = buffer.getvalue()
-        assert (
-            ".overridden <- .overridden (aaa-base) evicted by zzz-override"
-            in output
-        )
+        assert ".overridden <- .overridden (aaa-base) evicted by zzz-override" in output
         assert ".overridden has no destination, left untouched" in output
 
     def test_verbose_sync_does_not_report_identical_redeclarations(self):
@@ -466,8 +467,12 @@ class TestCLI(unittest.TestCase):
             handle.write("dup\n")
 
         buffer = io.StringIO()
-        with patch("sys.stdout", buffer), patch(
-            "sys.argv", ["mackup", "-v", "sync"],
+        with (
+            patch("sys.stdout", buffer),
+            patch(
+                "sys.argv",
+                ["mackup", "-v", "sync"],
+            ),
         ):
             main()
         output = buffer.getvalue()
@@ -477,10 +482,12 @@ class TestCLI(unittest.TestCase):
     def test_fanout_group_is_synced_in_the_slot_of_the_winning_config(self):
         """A group shared by two configs belongs to the one that won it."""
         self._write_custom_app(
-            "aaa-first", '[mapped_files]\n".work.rc" = ".shared.rc"\n',
+            "aaa-first",
+            '[mapped_files]\n".work.rc" = ".shared.rc"\n',
         )
         self._write_custom_app(
-            "zzz-last", '[mapped_files]\n".home.rc" = ".shared.rc"\n',
+            "zzz-last",
+            '[mapped_files]\n".home.rc" = ".shared.rc"\n',
         )
         os.makedirs(self.mackup_folder, exist_ok=True)
         with open(os.path.join(self.mackup_folder, ".shared.rc"), "w") as handle:
@@ -509,7 +516,8 @@ class TestCLI(unittest.TestCase):
         with patch("sys.argv", ["mackup", "sync"]):
             main()
         with open(
-            os.path.join(self.mackup_folder, ".mackup-deletions"), "w",
+            os.path.join(self.mackup_folder, ".mackup-deletions"),
+            "w",
         ) as handle:
             handle.write(".locked/rc\n")
 
@@ -557,8 +565,12 @@ class TestCLI(unittest.TestCase):
             '[mapped_files]\n".overridden" = ".from-work"\n',
         )
         buffer = io.StringIO()
-        with patch("sys.stdout", buffer), patch(
-            "sys.argv", ["mackup", "show", "aaa-base"],
+        with (
+            patch("sys.stdout", buffer),
+            patch(
+                "sys.argv",
+                ["mackup", "show", "aaa-base"],
+            ),
         ):
             main()
         assert (
@@ -572,8 +584,12 @@ class TestCLI(unittest.TestCase):
         with open(path, "w") as handle:
             handle.write('name = "unselected"\nfiles = [".unselectedrc"]\n')
         buffer = io.StringIO()
-        with patch("sys.stdout", buffer), patch(
-            "sys.argv", ["mackup", "show", "unselected"],
+        with (
+            patch("sys.stdout", buffer),
+            patch(
+                "sys.argv",
+                ["mackup", "show", "unselected"],
+            ),
         ):
             main()
         assert (
@@ -584,13 +600,15 @@ class TestCLI(unittest.TestCase):
     def test_show_reports_fanout_destinations(self):
         self._write_custom_app(
             "fanout",
-            '[mapped_files]\n'
-            '".work.rc" = ".shared.rc"\n'
-            '".home.rc" = ".shared.rc"\n',
+            '[mapped_files]\n".work.rc" = ".shared.rc"\n".home.rc" = ".shared.rc"\n',
         )
         buffer = io.StringIO()
-        with patch("sys.stdout", buffer), patch(
-            "sys.argv", ["mackup", "show", "fanout"],
+        with (
+            patch("sys.stdout", buffer),
+            patch(
+                "sys.argv",
+                ["mackup", "show", "fanout"],
+            ),
         ):
             main()
         output = buffer.getvalue()
@@ -620,17 +638,27 @@ class TestCLI(unittest.TestCase):
 
     def test_sync_reports_a_newer_release(self):
         buffer = io.StringIO()
-        with patch("sys.stdout", buffer), patch(
-            "mackup_ng.update.fetch_latest", return_value="99.0.0",
-        ), patch("sys.argv", ["mackup", "sync"]):
+        with (
+            patch("sys.stdout", buffer),
+            patch(
+                "mackup_ng.update.fetch_latest",
+                return_value="99.0.0",
+            ),
+            patch("sys.argv", ["mackup", "sync"]),
+        ):
             main()
         assert "99.0.0 available" in buffer.getvalue()
 
     def test_sync_says_nothing_when_up_to_date(self):
         buffer = io.StringIO()
-        with patch("sys.stdout", buffer), patch(
-            "mackup_ng.update.fetch_latest", return_value="0.0.1",
-        ), patch("sys.argv", ["mackup", "sync"]):
+        with (
+            patch("sys.stdout", buffer),
+            patch(
+                "mackup_ng.update.fetch_latest",
+                return_value="0.0.1",
+            ),
+            patch("sys.argv", ["mackup", "sync"]),
+        ):
             main()
         assert "available" not in buffer.getvalue()
 
@@ -641,8 +669,12 @@ class TestCLI(unittest.TestCase):
             calls.append(timeout)
             return "99.0.0"
 
-        with patch("mackup_ng.update.fetch_latest", fetch), patch(
-            "sys.argv", ["mackup", "-n", "sync"],
+        with (
+            patch("mackup_ng.update.fetch_latest", fetch),
+            patch(
+                "sys.argv",
+                ["mackup", "-n", "sync"],
+            ),
         ):
             main()
         assert calls == []

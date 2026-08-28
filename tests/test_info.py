@@ -177,9 +177,14 @@ class TestInfo(unittest.TestCase):
             handle.write("x\n")
 
         buffer = io.StringIO()
-        with pytest.raises(SystemExit) as excinfo, patch(
-            "sys.stdout", buffer,
-        ), patch("sys.argv", ["mackup", "info", unmanaged]):
+        with (
+            pytest.raises(SystemExit) as excinfo,
+            patch(
+                "sys.stdout",
+                buffer,
+            ),
+            patch("sys.argv", ["mackup", "info", unmanaged]),
+        ):
             main()
 
         assert excinfo.value.code == 1
@@ -219,7 +224,9 @@ class TestInfo(unittest.TestCase):
 
     def test_info_reports_unmet_conditions(self):
         self.write_app(
-            "test-app", "test-app", [self.test_file_name],
+            "test-app",
+            "test-app",
+            [self.test_file_name],
             extra='\n[when]\nos = "definitely-not-this-os"\n',
         )
 
@@ -230,7 +237,8 @@ class TestInfo(unittest.TestCase):
 
     def test_info_names_the_config_that_overrode_the_destination(self):
         self.write_mapped_app(
-            "zzz-later", f'[mapped_files]\n"{self.test_file_name}" = ".testrc-alt"\n',
+            "zzz-later",
+            f'[mapped_files]\n"{self.test_file_name}" = ".testrc-alt"\n',
         )
         self.write_config(["test-app", "zzz-later"])
 

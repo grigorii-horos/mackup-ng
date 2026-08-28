@@ -134,9 +134,7 @@ class TestUpgradeCommand(unittest.TestCase):
 class TestCache(unittest.TestCase):
     def setUp(self):
         self.home = tempfile.mkdtemp(prefix="mackup_update_home_")
-        self._orig = {
-            key: os.environ.get(key) for key in ("HOME", "XDG_CACHE_HOME")
-        }
+        self._orig = {key: os.environ.get(key) for key in ("HOME", "XDG_CACHE_HOME")}
         os.environ["HOME"] = self.home
         os.environ["XDG_CACHE_HOME"] = os.path.join(self.home, ".cache")
 
@@ -252,7 +250,8 @@ def upgrade_command(executable: str) -> str | None:
 def cache_path() -> str:
     """Path of the update-check cache file under ``$XDG_CACHE_HOME``."""
     base = os.environ.get(
-        "XDG_CACHE_HOME", os.path.join(os.environ["HOME"], ".cache"),
+        "XDG_CACHE_HOME",
+        os.path.join(os.environ["HOME"], ".cache"),
     )
     return os.path.join(base, "mackup", "update-check.json")
 
@@ -348,6 +347,7 @@ class TestCheck(unittest.TestCase):
         def fetch():
             self.calls += 1
             return value
+
         return fetch
 
     def _set_marker(self, name):
@@ -545,37 +545,53 @@ git commit -m "feat: fetch the latest version from PyPI behind a cache and a mar
 Add to the `TestCLI` class in `tests/test_cli.py`:
 
 ```python
-    def test_sync_reports_a_newer_release(self):
-        buffer = io.StringIO()
-        with patch("sys.stdout", buffer), patch(
-            "mackup_ng.update.fetch_latest", return_value="99.0.0",
-        ), patch("sys.argv", ["mackup", "sync"]):
-            main()
-        assert "99.0.0 available" in buffer.getvalue()
+def test_sync_reports_a_newer_release(self):
+    buffer = io.StringIO()
+    with (
+        patch("sys.stdout", buffer),
+        patch(
+            "mackup_ng.update.fetch_latest",
+            return_value="99.0.0",
+        ),
+        patch("sys.argv", ["mackup", "sync"]),
+    ):
+        main()
+    assert "99.0.0 available" in buffer.getvalue()
 
-    def test_sync_says_nothing_when_up_to_date(self):
-        buffer = io.StringIO()
-        with patch("sys.stdout", buffer), patch(
-            "mackup_ng.update.fetch_latest", return_value="0.0.1",
-        ), patch("sys.argv", ["mackup", "sync"]):
-            main()
-        assert "available" not in buffer.getvalue()
 
-    def test_dry_run_neither_fetches_nor_writes_the_cache(self):
-        from mackup_ng import update
+def test_sync_says_nothing_when_up_to_date(self):
+    buffer = io.StringIO()
+    with (
+        patch("sys.stdout", buffer),
+        patch(
+            "mackup_ng.update.fetch_latest",
+            return_value="0.0.1",
+        ),
+        patch("sys.argv", ["mackup", "sync"]),
+    ):
+        main()
+    assert "available" not in buffer.getvalue()
 
-        calls = []
 
-        def fetch(timeout=2.0):
-            calls.append(timeout)
-            return "99.0.0"
+def test_dry_run_neither_fetches_nor_writes_the_cache(self):
+    from mackup_ng import update
 
-        with patch("mackup_ng.update.fetch_latest", fetch), patch(
-            "sys.argv", ["mackup", "-n", "sync"],
-        ):
-            main()
-        assert calls == []
-        assert not os.path.exists(update.cache_path())
+    calls = []
+
+    def fetch(timeout=2.0):
+        calls.append(timeout)
+        return "99.0.0"
+
+    with (
+        patch("mackup_ng.update.fetch_latest", fetch),
+        patch(
+            "sys.argv",
+            ["mackup", "-n", "sync"],
+        ),
+    ):
+        main()
+    assert calls == []
+    assert not os.path.exists(update.cache_path())
 ```
 
 These tests need `XDG_CACHE_HOME` inside the test's temp `HOME`; add it to

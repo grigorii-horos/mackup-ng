@@ -38,7 +38,8 @@ class TestConfigLevelConditions(unittest.TestCase):
 
         # Mock the update.fetch_latest to prevent any tests from touching the network.
         self.fetch_patcher = patch(
-            "mackup_ng.update.fetch_latest", return_value=None,
+            "mackup_ng.update.fetch_latest",
+            return_value=None,
         )
         self.fetch_patcher.start()
         self.addCleanup(self.fetch_patcher.stop)
@@ -65,7 +66,9 @@ class TestConfigLevelConditions(unittest.TestCase):
 
     def _set_marker(self, name):
         markers = os.path.join(
-            os.environ["XDG_STATE_HOME"], "mackup", "markers",
+            os.environ["XDG_STATE_HOME"],
+            "mackup",
+            "markers",
         )
         os.makedirs(markers, exist_ok=True)
         open(os.path.join(markers, name), "a").close()
@@ -104,7 +107,7 @@ class TestConfigLevelConditions(unittest.TestCase):
             "gated-blocks",
             '[when]\nmarker = ["nope"]\n\n'
             f'[run]\nscript = "touch {touched}"\n\n'
-            '[[block]]\n'
+            "[[block]]\n"
             f'[block.run]\nscript = "touch {touched}.two"\n',
         )
         with patch("sys.argv", ["mackup", "sync"]):
@@ -116,8 +119,7 @@ class TestConfigLevelConditions(unittest.TestCase):
         touched = os.path.join(self.home, "block-ran.txt")
         self._write_app(
             "gated-blocks",
-            '[when]\nnot_marker = ["nope"]\n\n'
-            f'[run]\nscript = "touch {touched}"\n',
+            f'[when]\nnot_marker = ["nope"]\n\n[run]\nscript = "touch {touched}"\n',
         )
         with patch("sys.argv", ["mackup", "sync"]):
             main()
@@ -127,8 +129,7 @@ class TestConfigLevelConditions(unittest.TestCase):
         touched = os.path.join(self.home, "applied.txt")
         self._write_app(
             "gated-blocks",
-            '[when]\nmarker = ["nope"]\n\n'
-            f'[run]\nscript = "touch {touched}"\n',
+            f'[when]\nmarker = ["nope"]\n\n[run]\nscript = "touch {touched}"\n',
         )
         with patch("sys.argv", ["mackup", "apply"]):
             main()
@@ -165,8 +166,12 @@ class TestConfigLevelConditions(unittest.TestCase):
     def test_show_reports_unmet_conditions(self):
         self._write_palette_configs()
         buffer = io.StringIO()
-        with patch("sys.stdout", buffer), patch(
-            "sys.argv", ["mackup", "show", "zzz-override"],
+        with (
+            patch("sys.stdout", buffer),
+            patch(
+                "sys.argv",
+                ["mackup", "show", "zzz-override"],
+            ),
         ):
             main()
         output = buffer.getvalue()
@@ -177,8 +182,12 @@ class TestConfigLevelConditions(unittest.TestCase):
         self._write_palette_configs()
         self._set_marker("eink")
         buffer = io.StringIO()
-        with patch("sys.stdout", buffer), patch(
-            "sys.argv", ["mackup", "show", "zzz-override"],
+        with (
+            patch("sys.stdout", buffer),
+            patch(
+                "sys.argv",
+                ["mackup", "show", "zzz-override"],
+            ),
         ):
             main()
         assert "conditions not met" not in buffer.getvalue()
@@ -186,8 +195,12 @@ class TestConfigLevelConditions(unittest.TestCase):
     def test_verbose_sync_reports_the_skipped_config(self):
         self._write_palette_configs()
         buffer = io.StringIO()
-        with patch("sys.stdout", buffer), patch(
-            "sys.argv", ["mackup", "-v", "sync"],
+        with (
+            patch("sys.stdout", buffer),
+            patch(
+                "sys.argv",
+                ["mackup", "-v", "sync"],
+            ),
         ):
             main()
         assert "zzz-override: conditions not met on this machine" in buffer.getvalue()
@@ -211,8 +224,12 @@ class TestConfigLevelConditions(unittest.TestCase):
         )
         self._write_backup(".palette", "palette\n")
         buffer = io.StringIO()
-        with patch("sys.stdout", buffer), patch(
-            "sys.argv", ["mackup", "show", "multi-condition"],
+        with (
+            patch("sys.stdout", buffer),
+            patch(
+                "sys.argv",
+                ["mackup", "show", "multi-condition"],
+            ),
         ):
             main()
         output = buffer.getvalue()
@@ -228,8 +245,12 @@ class TestConfigLevelConditions(unittest.TestCase):
         # .palette-eink, so it is an ordinary orphan: reported under -v.
         self._write_palette_configs()
         buffer = io.StringIO()
-        with patch("sys.stdout", buffer), patch(
-            "sys.argv", ["mackup", "-v", "sync"],
+        with (
+            patch("sys.stdout", buffer),
+            patch(
+                "sys.argv",
+                ["mackup", "-v", "sync"],
+            ),
         ):
             main()
         assert ".palette-eink has no destination, left untouched" in buffer.getvalue()
@@ -250,8 +271,12 @@ class TestConfigLevelConditions(unittest.TestCase):
         )
         self._write_backup(".palette-default", "default\n")
         buffer = io.StringIO()
-        with patch("sys.stdout", buffer), patch(
-            "sys.argv", ["mackup", "-v", "sync"],
+        with (
+            patch("sys.stdout", buffer),
+            patch(
+                "sys.argv",
+                ["mackup", "-v", "sync"],
+            ),
         ):
             main()
         assert ".palette-default has no destination" not in buffer.getvalue()
@@ -266,8 +291,12 @@ class TestConfigLevelConditions(unittest.TestCase):
     def test_gated_out_configs_orphaned_backup_file_stays_on_disk(self):
         self._write_palette_configs()
         buffer = io.StringIO()
-        with patch("sys.stdout", buffer), patch(
-            "sys.argv", ["mackup", "-v", "sync"],
+        with (
+            patch("sys.stdout", buffer),
+            patch(
+                "sys.argv",
+                ["mackup", "-v", "sync"],
+            ),
         ):
             main()
         backup_eink_path = os.path.join(self.mackup_folder, ".palette-eink")

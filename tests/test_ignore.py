@@ -19,7 +19,10 @@ GLOBS = (
 
 class TestIgnoredNames(unittest.TestCase):
     def test_a_sync_conflict_copy_is_ignored(self):
-        assert ignore.is_ignored(GLOBS, "notes.sync-conflict-20260824-103000-ABCDEFG.md")
+        assert ignore.is_ignored(
+            GLOBS,
+            "notes.sync-conflict-20260824-103000-ABCDEFG.md",
+        )
 
     def test_a_sync_conflict_copy_without_an_extension_is_ignored(self):
         assert ignore.is_ignored(GLOBS, "zshrc.sync-conflict-20260824-103000-ABCDEFG")
@@ -48,7 +51,8 @@ class TestIgnoredNames(unittest.TestCase):
 
 class TestIgnoredPaths(unittest.TestCase):
     def test_a_conflict_copy_inside_a_subdirectory_is_ignored(self):
-        assert ignore.is_ignored_path(GLOBS,
+        assert ignore.is_ignored_path(
+            GLOBS,
             "lua/plugins/init.sync-conflict-20260824-103000-ABCDEFG.lua",
         )
 
@@ -131,7 +135,9 @@ class TestLoadGlobs(unittest.TestCase):
 
     def test_a_malformed_file_is_skipped(self):
         self.write_ignore_file(
-            os.path.join(self.home, ".mackup", "ignores"), "broken", "not toml {",
+            os.path.join(self.home, ".mackup", "ignores"),
+            "broken",
+            "not toml {",
         )
 
         assert "*.sync-conflict-*" in ignore.load_globs()

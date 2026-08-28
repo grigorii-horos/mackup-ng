@@ -23,7 +23,9 @@ LOG_FILENAME: str = "sync-log.json"
 def log_path() -> str:
     """Path of the sync log under ``$XDG_STATE_HOME``."""
     base = os.environ.get("XDG_STATE_HOME") or os.path.join(
-        os.environ["HOME"], ".local", "state",
+        os.environ["HOME"],
+        ".local",
+        "state",
     )
     return os.path.join(base, "mackup", LOG_FILENAME)
 
@@ -40,11 +42,7 @@ def read() -> dict[str, dict]:
         return {}
     if not isinstance(data, dict):
         return {}
-    return {
-        str(dest): entry
-        for dest, entry in data.items()
-        if isinstance(entry, dict)
-    }
+    return {str(dest): entry for dest, entry in data.items() if isinstance(entry, dict)}
 
 
 def record(entries: dict[str, dict]) -> None:

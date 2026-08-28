@@ -66,8 +66,12 @@ class TestConditions(unittest.TestCase):
             os.environ.pop("COND_X", None)
 
     def test_multiple_conditions_all_apply(self):
-        with patch("mackup_ng.hooks.os_kind", return_value="linux"), patch(
-            "mackup_ng.conditions.platform.machine", return_value="x86_64",
+        with (
+            patch("mackup_ng.hooks.os_kind", return_value="linux"),
+            patch(
+                "mackup_ng.conditions.platform.machine",
+                return_value="x86_64",
+            ),
         ):
             assert conditions.block_passes(_b(os=["linux"], arch=["x86_64"]))
             assert not conditions.block_passes(_b(os=["linux"], arch=["aarch64"]))

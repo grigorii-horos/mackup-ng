@@ -17,7 +17,10 @@ class TestReadOrder(unittest.TestCase):
         os.environ["XDG_CONFIG_HOME"] = os.path.join(self.home, ".config")
         self.legacy_dir = os.path.join(self.home, ".mackup", "applications")
         self.xdg_dir = os.path.join(
-            self.home, ".config", "mackup", "applications",
+            self.home,
+            ".config",
+            "mackup",
+            "applications",
         )
         os.makedirs(self.legacy_dir, exist_ok=True)
         os.makedirs(self.xdg_dir, exist_ok=True)
@@ -54,7 +57,7 @@ class TestReadOrder(unittest.TestCase):
             self.legacy_dir,
             "ordered",
             'files = [".zshrc", ".bashrc"]\n\n'
-            '[mapped_files]\n'
+            "[mapped_files]\n"
             '".config/b" = ".config/a"\n',
         )
         db = ApplicationsDatabase()

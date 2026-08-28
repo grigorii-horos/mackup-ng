@@ -187,17 +187,18 @@ top-level block:
 Add the getters next to `get_blocks`:
 
 ```python
-    def get_conditions(self, name: str) -> dict:
-        """Return the config's top-level ``[when]`` table (empty when absent)."""
-        return dict(self.app_conditions.get(name, {}))
+def get_conditions(self, name: str) -> dict:
+    """Return the config's top-level ``[when]`` table (empty when absent)."""
+    return dict(self.app_conditions.get(name, {}))
 
-    def config_enabled(self, name: str) -> bool:
-        """True when the config's conditions hold on this machine.
 
-        A config that is not enabled declares nothing: no sync pairs and no
-        blocks.
-        """
-        return conditions.config_passes({"when": self.app_conditions.get(name, {})})
+def config_enabled(self, name: str) -> bool:
+    """True when the config's conditions hold on this machine.
+
+    A config that is not enabled declares nothing: no sync pairs and no
+    blocks.
+    """
+    return conditions.config_passes({"when": self.app_conditions.get(name, {})})
 ```
 
 - [ ] **Step 5: Run the tests to verify they pass**
@@ -294,7 +295,9 @@ class TestConfigLevelConditions(unittest.TestCase):
 
     def _set_marker(self, name):
         markers = os.path.join(
-            os.environ["XDG_STATE_HOME"], "mackup", "markers",
+            os.environ["XDG_STATE_HOME"],
+            "mackup",
+            "markers",
         )
         os.makedirs(markers, exist_ok=True)
         open(os.path.join(markers, name), "a").close()
@@ -333,7 +336,7 @@ class TestConfigLevelConditions(unittest.TestCase):
             "gated-blocks",
             '[when]\nmarker = ["nope"]\n\n'
             f'[run]\nscript = "touch {touched}"\n\n'
-            '[[block]]\n'
+            "[[block]]\n"
             f'[block.run]\nscript = "touch {touched}.two"\n',
         )
         with patch("sys.argv", ["mackup", "sync"]):
@@ -345,8 +348,7 @@ class TestConfigLevelConditions(unittest.TestCase):
         touched = os.path.join(self.home, "block-ran.txt")
         self._write_app(
             "gated-blocks",
-            '[when]\nnot_marker = ["nope"]\n\n'
-            f'[run]\nscript = "touch {touched}"\n',
+            f'[when]\nnot_marker = ["nope"]\n\n[run]\nscript = "touch {touched}"\n',
         )
         with patch("sys.argv", ["mackup", "sync"]):
             main()
@@ -356,8 +358,7 @@ class TestConfigLevelConditions(unittest.TestCase):
         touched = os.path.join(self.home, "applied.txt")
         self._write_app(
             "gated-blocks",
-            '[when]\nmarker = ["nope"]\n\n'
-            f'[run]\nscript = "touch {touched}"\n',
+            f'[when]\nmarker = ["nope"]\n\n[run]\nscript = "touch {touched}"\n',
         )
         with patch("sys.argv", ["mackup", "apply"]):
             main()
@@ -460,42 +461,57 @@ git commit -m "feat: gate a config's sync entries and blocks by its [when]"
 Append to `tests/test_config_conditions.py` inside `TestConfigLevelConditions`:
 
 ```python
-    def test_show_reports_unmet_conditions(self):
-        self._write_palette_configs()
-        buffer = io.StringIO()
-        with patch("sys.stdout", buffer), patch(
-            "sys.argv", ["mackup", "show", "zzz-override"],
-        ):
-            main()
-        output = buffer.getvalue()
-        assert "conditions not met on this machine" in output
-        assert "marker" in output
+def test_show_reports_unmet_conditions(self):
+    self._write_palette_configs()
+    buffer = io.StringIO()
+    with (
+        patch("sys.stdout", buffer),
+        patch(
+            "sys.argv",
+            ["mackup", "show", "zzz-override"],
+        ),
+    ):
+        main()
+    output = buffer.getvalue()
+    assert "conditions not met on this machine" in output
+    assert "marker" in output
 
-    def test_show_says_nothing_about_conditions_when_they_hold(self):
-        self._write_palette_configs()
-        self._set_marker("eink")
-        buffer = io.StringIO()
-        with patch("sys.stdout", buffer), patch(
-            "sys.argv", ["mackup", "show", "zzz-override"],
-        ):
-            main()
-        assert "conditions not met" not in buffer.getvalue()
 
-    def test_verbose_sync_reports_the_skipped_config(self):
-        self._write_palette_configs()
-        buffer = io.StringIO()
-        with patch("sys.stdout", buffer), patch(
-            "sys.argv", ["mackup", "-v", "sync"],
-        ):
-            main()
-        assert "zzz-override: conditions not met on this machine" in buffer.getvalue()
+def test_show_says_nothing_about_conditions_when_they_hold(self):
+    self._write_palette_configs()
+    self._set_marker("eink")
+    buffer = io.StringIO()
+    with (
+        patch("sys.stdout", buffer),
+        patch(
+            "sys.argv",
+            ["mackup", "show", "zzz-override"],
+        ),
+    ):
+        main()
+    assert "conditions not met" not in buffer.getvalue()
 
-    def test_non_verbose_sync_stays_quiet_about_it(self):
-        self._write_palette_configs()
-        buffer = io.StringIO()
-        with patch("sys.stdout", buffer), patch("sys.argv", ["mackup", "sync"]):
-            main()
-        assert "conditions not met" not in buffer.getvalue()
+
+def test_verbose_sync_reports_the_skipped_config(self):
+    self._write_palette_configs()
+    buffer = io.StringIO()
+    with (
+        patch("sys.stdout", buffer),
+        patch(
+            "sys.argv",
+            ["mackup", "-v", "sync"],
+        ),
+    ):
+        main()
+    assert "zzz-override: conditions not met on this machine" in buffer.getvalue()
+
+
+def test_non_verbose_sync_stays_quiet_about_it(self):
+    self._write_palette_configs()
+    buffer = io.StringIO()
+    with patch("sys.stdout", buffer), patch("sys.argv", ["mackup", "sync"]):
+        main()
+    assert "conditions not met" not in buffer.getvalue()
 ```
 
 - [ ] **Step 2: Run the tests to verify they fail**

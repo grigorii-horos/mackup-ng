@@ -290,7 +290,10 @@ class TestReadOrder(unittest.TestCase):
         os.environ["XDG_CONFIG_HOME"] = os.path.join(self.home, ".config")
         self.legacy_dir = os.path.join(self.home, ".mackup", "applications")
         self.xdg_dir = os.path.join(
-            self.home, ".config", "mackup", "applications",
+            self.home,
+            ".config",
+            "mackup",
+            "applications",
         )
         os.makedirs(self.legacy_dir, exist_ok=True)
         os.makedirs(self.xdg_dir, exist_ok=True)
@@ -327,7 +330,7 @@ class TestReadOrder(unittest.TestCase):
             self.legacy_dir,
             "ordered",
             'files = [".zshrc", ".bashrc"]\n\n'
-            '[mapped_files]\n'
+            "[mapped_files]\n"
             '".config/b" = ".config/a"\n',
         )
         db = ApplicationsDatabase()
@@ -354,47 +357,44 @@ Expected: FAIL — `AttributeError: 'ApplicationsDatabase' object has no attribu
 In `src/mackup_ng/appsdb.py`, replace the body of `get_config_files` (keep the docstring, update its wording) with:
 
 ```python
-    @staticmethod
-    def get_config_files() -> list[str]:
-        """
-        Return the application configuration files in precedence order.
+@staticmethod
+def get_config_files() -> list[str]:
+    """
+    Return the application configuration files in precedence order.
 
-        Stock files come first (alphabetical), then the XDG custom directory,
-        then ``~/.mackup/applications`` — later files win when two configs
-        claim the same destination. A custom file still shadows a stock file
-        with the same name entirely.
+    Stock files come first (alphabetical), then the XDG custom directory,
+    then ``~/.mackup/applications`` — later files win when two configs
+    claim the same destination. A custom file still shadows a stock file
+    with the same name entirely.
 
-        Returns:
-            list of absolute paths, weakest first.
-        """
-        apps_dir: str = os.path.join(
-            os.path.dirname(os.path.realpath(__file__)), APPS_DIR,
-        )
-        legacy_custom_apps_dir: str = os.path.join(os.environ["HOME"], CUSTOM_APPS_DIR)
-        xdg_config_home: str = os.environ.get(
-            "XDG_CONFIG_HOME", os.path.join(os.environ["HOME"], ".config"),
-        )
-        xdg_custom_apps_dir: str = os.path.join(xdg_config_home, CUSTOM_APPS_DIR_XDG)
+    Returns:
+        list of absolute paths, weakest first.
+    """
+    apps_dir: str = os.path.join(
+        os.path.dirname(os.path.realpath(__file__)),
+        APPS_DIR,
+    )
+    legacy_custom_apps_dir: str = os.path.join(os.environ["HOME"], CUSTOM_APPS_DIR)
+    xdg_config_home: str = os.environ.get(
+        "XDG_CONFIG_HOME",
+        os.path.join(os.environ["HOME"], ".config"),
+    )
+    xdg_custom_apps_dir: str = os.path.join(xdg_config_home, CUSTOM_APPS_DIR_XDG)
 
-        def toml_names(directory: str) -> set[str]:
-            if not os.path.isdir(directory):
-                return set()
-            return {
-                name for name in os.listdir(directory) if name.endswith(".toml")
-            }
+    def toml_names(directory: str) -> set[str]:
+        if not os.path.isdir(directory):
+            return set()
+        return {name for name in os.listdir(directory) if name.endswith(".toml")}
 
-        legacy_names = toml_names(legacy_custom_apps_dir)
-        xdg_names = toml_names(xdg_custom_apps_dir) - legacy_names
-        stock_names = toml_names(apps_dir) - legacy_names - xdg_names
+    legacy_names = toml_names(legacy_custom_apps_dir)
+    xdg_names = toml_names(xdg_custom_apps_dir) - legacy_names
+    stock_names = toml_names(apps_dir) - legacy_names - xdg_names
 
-        return [
-            *(os.path.join(apps_dir, name) for name in sorted(stock_names)),
-            *(os.path.join(xdg_custom_apps_dir, name) for name in sorted(xdg_names)),
-            *(
-                os.path.join(legacy_custom_apps_dir, name)
-                for name in sorted(legacy_names)
-            ),
-        ]
+    return [
+        *(os.path.join(apps_dir, name) for name in sorted(stock_names)),
+        *(os.path.join(xdg_custom_apps_dir, name) for name in sorted(xdg_names)),
+        *(os.path.join(legacy_custom_apps_dir, name) for name in sorted(legacy_names)),
+    ]
 ```
 
 - [ ] **Step 4: Make the per-app entries ordered lists**
@@ -446,46 +446,49 @@ Change the two local containers from sets to lists:
 Then update `_register_exprs` to append while skipping exact duplicates (its parameter names change from `files_set` / `mappings_set` to `files` / `mappings`):
 
 ```python
-    @classmethod
-    def _register_exprs(
-        cls,
-        local_expr: str,
-        backup_expr: str,
-        files: list[str],
-        mappings: list[tuple[str, str]],
-    ) -> None:
-        """Brace-expand, reject absolute paths, and append local/backup pairs."""
-        for local_path, backup_path in cls._expand_brace_mappings(
-            local_expr, backup_expr,
-        ):
-            if any(p.startswith("/") for p in (local_path, backup_path)):
-                raise ValueError(
-                    "Unsupported absolute path in mapping: "
-                    f"{local_path!r} -> {backup_path!r}",
-                )
-            if (local_path, backup_path) in mappings:
-                continue
-            if local_path not in files:
-                files.append(local_path)
-            mappings.append((local_path, backup_path))
+@classmethod
+def _register_exprs(
+    cls,
+    local_expr: str,
+    backup_expr: str,
+    files: list[str],
+    mappings: list[tuple[str, str]],
+) -> None:
+    """Brace-expand, reject absolute paths, and append local/backup pairs."""
+    for local_path, backup_path in cls._expand_brace_mappings(
+        local_expr,
+        backup_expr,
+    ):
+        if any(p.startswith("/") for p in (local_path, backup_path)):
+            raise ValueError(
+                "Unsupported absolute path in mapping: "
+                f"{local_path!r} -> {backup_path!r}",
+            )
+        if (local_path, backup_path) in mappings:
+            continue
+        if local_path not in files:
+            files.append(local_path)
+        mappings.append((local_path, backup_path))
 ```
 
 - [ ] **Step 6: Update the getters**
 
 ```python
-    def get_files(self, name: str) -> list[str]:
-        """Return the local config paths of an application, in read order."""
-        value = self.apps[name]["configuration_files"]
-        assert isinstance(value, list)
-        return list(value)
+def get_files(self, name: str) -> list[str]:
+    """Return the local config paths of an application, in read order."""
+    value = self.apps[name]["configuration_files"]
+    assert isinstance(value, list)
+    return list(value)
 
-    def get_file_mappings(self, name: str) -> list[tuple[str, str]]:
-        """Return (local, backup) pairs of an application, in read order."""
-        return list(self.app_file_mappings[name])
 
-    def get_app_order(self) -> list[str]:
-        """Return app ids in config read order (weakest first)."""
-        return list(self.app_order)
+def get_file_mappings(self, name: str) -> list[tuple[str, str]]:
+    """Return (local, backup) pairs of an application, in read order."""
+    return list(self.app_file_mappings[name])
+
+
+def get_app_order(self) -> list[str]:
+    """Return app ids in config read order (weakest first)."""
+    return list(self.app_order)
 ```
 
 - [ ] **Step 7: Run the tests**
@@ -553,7 +556,10 @@ class TestSyncGroupFiles(unittest.TestCase):
         self._orig_home = os.environ.get("HOME")
         os.environ["HOME"] = self.home
         self.profile = ApplicationProfile(
-            mackup=self.mackup, files=set(), dry_run=False, verbose=False,
+            mackup=self.mackup,
+            files=set(),
+            dry_run=False,
+            verbose=False,
         )
 
     def tearDown(self):
@@ -610,7 +616,10 @@ class TestSyncGroupFiles(unittest.TestCase):
         source = os.path.join(self.mackup.mackup_folder, ".config/app/user.js")
         self._write(source, "from-backup", 3000)
         profile = ApplicationProfile(
-            mackup=self.mackup, files=set(), dry_run=True, verbose=False,
+            mackup=self.mackup,
+            files=set(),
+            dry_run=True,
+            verbose=False,
         )
         stats = profile.sync_group(".config/app/user.js", [".config/work/user.js"])
         assert stats["restored"] == 1
@@ -627,84 +636,87 @@ Expected: FAIL with `AttributeError: 'ApplicationProfile' object has no attribut
 Add to `ApplicationProfile` in `src/mackup_ng/application.py`, after `get_filepaths`:
 
 ```python
-    def member_paths(self, source: str, dests: list[str]) -> list[str]:
-        """Absolute paths of a fanout group: the backup source, then the destinations."""
-        return [
-            os.path.join(self.mackup.mackup_folder, source),
-            *(os.path.join(os.environ["HOME"], dest) for dest in dests),
-        ]
+def member_paths(self, source: str, dests: list[str]) -> list[str]:
+    """Absolute paths of a fanout group: the backup source, then the destinations."""
+    return [
+        os.path.join(self.mackup.mackup_folder, source),
+        *(os.path.join(os.environ["HOME"], dest) for dest in dests),
+    ]
 
-    @staticmethod
-    def new_stats() -> dict[str, int]:
-        """A zeroed statistics dict with every key the reporter expects."""
-        return {
-            "backed_up": 0, "restored": 0, "synchronized": 0,
-            "deleted": 0, "skipped": 0, "errors": 0,
-        }
 
-    def sync_group(self, source: str, dests: list[str]) -> dict[str, int]:
-        """Sync one fanout group: newest member wins and reaches every other.
+@staticmethod
+def new_stats() -> dict[str, int]:
+    """A zeroed statistics dict with every key the reporter expects."""
+    return {
+        "backed_up": 0,
+        "restored": 0,
+        "synchronized": 0,
+        "deleted": 0,
+        "skipped": 0,
+        "errors": 0,
+    }
 
-        Members are peers — the backup side has no special authority. A group
-        of two members is the ordinary 1:1 case.
-        """
-        stats = self.new_stats()
-        members = self.member_paths(source, dests)
-        backup_path = members[0]
-        existing = [
-            path for path in members
-            if os.path.isfile(path) or os.path.isdir(path)
-        ]
-        if not existing:
-            return stats
 
-        if any(os.path.isdir(path) for path in existing):
-            return self.sync_members_directory(members)
+def sync_group(self, source: str, dests: list[str]) -> dict[str, int]:
+    """Sync one fanout group: newest member wins and reaches every other.
 
-        winner = max(existing, key=self.get_effective_mtime)
-        winner_mtime = self.get_effective_mtime(winner)
-
-        for member in members:
-            if member == winner:
-                continue
-            if os.path.exists(member):
-                if os.path.samefile(member, winner):
-                    if self.verbose:
-                        self._print(
-                            f"Skipping {member}\n  already linked to\n  {winner}",
-                        )
-                    stats["skipped"] += 1
-                    continue
-                if self.get_effective_mtime(member) >= winner_mtime:
-                    if self.verbose:
-                        self._print(
-                            f"Skipping {member}\n  not older than\n  {winner}",
-                        )
-                    stats["skipped"] += 1
-                    continue
-
-            if self.verbose:
-                self._print(f"Copying\n  {winner}\n  to\n  {member} ...")
-
-            if not self.dry_run:
-                try:
-                    if os.path.lexists(member):
-                        utils.delete(member)
-                    utils.copy(winner, member)
-                except PermissionError as e:
-                    self._print(
-                        f"Error: Unable to copy file from {winner} to "
-                        f"{member} due to permission issue: {e}",
-                    )
-                    stats["errors"] += 1
-                    continue
-
-            if member == backup_path:
-                stats["backed_up"] += 1
-            else:
-                stats["restored"] += 1
-
+    Members are peers — the backup side has no special authority. A group
+    of two members is the ordinary 1:1 case.
+    """
+    stats = self.new_stats()
+    members = self.member_paths(source, dests)
+    backup_path = members[0]
+    existing = [path for path in members if os.path.isfile(path) or os.path.isdir(path)]
+    if not existing:
         return stats
+
+    if any(os.path.isdir(path) for path in existing):
+        return self.sync_members_directory(members)
+
+    winner = max(existing, key=self.get_effective_mtime)
+    winner_mtime = self.get_effective_mtime(winner)
+
+    for member in members:
+        if member == winner:
+            continue
+        if os.path.exists(member):
+            if os.path.samefile(member, winner):
+                if self.verbose:
+                    self._print(
+                        f"Skipping {member}\n  already linked to\n  {winner}",
+                    )
+                stats["skipped"] += 1
+                continue
+            if self.get_effective_mtime(member) >= winner_mtime:
+                if self.verbose:
+                    self._print(
+                        f"Skipping {member}\n  not older than\n  {winner}",
+                    )
+                stats["skipped"] += 1
+                continue
+
+        if self.verbose:
+            self._print(f"Copying\n  {winner}\n  to\n  {member} ...")
+
+        if not self.dry_run:
+            try:
+                if os.path.lexists(member):
+                    utils.delete(member)
+                utils.copy(winner, member)
+            except PermissionError as e:
+                self._print(
+                    f"Error: Unable to copy file from {winner} to "
+                    f"{member} due to permission issue: {e}",
+                )
+                stats["errors"] += 1
+                continue
+
+        if member == backup_path:
+            stats["backed_up"] += 1
+        else:
+            stats["restored"] += 1
+
+    return stats
 ```
 
 Add a temporary stub so the file-only tests run before Task 4 implements it:
@@ -753,7 +765,10 @@ class TestSyncGroupDirectories(unittest.TestCase):
         self._orig_home = os.environ.get("HOME")
         os.environ["HOME"] = self.home
         self.profile = ApplicationProfile(
-            mackup=self.mackup, files=set(), dry_run=False, verbose=False,
+            mackup=self.mackup,
+            files=set(),
+            dry_run=False,
+            verbose=False,
         )
 
     def tearDown(self):
@@ -820,75 +835,77 @@ Expected: FAIL with `NotImplementedError`
 Replace the stub in `src/mackup_ng/application.py`:
 
 ```python
-    def sync_members_directory(
-        self, members: list[str], backup_path: str,
-    ) -> dict[str, int]:
-        """Merge N directory members entry by entry; newest entry wins.
+def sync_members_directory(
+    self,
+    members: list[str],
+    backup_path: str,
+) -> dict[str, int]:
+    """Merge N directory members entry by entry; newest entry wins.
 
-        Every member ends up holding the union of the group's entries. A
-        member that does not exist yet is created, so a backup directory can
-        fan out to fresh destinations.
-        """
-        stats = self.new_stats()
-        present = [path for path in members if os.path.isdir(path)]
-        if not present:
-            return stats
-
-        root_source = max(present, key=os.path.getmtime)
-        if not self.dry_run:
-            for member in members:
-                self.ensure_directory(member, root_source)
-
-        entries: list[str] = []
-        for member in present:
-            for entry in sorted(self.collect_relative_entries(member)):
-                if entry not in entries:
-                    entries.append(entry)
-
-        changed = False
-        for entry in entries:
-            targets = [os.path.join(member, entry) for member in members]
-            holders = [path for path in targets if os.path.exists(path)]
-            if not holders:
-                continue
-            winner = max(holders, key=self.get_effective_mtime)
-            winner_mtime = self.get_effective_mtime(winner)
-            winner_is_dir = os.path.isdir(winner)
-
-            for target in targets:
-                if target == winner:
-                    continue
-                if os.path.exists(target):
-                    if os.path.isdir(target) == winner_is_dir and (
-                        self.get_effective_mtime(target) >= winner_mtime
-                    ):
-                        continue
-                if self.dry_run:
-                    changed = True
-                    continue
-                try:
-                    if winner_is_dir:
-                        if os.path.lexists(target) and not os.path.isdir(target):
-                            utils.delete(target)
-                        self.ensure_directory(target, winner)
-                    else:
-                        if self.verbose:
-                            self._print(f"Copying {entry} to {target}")
-                        self.copy_item(winner, target)
-                except PermissionError as e:
-                    self._print(
-                        f"Error: Unable to copy {winner} to {target} "
-                        f"due to permission issue: {e}",
-                    )
-                    stats["errors"] += 1
-                    continue
-                changed = True
-
-        if changed:
-            stats["synchronized"] += 1
-        else:
-            stats["skipped"] += 1
+    Every member ends up holding the union of the group's entries. A
+    member that does not exist yet is created, so a backup directory can
+    fan out to fresh destinations.
+    """
+    stats = self.new_stats()
+    present = [path for path in members if os.path.isdir(path)]
+    if not present:
         return stats
+
+    root_source = max(present, key=os.path.getmtime)
+    if not self.dry_run:
+        for member in members:
+            self.ensure_directory(member, root_source)
+
+    entries: list[str] = []
+    for member in present:
+        for entry in sorted(self.collect_relative_entries(member)):
+            if entry not in entries:
+                entries.append(entry)
+
+    changed = False
+    for entry in entries:
+        targets = [os.path.join(member, entry) for member in members]
+        holders = [path for path in targets if os.path.exists(path)]
+        if not holders:
+            continue
+        winner = max(holders, key=self.get_effective_mtime)
+        winner_mtime = self.get_effective_mtime(winner)
+        winner_is_dir = os.path.isdir(winner)
+
+        for target in targets:
+            if target == winner:
+                continue
+            if os.path.exists(target):
+                if os.path.isdir(target) == winner_is_dir and (
+                    self.get_effective_mtime(target) >= winner_mtime
+                ):
+                    continue
+            if self.dry_run:
+                changed = True
+                continue
+            try:
+                if winner_is_dir:
+                    if os.path.lexists(target) and not os.path.isdir(target):
+                        utils.delete(target)
+                    self.ensure_directory(target, winner)
+                else:
+                    if self.verbose:
+                        self._print(f"Copying {entry} to {target}")
+                    self.copy_item(winner, target)
+            except PermissionError as e:
+                self._print(
+                    f"Error: Unable to copy {winner} to {target} "
+                    f"due to permission issue: {e}",
+                )
+                stats["errors"] += 1
+                continue
+            changed = True
+
+    if changed:
+        stats["synchronized"] += 1
+    else:
+        stats["skipped"] += 1
+    return stats
 ```
 
 Note `ensure_directory(path, mode_from)` already does `os.makedirs(..., exist_ok=True)` plus mtime mirroring, so it both creates missing members and keeps root mtimes aligned.
@@ -927,74 +944,74 @@ git commit -m "feat: merge fanout directory groups entry by entry"
 Add to `tests/test_cli.py` inside `TestCLI`:
 
 ```python
-    def _write_custom_app(self, app_id, body):
-        path = os.path.join(self.custom_apps_dir, f"{app_id}.toml")
-        with open(path, "w") as handle:
-            handle.write(f'name = "{app_id}"\n{body}')
-        with open(self.config_path, "a") as handle:
-            handle.write(f"{app_id}\n")
+def _write_custom_app(self, app_id, body):
+    path = os.path.join(self.custom_apps_dir, f"{app_id}.toml")
+    with open(path, "w") as handle:
+        handle.write(f'name = "{app_id}"\n{body}')
+    with open(self.config_path, "a") as handle:
+        handle.write(f"{app_id}\n")
 
-    def test_sync_fans_backup_out_to_two_destinations(self):
-        self._write_custom_app(
-            "fanout",
-            '[mapped_files]\n'
-            '".work.rc" = ".shared.rc"\n'
-            '".home.rc" = ".shared.rc"\n',
-        )
-        source = os.path.join(self.mackup_folder, ".shared.rc")
-        os.makedirs(self.mackup_folder, exist_ok=True)
-        with open(source, "w") as handle:
-            handle.write("shared=1\n")
 
-        with patch("sys.argv", ["mackup", "sync"]):
-            main()
+def test_sync_fans_backup_out_to_two_destinations(self):
+    self._write_custom_app(
+        "fanout",
+        '[mapped_files]\n".work.rc" = ".shared.rc"\n".home.rc" = ".shared.rc"\n',
+    )
+    source = os.path.join(self.mackup_folder, ".shared.rc")
+    os.makedirs(self.mackup_folder, exist_ok=True)
+    with open(source, "w") as handle:
+        handle.write("shared=1\n")
 
-        for name in (".work.rc", ".home.rc"):
-            with open(os.path.join(self.test_home, name)) as handle:
-                assert handle.read() == "shared=1\n"
+    with patch("sys.argv", ["mackup", "sync"]):
+        main()
 
-    def test_later_config_overrides_the_destination(self):
-        self._write_custom_app("aaa-base", 'files = [".overridden"]\n')
-        self._write_custom_app(
-            "zzz-override",
-            '[mapped_files]\n".overridden" = ".from-work"\n',
-        )
-        os.makedirs(self.mackup_folder, exist_ok=True)
-        with open(os.path.join(self.mackup_folder, ".from-work"), "w") as handle:
-            handle.write("work\n")
-        with open(os.path.join(self.mackup_folder, ".overridden"), "w") as handle:
-            handle.write("base\n")
+    for name in (".work.rc", ".home.rc"):
+        with open(os.path.join(self.test_home, name)) as handle:
+            assert handle.read() == "shared=1\n"
 
-        with patch("sys.argv", ["mackup", "sync"]):
-            main()
 
-        with open(os.path.join(self.test_home, ".overridden")) as handle:
-            assert handle.read() == "work\n"
-        # the evicted source keeps its content and is left alone
-        with open(os.path.join(self.mackup_folder, ".overridden")) as handle:
-            assert handle.read() == "base\n"
+def test_later_config_overrides_the_destination(self):
+    self._write_custom_app("aaa-base", 'files = [".overridden"]\n')
+    self._write_custom_app(
+        "zzz-override",
+        '[mapped_files]\n".overridden" = ".from-work"\n',
+    )
+    os.makedirs(self.mackup_folder, exist_ok=True)
+    with open(os.path.join(self.mackup_folder, ".from-work"), "w") as handle:
+        handle.write("work\n")
+    with open(os.path.join(self.mackup_folder, ".overridden"), "w") as handle:
+        handle.write("base\n")
 
-    def test_tombstoned_destination_stays_removed_but_group_survives(self):
-        self._write_custom_app(
-            "fanout",
-            '[mapped_files]\n'
-            '".work.rc" = ".shared.rc"\n'
-            '".home.rc" = ".shared.rc"\n',
-        )
-        os.makedirs(self.mackup_folder, exist_ok=True)
-        with open(os.path.join(self.mackup_folder, ".shared.rc"), "w") as handle:
-            handle.write("shared=1\n")
-        with open(
-            os.path.join(self.mackup_folder, ".mackup-deletions"), "w",
-        ) as handle:
-            handle.write(".work.rc\n")
+    with patch("sys.argv", ["mackup", "sync"]):
+        main()
 
-        with patch("sys.argv", ["mackup", "sync"]):
-            main()
+    with open(os.path.join(self.test_home, ".overridden")) as handle:
+        assert handle.read() == "work\n"
+    # the evicted source keeps its content and is left alone
+    with open(os.path.join(self.mackup_folder, ".overridden")) as handle:
+        assert handle.read() == "base\n"
 
-        assert not os.path.exists(os.path.join(self.test_home, ".work.rc"))
-        assert os.path.exists(os.path.join(self.test_home, ".home.rc"))
-        assert os.path.exists(os.path.join(self.mackup_folder, ".shared.rc"))
+
+def test_tombstoned_destination_stays_removed_but_group_survives(self):
+    self._write_custom_app(
+        "fanout",
+        '[mapped_files]\n".work.rc" = ".shared.rc"\n".home.rc" = ".shared.rc"\n',
+    )
+    os.makedirs(self.mackup_folder, exist_ok=True)
+    with open(os.path.join(self.mackup_folder, ".shared.rc"), "w") as handle:
+        handle.write("shared=1\n")
+    with open(
+        os.path.join(self.mackup_folder, ".mackup-deletions"),
+        "w",
+    ) as handle:
+        handle.write(".work.rc\n")
+
+    with patch("sys.argv", ["mackup", "sync"]):
+        main()
+
+    assert not os.path.exists(os.path.join(self.test_home, ".work.rc"))
+    assert os.path.exists(os.path.join(self.test_home, ".home.rc"))
+    assert os.path.exists(os.path.join(self.mackup_folder, ".shared.rc"))
 ```
 
 - [ ] **Step 2: Run the tests to verify they fail**
@@ -1007,46 +1024,50 @@ Expected: FAIL — the fanout test finds only one destination written (whichever
 In `src/mackup_ng/application.py`, add next to the existing deletion helpers (keep `read_deleted_files` / `write_deleted_files` / `record_deleted_file` as they are — `rm` still uses them):
 
 ```python
-    def read_tombstones(self) -> set[str]:
-        """Normalized destinations recorded as explicitly removed."""
-        return self.read_deleted_files()
+def read_tombstones(self) -> set[str]:
+    """Normalized destinations recorded as explicitly removed."""
+    return self.read_deleted_files()
 
-    def apply_tombstones(
-        self, groups: dict[str, list[str]], tombstoned: set[str],
-    ) -> dict[str, int]:
-        """Delete tombstoned destinations, and sources left with no destination.
 
-        ``groups`` is the unfiltered plan: it still contains the tombstoned
-        destinations, so a source can tell whether any live destination
-        remains before it is deleted.
-        """
-        stats = self.new_stats()
-        for source, dests in groups.items():
-            dead = [dest for dest in dests if
-                    self.normalize_relative_path(dest) in tombstoned]
-            if not dead:
+def apply_tombstones(
+    self,
+    groups: dict[str, list[str]],
+    tombstoned: set[str],
+) -> dict[str, int]:
+    """Delete tombstoned destinations, and sources left with no destination.
+
+    ``groups`` is the unfiltered plan: it still contains the tombstoned
+    destinations, so a source can tell whether any live destination
+    remains before it is deleted.
+    """
+    stats = self.new_stats()
+    for source, dests in groups.items():
+        dead = [
+            dest for dest in dests if self.normalize_relative_path(dest) in tombstoned
+        ]
+        if not dead:
+            continue
+        victims = [os.path.join(os.environ["HOME"], dest) for dest in dead]
+        if len(dead) == len(dests):
+            victims.append(os.path.join(self.mackup.mackup_folder, source))
+        for filepath in victims:
+            if not os.path.lexists(filepath):
                 continue
-            victims = [os.path.join(os.environ["HOME"], dest) for dest in dead]
-            if len(dead) == len(dests):
-                victims.append(os.path.join(self.mackup.mackup_folder, source))
-            for filepath in victims:
-                if not os.path.lexists(filepath):
-                    continue
-                if self.verbose:
-                    self._print(f"Deleting\n  {filepath} ...")
-                if self.dry_run:
-                    stats["deleted"] += 1
-                    continue
-                try:
-                    utils.delete(filepath)
-                    stats["deleted"] += 1
-                except PermissionError as e:
-                    self._print(
-                        f"Error: Unable to delete file {filepath} "
-                        f"due to permission issue: {e}",
-                    )
-                    stats["errors"] += 1
-        return stats
+            if self.verbose:
+                self._print(f"Deleting\n  {filepath} ...")
+            if self.dry_run:
+                stats["deleted"] += 1
+                continue
+            try:
+                utils.delete(filepath)
+                stats["deleted"] += 1
+            except PermissionError as e:
+                self._print(
+                    f"Error: Unable to delete file {filepath} "
+                    f"due to permission issue: {e}",
+                )
+                stats["errors"] += 1
+    return stats
 ```
 
 - [ ] **Step 4: Build the plan once in `main.py`**
@@ -1075,51 +1096,51 @@ def build_sync_plan(
 Then rewrite the `sync` branch body between `to_backup = mckp.get_apps_to_backup()` and the dconf restore call:
 
 ```python
-        to_backup = mckp.get_apps_to_backup()
-        pairs, evictions = build_sync_plan(app_db, to_backup)
-        all_groups, orphans = mapping.group_by_source(pairs, evictions)
-        owners = mapping.group_owners(pairs)
+to_backup = mckp.get_apps_to_backup()
+pairs, evictions = build_sync_plan(app_db, to_backup)
+all_groups, orphans = mapping.group_by_source(pairs, evictions)
+owners = mapping.group_owners(pairs)
 
-        planner = ApplicationProfile(mckp, set(), dry_run, verbose)
-        tombstoned = planner.read_tombstones()
-        deletion_stats = planner.apply_tombstones(all_groups, tombstoned)
+planner = ApplicationProfile(mckp, set(), dry_run, verbose)
+tombstoned = planner.read_tombstones()
+deletion_stats = planner.apply_tombstones(all_groups, tombstoned)
 
-        live_pairs = [
-            pair for pair in pairs
-            if ApplicationProfile.normalize_relative_path(pair.dest)
-            not in tombstoned
-        ]
-        groups, _ = mapping.group_by_source(live_pairs)
-        groups_by_owner: dict[str, list[tuple[str, list[str]]]] = {}
-        for source, dests in groups.items():
-            groups_by_owner.setdefault(owners[source], []).append((source, dests))
+live_pairs = [
+    pair
+    for pair in pairs
+    if ApplicationProfile.normalize_relative_path(pair.dest) not in tombstoned
+]
+groups, _ = mapping.group_by_source(live_pairs)
+groups_by_owner: dict[str, list[tuple[str, list[str]]]] = {}
+for source, dests in groups.items():
+    groups_by_owner.setdefault(owners[source], []).append((source, dests))
 
-        for app_name in sorted(app_db.get_app_names()):
-            env_files = app_db.get_env_files(app_name)
-            cfg_blocks = app_db.get_blocks(app_name)
-            pretty_name = app_db.get_name(app_name)
+for app_name in sorted(app_db.get_app_names()):
+    env_files = app_db.get_env_files(app_name)
+    cfg_blocks = app_db.get_blocks(app_name)
+    pretty_name = app_db.get_name(app_name)
 
-            tally = blocks.apply_blocks(cfg_blocks, "pre", env_files, dry_run)
+    tally = blocks.apply_blocks(cfg_blocks, "pre", env_files, dry_run)
 
-            stats: dict[str, int] | None = None
-            owned = groups_by_owner.get(app_name)
-            if owned:
-                app = ApplicationProfile(mckp, set(), dry_run, verbose)
-                print_app_header(app_name, pretty_name)
-                stats = ApplicationProfile.new_stats()
-                for source, dests in owned:
-                    for key, value in app.sync_group(source, dests).items():
-                        stats[key] += value
+    stats: dict[str, int] | None = None
+    owned = groups_by_owner.get(app_name)
+    if owned:
+        app = ApplicationProfile(mckp, set(), dry_run, verbose)
+        print_app_header(app_name, pretty_name)
+        stats = ApplicationProfile.new_stats()
+        for source, dests in owned:
+            for key, value in app.sync_group(source, dests).items():
+                stats[key] += value
 
-            tally += blocks.apply_blocks(cfg_blocks, "post", env_files, dry_run)
-            report_config(pretty_name, stats, tally)
+    tally += blocks.apply_blocks(cfg_blocks, "post", env_files, dry_run)
+    report_config(pretty_name, stats, tally)
 
-        if deletion_stats["deleted"]:
-            print(
-                utils.colorize_message(
-                    f"Deleted {deletion_stats['deleted']} tombstoned path(s)",
-                ),
-            )
+if deletion_stats["deleted"]:
+    print(
+        utils.colorize_message(
+            f"Deleted {deletion_stats['deleted']} tombstoned path(s)",
+        ),
+    )
 ```
 
 - [ ] **Step 5: Run the tests to verify they pass**
@@ -1154,41 +1175,48 @@ git commit -m "feat: resolve one global sync plan with fanout groups"
 Add to `TestCLI` in `tests/test_cli.py`:
 
 ```python
-    def test_verbose_sync_reports_evictions_and_orphans(self):
-        self._write_custom_app("aaa-base", 'files = [".overridden"]\n')
-        self._write_custom_app(
-            "zzz-override",
-            '[mapped_files]\n".overridden" = ".from-work"\n',
-        )
-        os.makedirs(self.mackup_folder, exist_ok=True)
-        with open(os.path.join(self.mackup_folder, ".from-work"), "w") as handle:
-            handle.write("work\n")
+def test_verbose_sync_reports_evictions_and_orphans(self):
+    self._write_custom_app("aaa-base", 'files = [".overridden"]\n')
+    self._write_custom_app(
+        "zzz-override",
+        '[mapped_files]\n".overridden" = ".from-work"\n',
+    )
+    os.makedirs(self.mackup_folder, exist_ok=True)
+    with open(os.path.join(self.mackup_folder, ".from-work"), "w") as handle:
+        handle.write("work\n")
 
-        buffer = io.StringIO()
-        with patch("sys.stdout", buffer), patch(
-            "sys.argv", ["mackup", "-v", "sync"],
-        ):
-            main()
-        output = buffer.getvalue()
-        assert "evicted by zz" in output or "evicted by" in output
-        assert ".overridden" in output
-        assert "no destination" in output
+    buffer = io.StringIO()
+    with (
+        patch("sys.stdout", buffer),
+        patch(
+            "sys.argv",
+            ["mackup", "-v", "sync"],
+        ),
+    ):
+        main()
+    output = buffer.getvalue()
+    assert "evicted by zz" in output or "evicted by" in output
+    assert ".overridden" in output
+    assert "no destination" in output
 
-    def test_show_reports_fanout_destinations(self):
-        self._write_custom_app(
-            "fanout",
-            '[mapped_files]\n'
-            '".work.rc" = ".shared.rc"\n'
-            '".home.rc" = ".shared.rc"\n',
-        )
-        buffer = io.StringIO()
-        with patch("sys.stdout", buffer), patch(
-            "sys.argv", ["mackup", "show", "fanout"],
-        ):
-            main()
-        output = buffer.getvalue()
-        assert ".work.rc <- .shared.rc" in output
-        assert "fanout: 2 destinations" in output
+
+def test_show_reports_fanout_destinations(self):
+    self._write_custom_app(
+        "fanout",
+        '[mapped_files]\n".work.rc" = ".shared.rc"\n".home.rc" = ".shared.rc"\n',
+    )
+    buffer = io.StringIO()
+    with (
+        patch("sys.stdout", buffer),
+        patch(
+            "sys.argv",
+            ["mackup", "show", "fanout"],
+        ),
+    ):
+        main()
+    output = buffer.getvalue()
+    assert ".work.rc <- .shared.rc" in output
+    assert "fanout: 2 destinations" in output
 ```
 
 - [ ] **Step 2: Run the tests to verify they fail**
@@ -1223,29 +1251,28 @@ In the `sync` branch, right after `owners = mapping.group_owners(pairs)`:
 Replace the `Configuration files:` part of the `show` branch with a pair listing that marks fanout and lost entries:
 
 ```python
-        mappings = app_db.get_file_mappings(requested_app_name)
-        if mappings:
-            pairs, _ = build_sync_plan(app_db, set(app_db.get_app_names()))
-            winners = {pair.dest: pair for pair in pairs}
-            fanout = Counter(pair.source for pair in pairs)
-            print(bold("Configuration files:"))
-            for local, backup in mappings:
-                winner = winners.get(local)
-                if winner is None or winner.source != backup:
-                    lost = utils.style_text(
-                        f"(overridden by {winner.owner_app})" if winner else
-                        "(overridden)",
-                        color=utils.AnsiColor.GRAY,
-                    )
-                    print(f"{dash} {local} <- {backup} {lost}")
-                    continue
-                extra = ""
-                if fanout[backup] > 1:
-                    extra = " " + utils.style_text(
-                        f"(fanout: {fanout[backup]} destinations)",
-                        color=utils.AnsiColor.GRAY,
-                    )
-                print(f"{dash} {local} <- {backup}{extra}")
+mappings = app_db.get_file_mappings(requested_app_name)
+if mappings:
+    pairs, _ = build_sync_plan(app_db, set(app_db.get_app_names()))
+    winners = {pair.dest: pair for pair in pairs}
+    fanout = Counter(pair.source for pair in pairs)
+    print(bold("Configuration files:"))
+    for local, backup in mappings:
+        winner = winners.get(local)
+        if winner is None or winner.source != backup:
+            lost = utils.style_text(
+                f"(overridden by {winner.owner_app})" if winner else "(overridden)",
+                color=utils.AnsiColor.GRAY,
+            )
+            print(f"{dash} {local} <- {backup} {lost}")
+            continue
+        extra = ""
+        if fanout[backup] > 1:
+            extra = " " + utils.style_text(
+                f"(fanout: {fanout[backup]} destinations)",
+                color=utils.AnsiColor.GRAY,
+            )
+        print(f"{dash} {local} <- {backup}{extra}")
 ```
 
 Add the import at the top of `main.py`:
@@ -1343,8 +1370,12 @@ class TestRemoveDestination(unittest.TestCase):
         with patch("sys.argv", ["mackup", "sync"]):
             main()
         buffer = io.StringIO()
-        with patch("sys.stdout", buffer), patch(
-            "sys.argv", ["mackup", "rm", ".work.rc"],
+        with (
+            patch("sys.stdout", buffer),
+            patch(
+                "sys.argv",
+                ["mackup", "rm", ".work.rc"],
+            ),
         ):
             main()
 
@@ -1382,43 +1413,45 @@ Expected: FAIL — `remove_file` deletes the shared backup source, so the siblin
 In `src/mackup_ng/application.py`, next to `remove_file`:
 
 ```python
-    def remove_destination(
-        self, source: str, dest: str, siblings: int,
-    ) -> dict[str, int]:
-        """Remove one destination; drop the source only when nothing else uses it.
+def remove_destination(
+    self,
+    source: str,
+    dest: str,
+    siblings: int,
+) -> dict[str, int]:
+    """Remove one destination; drop the source only when nothing else uses it.
 
-        ``siblings`` is the number of other live destinations fed by ``source``.
-        """
-        stats = self.new_stats()
-        home_filepath = os.path.join(os.environ["HOME"], dest)
-        targets = [home_filepath]
-        if siblings == 0:
-            targets.append(os.path.join(self.mackup.mackup_folder, source))
+    ``siblings`` is the number of other live destinations fed by ``source``.
+    """
+    stats = self.new_stats()
+    home_filepath = os.path.join(os.environ["HOME"], dest)
+    targets = [home_filepath]
+    if siblings == 0:
+        targets.append(os.path.join(self.mackup.mackup_folder, source))
 
-        if self.verbose:
-            for filepath in targets:
-                self._print(f"Deleting\n  {filepath} ...")
-
-        if self.dry_run:
-            stats["deleted"] += 1
-            return stats
-
+    if self.verbose:
         for filepath in targets:
-            if not os.path.lexists(filepath):
-                continue
-            try:
-                utils.delete(filepath)
-            except PermissionError as e:
-                self._print(
-                    f"Error: Unable to delete file {filepath} "
-                    f"due to permission issue: {e}",
-                )
-                stats["errors"] += 1
+            self._print(f"Deleting\n  {filepath} ...")
 
-        if stats["errors"] == 0:
-            self.record_deleted_file(dest)
-            stats["deleted"] += 1
+    if self.dry_run:
+        stats["deleted"] += 1
         return stats
+
+    for filepath in targets:
+        if not os.path.lexists(filepath):
+            continue
+        try:
+            utils.delete(filepath)
+        except PermissionError as e:
+            self._print(
+                f"Error: Unable to delete file {filepath} due to permission issue: {e}",
+            )
+            stats["errors"] += 1
+
+    if stats["errors"] == 0:
+        self.record_deleted_file(dest)
+        stats["deleted"] += 1
+    return stats
 ```
 
 - [ ] **Step 4: Rewrite the `rm` branch to use the resolved plan**
@@ -1439,32 +1472,32 @@ In `src/mackup_ng/main.py`, replace the `managed_paths` construction with plan-d
 Keep `get_requested_path_candidates`, `escapes_home` and the descendant lookup exactly as they are — they already work on `(local, backup)` tuples. Replace the removal call at the end of the loop:
 
 ```python
-            matching_app_name, matching_mapping = match
-            local_filename, backup_filename = matching_mapping
-            pretty_name = app_db.get_name(matching_app_name)
-            siblings = [
-                dest for dest in rm_groups.get(backup_filename, [])
-                if dest != local_filename
-            ]
-            app = ApplicationProfile(mckp, set(), dry_run, verbose)
-            print_app_header(matching_app_name, pretty_name)
-            app_stats = app.remove_destination(
-                backup_filename, local_filename, len(siblings),
-            )
-            rm_action = get_action_label(app_stats)
-            if rm_action is not None:
-                print(
-                    utils.colorize_message(
-                        f"{rm_action} {local_filename} ({pretty_name})",
-                    ),
-                )
-            if siblings:
-                print(
-                    utils.colorize_message(
-                        f"{backup_filename} still feeds "
-                        f"{len(siblings)} destination(s)",
-                    ),
-                )
+matching_app_name, matching_mapping = match
+local_filename, backup_filename = matching_mapping
+pretty_name = app_db.get_name(matching_app_name)
+siblings = [
+    dest for dest in rm_groups.get(backup_filename, []) if dest != local_filename
+]
+app = ApplicationProfile(mckp, set(), dry_run, verbose)
+print_app_header(matching_app_name, pretty_name)
+app_stats = app.remove_destination(
+    backup_filename,
+    local_filename,
+    len(siblings),
+)
+rm_action = get_action_label(app_stats)
+if rm_action is not None:
+    print(
+        utils.colorize_message(
+            f"{rm_action} {local_filename} ({pretty_name})",
+        ),
+    )
+if siblings:
+    print(
+        utils.colorize_message(
+            f"{backup_filename} still feeds {len(siblings)} destination(s)",
+        ),
+    )
 ```
 
 Note: for a file *inside* a managed directory the descendant lookup produces a synthetic pair that is not in `rm_groups`, so `siblings` is empty and both sides are deleted — the current behavior, which the existing `tests/test_cli.py` nested-removal test covers.

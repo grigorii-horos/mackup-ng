@@ -229,8 +229,7 @@ def main() -> None:
         )
         lines.append("")
         lines.append(
-            f"{bold(str(len(synced)))} applications supported in "
-            f"mackup-ng v{VERSION}",
+            f"{bold(str(len(synced)))} applications supported in mackup-ng v{VERSION}",
         )
         print("\n".join(lines))
 
@@ -244,14 +243,15 @@ def main() -> None:
             die(f"Unsupported application: {requested_app_name}")
         dash = utils.style_text(" -", color=utils.AnsiColor.GRAY)
         pretty = utils.style_text(
-            app_db.get_name(requested_app_name), color=utils.AnsiColor.CYAN, bold=True,
+            app_db.get_name(requested_app_name),
+            color=utils.AnsiColor.CYAN,
+            bold=True,
         )
         print(f"{bold('Name:')} {pretty}")
         if not app_db.config_enabled(requested_app_name):
             failing_conds = app_db.get_failing_conditions(requested_app_name)
             unmet = ", ".join(
-                f"{key}={value}"
-                for key, value in sorted(failing_conds.items())
+                f"{key}={value}" for key, value in sorted(failing_conds.items())
             )
             print(
                 utils.style_text(
@@ -273,7 +273,8 @@ def main() -> None:
                     # This config is excluded from sync, so the plan holds no
                     # entry for it — there is nothing to override it either.
                     skipped = utils.style_text(
-                        "(not selected for sync)", color=utils.AnsiColor.GRAY,
+                        "(not selected for sync)",
+                        color=utils.AnsiColor.GRAY,
                     )
                     print(f"{dash} {local} <- {backup} {skipped}")
                     continue
@@ -296,10 +297,12 @@ def main() -> None:
             print(bold("Action blocks:"))
             for b in cfg_blocks:
                 phase = utils.style_text(
-                    b.get("phase", "post"), color=utils.AnsiColor.GRAY,
+                    b.get("phase", "post"),
+                    color=utils.AnsiColor.GRAY,
                 )
                 action = utils.style_text(
-                    str(blocks.block_action(b)), color=utils.AnsiColor.CYAN,
+                    str(blocks.block_action(b)),
+                    color=utils.AnsiColor.CYAN,
                 )
                 print(f"{dash} {phase}: {action}")
 
@@ -309,7 +312,11 @@ def main() -> None:
         info_pairs, _ = build_sync_plan(app_db, mckp.get_apps_to_backup())
         info_tombstones = ApplicationProfile(mckp, dry_run, verbose).read_tombstones()
         info_ctx = info.build_context(
-            mckp, app_db, info_pairs, info_tombstones, synclog.read(),
+            mckp,
+            app_db,
+            info_pairs,
+            info_tombstones,
+            synclog.read(),
         )
         unmanaged = False
         for index, requested_path in enumerate(args["<path>"]):
@@ -384,9 +391,9 @@ def main() -> None:
         deletion_stats = planner.apply_tombstones(all_groups, tombstoned)
 
         live_pairs = [
-            pair for pair in pairs
-            if ApplicationProfile.normalize_relative_path(pair.dest)
-            not in tombstoned
+            pair
+            for pair in pairs
+            if ApplicationProfile.normalize_relative_path(pair.dest) not in tombstoned
         ]
         groups, _ = mapping.group_by_source(live_pairs)
         # A group is synced in the slot of the config that won its last live
@@ -457,8 +464,7 @@ def main() -> None:
             # path is still sitting on disk.
             print(
                 utils.colorize_message(
-                    f"Failed to delete {deletion_stats['errors']} "
-                    "tombstoned path(s)",
+                    f"Failed to delete {deletion_stats['errors']} tombstoned path(s)",
                 ),
             )
 
@@ -522,9 +528,11 @@ def main() -> None:
             tally += blocks.apply_blocks(cfg_blocks, "post", env_files, dry_run)
             phrase = blocks.summarize(tally)
             if phrase:
-                print(utils.colorize_message(
-                    f"Applied {app_db.get_name(app_name)} ({phrase})",
-                ))
+                print(
+                    utils.colorize_message(
+                        f"Applied {app_db.get_name(app_name)} ({phrase})",
+                    ),
+                )
 
     # mackup rm <path>...
     elif args["rm"]:
@@ -555,7 +563,10 @@ def main() -> None:
                     backup_root,
                 ) in managed_paths.values():
                     relative = paths.managed_descendant_relative(
-                        mckp.mackup_folder, path, local_root, backup_root,
+                        mckp.mackup_folder,
+                        path,
+                        local_root,
+                        backup_root,
                     )
                     if relative is not None:
                         return app_name, local_root, backup_root, relative
@@ -595,7 +606,8 @@ def main() -> None:
             local_filename, backup_filename = matching_mapping
             pretty_name = app_db.get_name(matching_app_name)
             live_pairs = [
-                pair for pair in rm_pairs
+                pair
+                for pair in rm_pairs
                 if ApplicationProfile.normalize_relative_path(pair.dest)
                 not in tombstoned
             ]
@@ -620,12 +632,15 @@ def main() -> None:
                     local_filename,
                 )
                 siblings = [
-                    dest for dest in rm_groups.get(backup_filename, [])
+                    dest
+                    for dest in rm_groups.get(backup_filename, [])
                     if ApplicationProfile.normalize_relative_path(dest)
                     != normalized_local
                 ]
                 app_stats = app.remove_destination(
-                    backup_filename, local_filename, len(siblings),
+                    backup_filename,
+                    local_filename,
+                    len(siblings),
                 )
             if app_stats["errors"] == 0 and app_stats["deleted"]:
                 tombstoned.add(
@@ -641,7 +656,6 @@ def main() -> None:
             if siblings:
                 print(
                     utils.colorize_message(
-                        f"{backup_filename} still feeds "
-                        f"{len(siblings)} destination(s)",
+                        f"{backup_filename} still feeds {len(siblings)} destination(s)",
                     ),
                 )

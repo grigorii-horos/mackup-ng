@@ -1,4 +1,5 @@
 """Tests for the --config-file command line option."""
+
 import os
 import unittest
 

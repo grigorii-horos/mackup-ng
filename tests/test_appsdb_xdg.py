@@ -34,6 +34,7 @@ class TestApplicationsDatabaseXDG(unittest.TestCase):
             os.environ.pop("XDG_CONFIG_HOME", None)
         else:
             os.environ["XDG_CONFIG_HOME"] = self._original_xdg_config_home
+
     def test_legacy_custom_apps_dir(self):
         """Test that legacy ~/.mackup/ directory is found."""
         # Don't set XDG_CONFIG_HOME, only legacy should be found
@@ -199,22 +200,28 @@ class TestApplicationsDatabaseXDG(unittest.TestCase):
     def test_platform_selector_mapping_uses_fallback_as_backup_path(self):
         """Unkeyed fallback acts as canonical backup path for all platforms."""
         with patch("mackup_ng.appsdb.platform.system", return_value="Darwin"):
-            local_path, backup_path = ApplicationsDatabase._resolve_platform_selectors_with_backup(
-                "[mac:a/b/c,linux:x/y/z,m/n/o]",
+            local_path, backup_path = (
+                ApplicationsDatabase._resolve_platform_selectors_with_backup(
+                    "[mac:a/b/c,linux:x/y/z,m/n/o]",
+                )
             )
             assert local_path == "a/b/c"
             assert backup_path == "m/n/o"
 
         with patch("mackup_ng.appsdb.platform.system", return_value="Linux"):
-            local_path, backup_path = ApplicationsDatabase._resolve_platform_selectors_with_backup(
-                "[mac:a/b/c,linux:x/y/z,m/n/o]",
+            local_path, backup_path = (
+                ApplicationsDatabase._resolve_platform_selectors_with_backup(
+                    "[mac:a/b/c,linux:x/y/z,m/n/o]",
+                )
             )
             assert local_path == "x/y/z"
             assert backup_path == "m/n/o"
 
         with patch("mackup_ng.appsdb.platform.system", return_value="Linux"):
-            local_path, backup_path = ApplicationsDatabase._resolve_platform_selectors_with_backup(
-                "[mac:a/b/c,m/n/o]",
+            local_path, backup_path = (
+                ApplicationsDatabase._resolve_platform_selectors_with_backup(
+                    "[mac:a/b/c,m/n/o]",
+                )
             )
             assert local_path == "m/n/o"
             assert backup_path == "m/n/o"
@@ -229,7 +236,9 @@ class TestApplicationsDatabaseXDG(unittest.TestCase):
                 == ".config/app/config.json"
             )
             assert (
-                ApplicationsDatabase._expand_builtin_path_vars("${MACKUP_XDG_CACHE}/tool/cache.db")
+                ApplicationsDatabase._expand_builtin_path_vars(
+                    "${MACKUP_XDG_CACHE}/tool/cache.db",
+                )
                 == ".cache/tool/cache.db"
             )
 
@@ -241,7 +250,9 @@ class TestApplicationsDatabaseXDG(unittest.TestCase):
                 == "Library/Application Support/app/config.json"
             )
             assert (
-                ApplicationsDatabase._expand_builtin_path_vars("${MACKUP_XDG_CACHE}/tool/cache.db")
+                ApplicationsDatabase._expand_builtin_path_vars(
+                    "${MACKUP_XDG_CACHE}/tool/cache.db",
+                )
                 == "Library/Caches/tool/cache.db"
             )
 
@@ -253,7 +264,9 @@ class TestApplicationsDatabaseXDG(unittest.TestCase):
                 == "AppData/Roaming/app/config.json"
             )
             assert (
-                ApplicationsDatabase._expand_builtin_path_vars("${MACKUP_XDG_DATA}/tool/data.db")
+                ApplicationsDatabase._expand_builtin_path_vars(
+                    "${MACKUP_XDG_DATA}/tool/data.db",
+                )
                 == "AppData/Local/tool/data.db"
             )
 
@@ -262,13 +275,15 @@ class TestApplicationsDatabaseXDG(unittest.TestCase):
         with patch("mackup_ng.appsdb.platform.system", return_value="Darwin"):
             assert (
                 ApplicationsDatabase._expand_builtin_path_vars(
-                    "${MACKUP_XDG_CONFIG}/app/config.json", for_backup=True,
+                    "${MACKUP_XDG_CONFIG}/app/config.json",
+                    for_backup=True,
                 )
                 == ".config/app/config.json"
             )
             assert (
                 ApplicationsDatabase._expand_builtin_path_vars(
-                    "${MACKUP_XDG_DATA}/app/data.json", for_backup=True,
+                    "${MACKUP_XDG_DATA}/app/data.json",
+                    for_backup=True,
                 )
                 == ".local/share/app/data.json"
             )
@@ -370,7 +385,9 @@ class TestApplicationsDatabaseXDG(unittest.TestCase):
                 os.environ["XDG_CONFIG_HOME"] = old_xdg
             shutil.rmtree(temp_home)
 
-    def test_applications_database_supports_builtin_vars_with_selectors_and_braces(self):
+    def test_applications_database_supports_builtin_vars_with_selectors_and_braces(
+        self,
+    ):
         """Built-in vars should work after selectors and before brace expansion."""
         temp_home = tempfile.mkdtemp()
         temp_xdg = os.path.join(temp_home, ".config")

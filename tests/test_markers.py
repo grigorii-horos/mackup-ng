@@ -45,7 +45,12 @@ class TestMarkers(unittest.TestCase):
         """set_marker writes into $XDG_STATE_HOME/mackup/markers, not ~/.mackup."""
         hooks.set_marker("eink")
         flag = os.path.join(
-            self.home, ".local", "state", "mackup", "markers", "eink",
+            self.home,
+            ".local",
+            "state",
+            "mackup",
+            "markers",
+            "eink",
         )
         assert os.path.isfile(flag)
         assert hooks.has_marker("eink")

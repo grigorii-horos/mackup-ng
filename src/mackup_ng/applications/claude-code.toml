@@ -1,0 +1,4 @@
+name = "Claude Code"
+files = [
+    ".claude/{agents,CLAUDE.md,commands,hooks,keybindings.json,settings.json,skills,statusline.sh}",
+]

@@ -186,6 +186,8 @@ def svc_stop(svc: str) -> None:
 def svc_start(svc: str) -> None:
     mgr = service_manager()
     if mgr == "systemctl":
+        # Clear a previous start-limit/failed state, else `start` is refused.
+        _sysd("reset-failed", svc)
         _sysd("start", svc)
     elif mgr == "brew":
         _brew("start", svc)
@@ -435,11 +437,22 @@ def block_action(block: dict) -> str | None:
     return None
 
 
-def apply_block(block: dict, env_files: list[str], dry_run: bool) -> tuple[str, int]:
+def apply_block(
+    block: dict,
+    env_files: list[str],
+    dry_run: bool,
+    pending_starts: set[str] | None = None,
+) -> tuple[str, int]:
     """Apply one block's action; return (action, change_count).
 
     Base keys (phase, conditions, restart_service) live on ``block``; the action
     parameters live in the ``block[<action>]`` sub-table.
+
+    ``restart_service`` brackets the action with a stop/start. When
+    ``pending_starts`` is given, the start is deferred: the service name is
+    recorded there and the caller starts it once after the last block. Starting
+    per block would bounce the unit once per block and trip systemd's
+    StartLimitBurst, leaving the service dead (Result: start-limit-hit).
     """
     action = block_action(block)
     if action is None:
@@ -449,10 +462,12 @@ def apply_block(block: dict, env_files: list[str], dry_run: bool) -> tuple[str, 
     was_active = svc_is_active(svc) if svc else False
     if was_active and svc and not dry_run:
         svc_stop(svc)
+        if pending_starts is not None:
+            pending_starts.add(svc)
     try:
         count = _HANDLERS[action](block[action], env_files, dry_run)
     finally:
-        if was_active and svc and not dry_run:
+        if was_active and svc and not dry_run and pending_starts is None:
             svc_start(svc)
     return (action, count)
 
@@ -485,12 +500,17 @@ def apply_blocks(
 ) -> Counter:
     """Apply matching-phase blocks in order; return a Counter action -> changes."""
     tally: Counter = Counter()
-    for block in blocks:
-        if block.get("phase", "post") != phase:
-            continue
-        if not conditions.block_passes(block):
-            continue
-        action, count = apply_block(block, env_files, dry_run)
-        if action and count:
-            tally[action] += count
+    pending_starts: set[str] = set()
+    try:
+        for block in blocks:
+            if block.get("phase", "post") != phase:
+                continue
+            if not conditions.block_passes(block):
+                continue
+            action, count = apply_block(block, env_files, dry_run, pending_starts)
+            if action and count:
+                tally[action] += count
+    finally:
+        for svc in sorted(pending_starts):
+            svc_start(svc)
     return tally

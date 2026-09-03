@@ -3,6 +3,7 @@
 import os
 import tempfile
 import unittest
+from unittest import mock
 
 from mackup_ng import blocks
 
@@ -128,6 +129,39 @@ class TestBlocks(unittest.TestCase):
         )
         assert not os.path.exists(out)
 
+    def test_restart_service_coalesced_across_blocks(self):
+        """Many blocks touching one service must yield a single stop/start pair.
+
+        Bouncing the unit per block trips systemd's StartLimitBurst and leaves
+        the service dead (Result: start-limit-hit).
+        """
+        state = {"running": True}
+        stops: list[str] = []
+        starts: list[str] = []
+
+        def fake_is_active(svc):
+            return bool(svc) and state["running"]
+
+        def fake_stop(svc):
+            state["running"] = False
+            stops.append(svc)
+
+        def fake_start(svc):
+            state["running"] = True
+            starts.append(svc)
+
+        run_blocks = [
+            {"restart_service": "syncthing", "run": {"commands": ["true"]}}
+            for _ in range(6)
+        ]
+        with mock.patch.object(blocks, "svc_is_active", fake_is_active), \
+             mock.patch.object(blocks, "svc_stop", fake_stop), \
+             mock.patch.object(blocks, "svc_start", fake_start):
+            blocks.apply_blocks(run_blocks, phase="post", env_files=[], dry_run=False)
+
+        assert stops == ["syncthing"]
+        assert starts == ["syncthing"]
+        assert state["running"] is True
 
 if __name__ == "__main__":
     unittest.main()

@@ -199,7 +199,7 @@ def os_kind() -> str:
         return "macos"
     if system == PLATFORM_WINDOWS:
         return "windows"
-    if system == PLATFORM_LINUX:
+    if system in (PLATFORM_LINUX, "Android"):
         prefix = os.environ.get("PREFIX", "")
         if "com.termux" in prefix or os.environ.get("ANDROID_ROOT"):
             return "android"

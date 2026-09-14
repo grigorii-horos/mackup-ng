@@ -109,11 +109,24 @@ def test_not_os_accepts_a_list(monkeypatch):
     )
 
 
-def test_not_os_keeps_android_where_os_list_would_drop_it(monkeypatch):
-    """The reason not_os exists: os = ["linux", "windows"] silently excludes
-    android, which os_kind() reports separately."""
-    monkeypatch.setattr(hooks, "os_kind", lambda: "android")
+def test_not_os_respects_value_not_hardcoded_list(monkeypatch):
+    """Verify not_os uses its value argument, not a hardcoded OS list.
 
+    Catches mutations that hardcode not_os to check a fixed list like
+    `["linux", "windows"]` instead of using the passed value. When
+    os_kind()="windows" and not_os="macos", the correct implementation
+    should return True (windows is not macos), but such a mutation would
+    return False.
+
+    Also documents why not_os was needed: os=["linux", "windows"] silently
+    excludes android, but not_os="macos" does not.
+    """
+    # Check that not_os uses its value argument
+    monkeypatch.setattr(hooks, "os_kind", lambda: "windows")
+    assert conditions.block_passes({"when": {"not_os": "macos"}})
+
+    # Document why not_os was needed
+    monkeypatch.setattr(hooks, "os_kind", lambda: "android")
     assert conditions.block_passes({"when": {"not_os": "macos"}})
     assert not conditions.block_passes({"when": {"os": ["linux", "windows"]}})
 

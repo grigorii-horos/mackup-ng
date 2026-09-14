@@ -668,6 +668,55 @@ class TestCLI(unittest.TestCase):
         assert "files only" in output
         assert "None" not in output
 
+    def test_apply_dry_run_does_not_warn_about_a_passing_files_only_block(self):
+        """A [[block]] with only `files` must never reach the action executor,
+        so it must never trigger blocks.py's 'no (single) action' warning.
+        """
+        self._write_custom_app(
+            "files-only-app",
+            'files = [".top"]\n\n[[block]]\nfiles = [".other"]\n',
+        )
+        buffer = io.StringIO()
+        with (
+            patch("sys.stdout", buffer),
+            patch("sys.argv", ["mackup", "apply", "-n"]),
+        ):
+            main()
+        assert "no (single) action" not in buffer.getvalue()
+
+    def test_show_marks_unit_lines_when_the_whole_config_is_gated_out(self):
+        """A config-level [when] failure must qualify every unit line the same
+        way the config header already is, not just leave a bare slot line.
+        """
+        with open(
+            os.path.join(self.custom_apps_dir, "termux.toml"), "w",
+        ) as handle:
+            handle.write(
+                'name = "Termux"\n'
+                "[when]\n"
+                'os = ["definitely-not-this-os"]\n'
+                "\n"
+                "[[block]]\n"
+                "[block.chmod]\n"
+                'path = "~/.termux"\n'
+                'mode = "700"\n',
+            )
+        buffer = io.StringIO()
+        with (
+            patch("sys.stdout", buffer),
+            patch("sys.argv", ["mackup", "show", "termux"]),
+        ):
+            main()
+        output = buffer.getvalue()
+
+        assert "conditions not met on this machine" in output
+        lines = [line for line in output.splitlines() if "slot" in line]
+        assert lines, "expected a unit line in the Units: section"
+        for line in lines:
+            assert "conditions not met" in line, (
+                f"unit line lacks a config-level qualifier: {line!r}"
+            )
+
     def test_sync_reports_skipped_for_config_fully_evicted(self):
         """A selected config whose only pair loses its destination still reports."""
         self._write_custom_app("aaa-base", 'files = [".overridden"]\n')

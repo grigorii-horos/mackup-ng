@@ -488,12 +488,28 @@ class ApplicationsDatabase:
                     return "during"
                 return str(phase)
 
-            raw_blocks = [b for b in data.get("block", []) if isinstance(b, dict)]
+            raw_blocks: list[dict] = []
+            for candidate in data.get("block", []):
+                if not isinstance(candidate, dict):
+                    continue
+                if "files" not in candidate and blocks.block_action(candidate) is None:
+                    print(
+                        utils.colorize_message(
+                            f"Warning: {app_name}: block has neither files nor "
+                            "an action, skipped",
+                        ),
+                    )
+                    continue
+                raw_blocks.append(candidate)
+
+            # Compute each block's phase once (not once per bucket below), so
+            # an unrecognized phase value warns a single time per block.
+            phased_blocks = [(b, _phase_of(b)) for b in raw_blocks]
             ordered: list[dict | None] = [
-                *[b for b in raw_blocks if _phase_of(b) == "pre"],
+                *[b for b, phase in phased_blocks if phase == "pre"],
                 None,  # placeholder for the top-level unit
-                *[b for b in raw_blocks if _phase_of(b) == "during"],
-                *[b for b in raw_blocks if _phase_of(b) == "post"],
+                *[b for b, phase in phased_blocks if phase == "during"],
+                *[b for b, phase in phased_blocks if phase == "post"],
             ]
 
             # Names ignored inside this config's paths, on top of the global
@@ -517,6 +533,11 @@ class ApplicationsDatabase:
             # Add the configuration files to sync
             config_files: list[str] = []
             config_mappings: list[tuple[str, str, int]] = []
+            # (local, backup) pairs already claimed by an earlier unit in this
+            # config, so a path declared by two units is de-duplicated across
+            # the whole config, not just within the unit that declares it —
+            # the first unit to declare a path keeps it.
+            config_pairs_seen: set[tuple[str, str]] = set()
             self.apps[app_name]["configuration_files"] = config_files
             self.app_file_mappings[app_name] = config_mappings
 
@@ -537,7 +558,14 @@ class ApplicationsDatabase:
             units: list[Unit] = []
             for slot, entry in enumerate(ordered):
                 is_top = entry is None
-                block = top_action if is_top else entry
+                # A non-top unit's block is only set when it actually carries
+                # an action — Unit.block means "this unit has an action"
+                # everywhere, so a files-only block never reaches the action
+                # executor and `show` labels it "files only" by construction.
+                if entry is None:
+                    block = top_action
+                else:
+                    block = entry if blocks.block_action(entry) else None
                 when = {} if entry is None else dict(entry.get("when", {}))
                 if when:
                     bad_keys = conditions.unrecognized_keys(when)
@@ -615,10 +643,13 @@ class ApplicationsDatabase:
                     ),
                 )
                 if passed:
-                    config_files.extend(unit_files)
-                    config_mappings.extend(
-                        (local, backup, slot) for local, backup in unit_mappings
-                    )
+                    for local, backup in unit_mappings:
+                        if (local, backup) in config_pairs_seen:
+                            continue
+                        config_pairs_seen.add((local, backup))
+                        if local not in config_files:
+                            config_files.append(local)
+                        config_mappings.append((local, backup, slot))
 
             self.app_units[app_name] = units
 

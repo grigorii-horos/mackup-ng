@@ -254,7 +254,8 @@ def main() -> None:
             bold=True,
         )
         print(f"{bold('Name:')} {pretty}")
-        if not app_db.config_enabled(requested_app_name):
+        config_ok = app_db.config_enabled(requested_app_name)
+        if not config_ok:
             failing_conds = app_db.get_failing_conditions(requested_app_name)
             unmet = ", ".join(
                 f"{key}={value}" for key, value in sorted(failing_conds.items())
@@ -313,9 +314,7 @@ def main() -> None:
                     if action_name is not None
                     else utils.style_text("files only", color=utils.AnsiColor.GRAY)
                 )
-                if unit.passed:
-                    print(f"{dash} slot {unit.slot}: {action}")
-                else:
+                if not unit.passed:
                     unit_unmet = conditions.failing({"when": unit.when})
                     detail = ", ".join(
                         f"{k}={v}" for k, v in sorted(unit_unmet.items())
@@ -327,6 +326,18 @@ def main() -> None:
                             color=utils.AnsiColor.GRAY,
                         ),
                     )
+                elif not config_ok:
+                    # The unit's own [when] holds, but the config-level
+                    # [when] does not — nothing here actually runs either.
+                    print(
+                        f"{dash} slot {unit.slot}: {action} — "
+                        + utils.style_text(
+                            "conditions not met on this machine",
+                            color=utils.AnsiColor.GRAY,
+                        ),
+                    )
+                else:
+                    print(f"{dash} slot {unit.slot}: {action}")
 
     # mackup info <path>...
     elif args["info"]:

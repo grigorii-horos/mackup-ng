@@ -262,3 +262,30 @@ Warnings follow the established pattern, `print(utils.colorize_message("Warning:
   fault, which is the good failure mode.
 - **120 configs are rewritten mechanically.** The risk is a translation error,
   not a design flaw; the invariant test is the check.
+
+## Findings from the final review
+
+Two consequences of the model above were not spelled out when this spec was
+written; the final review established both and neither changes any code.
+
+- **A path a failing unit no longer declares is silently left alone.** When a
+  unit's `[when]` does not hold, its paths never enter the pair list at all —
+  not as a pair, not as an eviction. The deletion-tombstone pass only ever
+  sees paths that were once in the pair list, so it never considers this one:
+  locally and in the store, the file simply stays untouched. This is the
+  correct outcome for the `~/Library` case (the backup belongs to a machine
+  this one is not) — a unit-gated path is not this machine's to delete — but
+  nothing in the spec said so before now.
+- **The verbose orphan report does not cover unit-gated paths.** `mackup sync
+  -v` prints `… has no destination, left untouched` for a backup path whose
+  *config-level* `[when]` failed (see `main.py`'s sync branch, which walks
+  `app_db.get_file_mappings` for every enabled-but-gated-out config), but a
+  path whose *unit-level* `[when]` failed never reaches that report — it was
+  never a candidate pair in the first place, at any point, so there is
+  nothing to compare it against. Before the config merge, when `~/Library`
+  paths and their siblings lived in separate `<app>.toml` / `<app>-macos.toml`
+  files, a `~/Library` path on non-macOS came from a *config* gated out by
+  `[when]` and so was reported. After the merge it comes from a *unit* gated
+  out by `[block.when]` inside one still-enabled config, and is not. This is
+  a real behaviour change introduced by that merge, not a bug in this task —
+  documented here rather than fixed, per the review.

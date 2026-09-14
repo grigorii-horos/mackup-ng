@@ -1,9 +1,11 @@
 """A config is an ordered sequence of units, numbered in execution order."""
 
+import io
 import os
 import shutil
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from mackup_ng.appsdb import ApplicationsDatabase
 
@@ -158,3 +160,65 @@ class TestUnits(unittest.TestCase):
             [".top"],
             [".other"],
         ]
+
+    def test_unknown_phase_warns_exactly_once_per_block(self):
+        """`_phase_of` used to be called from three list comprehensions, so one
+        bad phase warned three times per block build. It must warn once.
+        """
+        self._write(
+            "badphase_once",
+            'name = "Bad"\nfiles = [".top"]\n\n[[block]]\n'
+            'phase = "whenever"\nfiles = [".other"]\n',
+        )
+        buffer = io.StringIO()
+        with patch("sys.stdout", buffer):
+            ApplicationsDatabase()
+
+        assert buffer.getvalue().count("unknown phase") == 1
+
+    def test_a_passing_files_only_block_carries_no_action(self):
+        """A [[block]] with only `files` must not reach the action executor:
+        `Unit.block` is None unless the unit actually carries an action.
+        """
+        self._write(
+            "files_only",
+            'name = "FilesOnly"\nfiles = [".top"]\n\n[[block]]\nfiles = [".other"]\n',
+        )
+        units = ApplicationsDatabase().get_units("files_only")
+
+        files_only_unit = next(u for u in units if u.slot == 1)
+        assert files_only_unit.passed is True
+        assert files_only_unit.block is None
+
+    def test_a_block_with_neither_files_nor_action_warns_and_is_skipped(self):
+        self._write(
+            "neither",
+            'name = "Neither"\nfiles = [".top"]\n\n[[block]]\n[block.when]\nos = "linux"\n',
+        )
+        buffer = io.StringIO()
+        with patch("sys.stdout", buffer):
+            db = ApplicationsDatabase()
+        output = buffer.getvalue()
+
+        assert output.count("neither files nor an action") == 1
+        assert "skipped" in output
+        # The bad block is skipped entirely: only the top-level unit remains.
+        units = db.get_units("neither")
+        assert len(units) == 1
+        assert [local for local, _ in units[0].mappings] == [".top"]
+
+    def test_a_path_declared_by_two_units_is_deduplicated_config_wide(self):
+        """At the parent commit, the file/mapping lists were config-wide, so a
+        path declared twice in one config could not appear twice. Per-unit
+        lists must not reintroduce that duplicate.
+        """
+        self._write(
+            "dup",
+            'name = "Dup"\nfiles = [".dup"]\n\n[[block]]\nfiles = [".dup"]\n',
+        )
+        db = ApplicationsDatabase()
+
+        assert db.get_files("dup") == [".dup"]
+        # The first unit to declare the path (the top-level unit, slot 0)
+        # keeps it.
+        assert db.get_file_mappings("dup") == [(".dup", ".dup", 0)]

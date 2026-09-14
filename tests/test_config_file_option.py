@@ -5,7 +5,7 @@ import unittest
 
 import pytest
 
-from mackup_ng.config import Config
+from mackup_ng.config import Config, ConfigError
 from mackup_ng.mackup import Mackup
 
 
@@ -32,19 +32,18 @@ class TestConfigFileOption(unittest.TestCase):
 
     def test_mackup_with_config_file(self):
         """Test that Mackup class accepts config_file parameter."""
-        # This should not raise any errors
-        mckp = Mackup("mackup-empty.toml")
+        mckp = Mackup("mackup-backup_dir-absolute.toml")
 
-        # Verify that the config was properly initialized
-        assert isinstance(mckp.mackup_folder, str)
+        assert mckp.mackup_folder == "/some/absolute/folder"
 
-    def test_mackup_without_config_file(self):
-        """Test that Mackup class works without config_file parameter."""
-        # This should use default config file discovery
-        mckp = Mackup()
+    def test_mackup_without_a_config_anywhere_is_an_error(self):
+        """Default discovery finds nothing here, and that is now fatal.
 
-        # Verify that the config was properly initialized
-        assert isinstance(mckp.mackup_folder, str)
+        There is no storage location to fall back to since the cloud engines
+        were removed, so Mackup says so rather than guessing a folder.
+        """
+        with pytest.raises(ConfigError, match="backup_dir"):
+            Mackup()
 
     def test_config_file_does_not_exist(self):
         """Test that specifying a non-existent config file raises an error."""

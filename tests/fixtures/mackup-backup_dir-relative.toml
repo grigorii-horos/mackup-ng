@@ -1,6 +1,5 @@
 [storage]
-engine = "file_system"
-path = "some/relative/folder"
+backup_dir = "some/relative/folder"
 
 [applications]
 sync = ["sabnzbd", "sublime-text-3", "x11"]

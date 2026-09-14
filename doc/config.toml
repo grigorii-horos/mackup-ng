@@ -2,19 +2,12 @@
 # Install it at ~/.config/mackup/config.toml
 
 [storage]
-# Where mackup stores your configuration files.
-#   "dropbox"      — mackup locates your Dropbox folder itself
-#   "google_drive" — likewise for Google Drive
-#   "icloud"       — likewise for iCloud Drive
-#   "file_system"  — you give the path, mackup detects nothing
-engine = "dropbox"
-
-# Required for "file_system", ignored otherwise. Relative paths are taken
-# from your home directory; absolute paths are used as given.
-# path = "some/folder/in/your/home"
-
-# The folder mackup creates inside the storage. Defaults to "Mackup".
-# directory = "Mackup"
+# The one folder mackup backs your configuration files up into.
+# A relative path is taken from your home directory; an absolute path is used
+# as given. The folder containing it must already exist — mackup creates the
+# backup folder itself, but refuses to invent a whole tree from a typo.
+# There is no default: without this setting mackup has nowhere to work.
+backup_dir = "Sync/Configs/Mackup"
 
 [applications]
 # Applications to sync. An empty list means every supported application.

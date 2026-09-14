@@ -1,3 +1,6 @@
+[storage]
+backup_dir = "Mackup"
+
 [applications]
 # The INI fixture also exercised ';' inline comments; TOML has only '#'.
 ignore = ["subversion", "sequel-pro", "sabnzbd"]  # inline comment

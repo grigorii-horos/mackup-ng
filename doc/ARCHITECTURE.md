@@ -10,8 +10,8 @@ understand the codebase.
 ## Core Concepts
 
 Mackup is a tool that backs up and syncs application configuration files
-across multiple machines using a cloud storage service (Dropbox, Google Drive,
-iCloud) or any file system location.
+across multiple machines through a single backup folder, which you point at
+whatever already replicates directories for you.
 
 ### Operation Modes
 
@@ -52,7 +52,7 @@ inside it).
 
 **Configuration Options:**
 
-- Storage engine (dropbox, google_drive, icloud, file_system)
+- Backup folder (`storage.backup_dir`)
 - Storage path and directory name
 - Applications to sync/ignore
 - Custom directory name
@@ -128,7 +128,6 @@ Common utility functions used throughout the codebase:
 - Path manipulation and resolution
 - XDG directory detection
 - Error handling and user prompts
-- Storage engine detection (Dropbox, Google Drive, iCloud)
 
 ## Data Flow
 
@@ -161,7 +160,7 @@ won the group's last live destination:
     - Picks the newest member and copies it to the others
     - Merges directory members entry by entry
     ↓
-Files now in: ~/Dropbox/Mackup/ (or chosen storage)
+Files now in: the configured backup folder
 ```
 
 ### Remove Flow
@@ -211,7 +210,7 @@ Future syncs remove the same path on other machines
 
 ### 3. Storage Abstraction
 
-- **Multiple backends**: Dropbox, Google Drive, iCloud, file system
+- **One backup folder**: whatever path you configure
 - **Auto-detection**: Automatically finds storage paths
 - **Flexibility**: Custom paths for any sync solution
 

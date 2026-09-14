@@ -1,6 +1,0 @@
-[storage]
-engine = "google_drive"
-
-[applications]
-ignore = ["subversion", "sequel-pro", "sabnzbd"]
-sync = ["sabnzbd", "sublime-text-3", "x11"]

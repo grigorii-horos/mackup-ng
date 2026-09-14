@@ -13,19 +13,12 @@ def _xdg_home(tmp_path, monkeypatch):
         monkeypatch.delenv(var, raising=False)
     config_dir = tmp_path / ".config" / "mackup"
     config_dir.mkdir(parents=True)
-    # Several tests below write a config with no [storage] table, so the
-    # engine defaults to dropbox and _parse_path resolves a real
-    # ~/.dropbox/host.db. Without one there, Config() exits with "Unable to
-    # find your Dropbox install" before it ever reaches the validation or
-    # warning behaviour under test. tests/fixtures/.dropbox/host.db carries
-    # the same fake entry; mirror it under this test's own $HOME.
-    dropbox_dir = tmp_path / ".dropbox"
-    dropbox_dir.mkdir()
-    (dropbox_dir / "host.db").write_text(
-        "0000000000000000000000000000000000000000\n"
-        "L2hvbWUvc29tZV91c2VyL0Ryb3Bib3g=\n",
-    )
     return config_dir
+
+
+# storage.backup_dir is required, so any config that must parse far enough to
+# exercise a warning has to carry one.
+STORAGE = '[storage]\nbackup_dir = "Mackup"\n\n'
 
 
 def test_legacy_config_file_is_rejected(tmp_path, monkeypatch):
@@ -60,7 +53,9 @@ def test_malformed_toml_names_the_file(tmp_path, monkeypatch):
 
 def test_ignore_must_be_a_list(tmp_path, monkeypatch):
     config_dir = _xdg_home(tmp_path, monkeypatch)
-    (config_dir / "config.toml").write_text('[applications]\nignore = "ssh"\n')
+    (config_dir / "config.toml").write_text(
+        STORAGE + '[applications]\nignore = "ssh"\n',
+    )
 
     with pytest.raises(ConfigError, match=r"applications\.ignore"):
         Config()
@@ -69,7 +64,7 @@ def test_ignore_must_be_a_list(tmp_path, monkeypatch):
 def test_unknown_table_warns_but_parses(tmp_path, monkeypatch, capsys):
     config_dir = _xdg_home(tmp_path, monkeypatch)
     (config_dir / "config.toml").write_text(
-        '[colors]\nfilename_path_separator = "1;32"\n'
+        STORAGE + '[colors]\nfilename_path_separator = "1;32"\n'
         '\n[applications]\nignore = ["ssh"]\n',
     )
 
@@ -81,7 +76,9 @@ def test_unknown_table_warns_but_parses(tmp_path, monkeypatch, capsys):
 
 def test_unknown_key_warns(tmp_path, monkeypatch, capsys):
     config_dir = _xdg_home(tmp_path, monkeypatch)
-    (config_dir / "config.toml").write_text('[applications]\nignor = ["ssh"]\n')
+    (config_dir / "config.toml").write_text(
+        STORAGE + '[applications]\nignor = ["ssh"]\n',
+    )
 
     Config()
 
@@ -98,7 +95,7 @@ def test_same_config_file_warns_only_once_across_instances(
     repeat for repeat reads of the *same* resolved path."""
     config_dir = _xdg_home(tmp_path, monkeypatch)
     (config_dir / "config.toml").write_text(
-        '[colors]\nfoo = "bar"\n\n[applications]\nignore = ["ssh"]\n',
+        STORAGE + '[colors]\nfoo = "bar"\n\n[applications]\nignore = ["ssh"]\n',
     )
 
     Config()
@@ -120,11 +117,11 @@ def test_different_config_files_each_warn_independently(
     """
     config_dir = _xdg_home(tmp_path, monkeypatch)
     (config_dir / "config.toml").write_text(
-        '[colors]\nfoo = "bar"\n\n[applications]\nignore = ["ssh"]\n',
+        STORAGE + '[colors]\nfoo = "bar"\n\n[applications]\nignore = ["ssh"]\n',
     )
     other = tmp_path / "other.toml"
     other.write_text(
-        '[weirdtable]\nfoo = "bar"\n\n[applications]\nignore = ["git"]\n',
+        STORAGE + '[weirdtable]\nfoo = "bar"\n\n[applications]\nignore = ["git"]\n',
     )
 
     Config()  # default location, as hooks.backup_dir() would build it
@@ -135,11 +132,10 @@ def test_different_config_files_each_warn_independently(
     assert "unknown config table [weirdtable]" in output
 
 
-def test_storage_directory_inside_a_managed_dir_is_rejected(tmp_path, monkeypatch):
+def test_backup_dir_inside_a_managed_dir_is_rejected(tmp_path, monkeypatch):
     config_dir = _xdg_home(tmp_path, monkeypatch)
     (config_dir / "config.toml").write_text(
-        '[storage]\nengine = "file_system"\n'
-        'path = ".config/mackup"\ndirectory = "applications"\n',
+        '[storage]\nbackup_dir = ".config/mackup/applications"\n',
     )
 
     with pytest.raises(ConfigError, match="manages"):
@@ -151,34 +147,6 @@ def test_storage_table_must_be_a_table(tmp_path, monkeypatch):
     (config_dir / "config.toml").write_text('storage = "dropbox"\n')
 
     with pytest.raises(ConfigError, match="storage"):
-        Config()
-
-
-def test_storage_engine_must_be_a_string(tmp_path, monkeypatch):
-    config_dir = _xdg_home(tmp_path, monkeypatch)
-    (config_dir / "config.toml").write_text("[storage]\nengine = 42\n")
-
-    with pytest.raises(ConfigError, match=r"storage\.engine"):
-        Config()
-
-
-def test_storage_path_must_be_a_string(tmp_path, monkeypatch):
-    config_dir = _xdg_home(tmp_path, monkeypatch)
-    (config_dir / "config.toml").write_text(
-        '[storage]\nengine = "file_system"\npath = 42\n',
-    )
-
-    with pytest.raises(ConfigError, match=r"storage\.path"):
-        Config()
-
-
-def test_storage_directory_must_be_a_string(tmp_path, monkeypatch):
-    config_dir = _xdg_home(tmp_path, monkeypatch)
-    (config_dir / "config.toml").write_text(
-        '[storage]\nengine = "file_system"\npath = "somewhere"\ndirectory = 42\n',
-    )
-
-    with pytest.raises(ConfigError, match=r"storage\.directory"):
         Config()
 
 

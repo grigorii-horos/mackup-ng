@@ -30,8 +30,7 @@ Backup and keep your application settings in sync.
   - [What does it do](#what-does-it-do)
     - [Sync mode](#sync-mode)
     - [Ignored files](#ignored-files)
-  - [Supported Storages](#supported-storages)
-  - [Unsupported Storages](#unsupported-storages)
+  - [Storage](#storage)
   - [Supported Applications](#supported-applications)
   - [Can you support application X](#can-you-support-application-x)
   - [Personalization \& configuration](#personalization--configuration)
@@ -98,7 +97,7 @@ Path: .zshrc
 Config: zsh (Zsh)
 Sync: yes
 Local: /home/you/.zshrc — 8.9 KiB, 2026-08-17 13:33
-Backup: /home/you/Dropbox/Mackup/.zshrc — 8.5 KiB, 2026-08-14 09:02
+Backup: /home/you/Sync/Configs/Mackup/.zshrc — 8.5 KiB, 2026-08-14 09:02
 Last sync: 2026-08-14 09:02 (Backed up)
 State: diverged — local is newer; next sync backs it up
 ```
@@ -142,8 +141,7 @@ mackup-ng uses sync mode.
 ### Sync mode
 
 Sync mode is used to synchronize your files.
-The files are stored in the configured Mackup folder,
-which can be in Dropbox, iCloud, or wherever you configure it.
+The files are stored in the one folder you set as `storage.backup_dir`.
 
 It is covered by the commands:
 
@@ -217,19 +215,26 @@ machine:
 mackup-ng mark no-update-check
 ```
 
-## Supported Storages
+## Storage
 
-- [Dropbox](https://www.dropbox.com/)
-- [Google Drive](https://drive.google.com/)
-- [iCloud](http://www.apple.com/icloud/)
-- Anything able to sync a folder (e.g. [Git](http://git-scm.com/))
+mackup-ng has no storage backends. It backs up into one folder, set as
+`storage.backup_dir` in `config.toml`, and that is the whole of it:
 
-See the [README](doc/README.md) file in the doc directory for more info.
+```toml
+[storage]
+backup_dir = "Sync/Configs/Mackup"
+```
 
-## Unsupported Storages
+Point it at whatever already syncs on your machine — a
+[Syncthing](https://syncthing.net/) share, a mounted drive, a cloud
+provider's local folder, a [Git](https://git-scm.com/) working copy, or a
+plain second directory you copy elsewhere yourself. mackup-ng never talks to
+a sync service; it only reads and writes that folder, so anything that can
+replicate a directory works.
 
-- [Box](https://www.box.com): No longer supported as it ignores dotfiles, see
-  <https://github.com/lra/mackup/issues/807>.
+Earlier versions detected Dropbox, Google Drive and iCloud folders for you.
+That is gone: the detection was three code paths that guessed a location, and
+naming the folder yourself is both shorter and unambiguous.
 
 ## Supported Applications
 

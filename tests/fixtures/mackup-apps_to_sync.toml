@@ -1,2 +1,5 @@
+[storage]
+backup_dir = "Mackup"
+
 [applications]
 sync = ["sabnzbd", "sublime-text-3", "x11"]

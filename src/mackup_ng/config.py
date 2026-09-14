@@ -8,24 +8,13 @@ from typing import ClassVar
 
 from . import dirs
 from .constants import (
-    ENGINE_DROPBOX,
-    ENGINE_FS,
-    ENGINE_GDRIVE,
-    ENGINE_ICLOUD,
     LEGACY_CONFIG_FILE,
     LEGACY_HOME_DIR,
-    MACKUP_BACKUP_PATH,
 )
-from .utils import (
-    colorize_message,
-    error,
-    get_dropbox_folder_location,
-    get_google_drive_folder_location,
-    get_icloud_folder_location,
-)
+from .utils import colorize_message, error
 
 _KNOWN_KEYS: dict[str, set[str]] = {
-    "storage": {"engine", "path", "directory"},
+    "storage": {"backup_dir"},
     "applications": {"ignore", "sync"},
 }
 
@@ -73,59 +62,19 @@ class Config:
         self._data = self._load(config_path)
         self._warn_on_unknown_keys(config_path)
 
-        self._engine = self._parse_engine()
-        self._path = self._parse_path()
-        self._directory = self._parse_directory()
+        self._fullpath = self._parse_backup_dir()
         self._apps_to_ignore = self._parse_apps_to_ignore()
         self._apps_to_sync = self._parse_apps_to_sync()
 
     @property
-    def engine(self) -> str:
-        """
-        The engine used by the storage.
-
-        ENGINE_DROPBOX, ENGINE_GDRIVE, ENGINE_ICLOUD or ENGINE_FS.
-
-        Returns:
-            str
-        """
-        return str(self._engine)
-
-    @property
-    def path(self) -> str:
-        """
-        Path to the Mackup configuration files.
-
-        The path to the directory where Mackup is gonna create and store his
-        directory.
-
-        Returns:
-            str
-        """
-        return str(self._path)
-
-    @property
-    def directory(self) -> str:
-        """
-        The name of the Mackup directory, named Mackup by default.
-
-        Returns:
-            str
-        """
-        return str(self._directory)
-
-    @property
     def fullpath(self) -> str:
         """
-        Full path to the Mackup configuration files.
-
-        The full path to the directory when Mackup is storing the configuration
-        files.
+        Absolute path of the folder Mackup backs up into.
 
         Returns:
             str
         """
-        return str(os.path.join(self.path, self.directory))
+        return str(self._fullpath)
 
     @property
     def apps_to_ignore(self) -> set[str]:
@@ -151,9 +100,9 @@ class Config:
     def _reject_legacy_layout() -> None:
         """Refuse to run while the pre-XDG layout is still in place.
 
-        Falling back silently would be worse than stopping: with no config
-        found, the storage engine defaults to dropbox and a sync would write
-        to the wrong place entirely.
+        Stopping beats carrying on: a config left at the old path is not
+        read at all, and the new one is required, so continuing would mean
+        acting on a configuration the user thinks is in force but is not.
         """
         home = Path.home()
         for legacy in (home / LEGACY_CONFIG_FILE, home / LEGACY_HOME_DIR):
@@ -295,67 +244,33 @@ class Config:
             raise ConfigError(f"{table}.{key} must be a list of strings")
         return set(value)
 
-    def _parse_engine(self) -> str:
+    def _parse_backup_dir(self) -> str:
         """
-        Parse the storage engine in the config.
+        Parse the one storage location in the config.
+
+        A relative value is resolved against $HOME; an absolute one is used
+        as given. There is no default: without a backup folder there is
+        nothing sensible to do, so an absent value is an error rather than a
+        guess.
 
         Returns:
             str
         """
-        engine = self._table("storage").get("engine", ENGINE_DROPBOX)
-
-        if not isinstance(engine, str):
+        backup_dir = self._table("storage").get("backup_dir")
+        if backup_dir is None:
             raise ConfigError(
-                f"storage.engine must be a string, got {type(engine).__name__}",
+                "storage.backup_dir is required — set it to the folder Mackup"
+                f" should back up into, in {dirs.config_file()}",
             )
-
-        if engine not in (ENGINE_DROPBOX, ENGINE_GDRIVE, ENGINE_ICLOUD, ENGINE_FS):
-            raise ConfigError(f"Unknown storage engine: {engine}")
-
-        return engine
-
-    def _parse_path(self) -> str:
-        """
-        Parse the storage path in the config.
-
-        Returns:
-            str
-        """
-        if self.engine == ENGINE_DROPBOX:
-            return get_dropbox_folder_location()
-        if self.engine == ENGINE_GDRIVE:
-            return get_google_drive_folder_location()
-        if self.engine == ENGINE_ICLOUD:
-            return get_icloud_folder_location()
-
-        cfg_path = self._table("storage").get("path")
-        if cfg_path is None:
+        if not isinstance(backup_dir, str):
             raise ConfigError(
-                "The required 'path' can't be found while"
-                " the 'file_system' engine is used.",
+                f"storage.backup_dir must be a string,"
+                f" got {type(backup_dir).__name__}",
             )
-        if not isinstance(cfg_path, str):
-            raise ConfigError(
-                f"storage.path must be a string, got {type(cfg_path).__name__}",
-            )
-        # An absolute cfg_path wins, which is what os.path.join already does.
-        return os.path.join(os.environ["HOME"], cfg_path)
-
-    def _parse_directory(self) -> str:
-        """
-        Parse the storage directory in the config.
-
-        Returns:
-            str
-        """
-        directory = self._table("storage").get("directory", MACKUP_BACKUP_PATH)
-        if not isinstance(directory, str):
-            raise ConfigError(
-                f"storage.directory must be a string, "
-                f"got {type(directory).__name__}",
-            )
-        self._reject_managed_fullpath(os.path.join(self.path, directory))
-        return directory
+        # An absolute backup_dir wins, which is what os.path.join already does.
+        fullpath = os.path.join(os.environ["HOME"], backup_dir)
+        self._reject_managed_fullpath(fullpath)
+        return fullpath
 
     def _parse_apps_to_ignore(self) -> set[str]:
         """

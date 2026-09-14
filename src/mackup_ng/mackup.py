@@ -32,11 +32,13 @@ class Mackup:
                 " Run mackup --help for guidance.",
             )
 
-        # Do we have a folder set to save Mackup content into?
-        if not os.path.isdir(self._config.path):
-            utils.error(
-                f"Unable to find the storage folder: {self._config.path}",
-            )
+        # The backup folder itself is created on demand, but the folder that
+        # is to contain it must already exist — otherwise a typo in
+        # storage.backup_dir would silently grow a new tree somewhere
+        # unexpected instead of being reported.
+        parent = os.path.dirname(self.mackup_folder)
+        if not os.path.isdir(parent):
+            utils.error(f"Unable to find the storage folder: {parent}")
 
         # Is Sublime Text running?
         # if is_process_running('Sublime Text'):

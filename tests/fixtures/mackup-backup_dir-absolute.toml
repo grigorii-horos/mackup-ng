@@ -1,0 +1,5 @@
+[storage]
+backup_dir = "/some/absolute/folder"
+
+[applications]
+ignore = ["subversion", "sequel-pro"]

@@ -1,11 +1,8 @@
 """System static utilities being used by the modules."""
 
-import base64
-import binascii
 import os
 import platform
 import shutil
-import sqlite3
 import stat
 import subprocess
 import sys
@@ -262,98 +259,6 @@ def error(message: str) -> NoReturn:
         message(str): The message to display.
     """
     sys.exit(style_text(f"Error: {message}", color=AnsiColor.RED, bold=True))
-
-
-def get_dropbox_folder_location() -> str:
-    """
-    Try to locate the Dropbox folder.
-
-    Returns:
-        (str) Full path to the current Dropbox folder
-    """
-    host_db_path = os.path.join(os.environ["HOME"], ".dropbox/host.db")
-    min_host_db_fields = 2
-    try:
-        with open(host_db_path) as f_hostdb:
-            data = f_hostdb.read().split()
-        if len(data) < min_host_db_fields:
-            raise ValueError("Malformed Dropbox host.db")
-        dropbox_home = base64.b64decode(data[1], validate=True).decode()
-    except (
-        OSError,
-        ValueError,
-        binascii.Error,
-        UnicodeEncodeError,
-        UnicodeDecodeError,
-    ):
-        error(constants.ERROR_UNABLE_TO_FIND_STORAGE.format(provider="Dropbox install"))
-
-    return dropbox_home
-
-
-def get_google_drive_folder_location() -> str:
-    """
-    Try to locate the Google Drive folder.
-
-    Returns:
-        (str) Full path to the current Google Drive folder
-    """
-    gdrive_db_path = "Library/Application Support/Google/Drive/sync_config.db"
-    yosemite_gdrive_db_path = (
-        "Library/Application Support/Google/Drive/user_default/sync_config.db"
-    )
-    yosemite_gdrive_db = os.path.join(os.environ["HOME"], yosemite_gdrive_db_path)
-    if os.path.isfile(yosemite_gdrive_db):
-        gdrive_db_path = yosemite_gdrive_db
-
-    googledrive_home: str | None = None
-
-    gdrive_db = (
-        gdrive_db_path
-        if os.path.isabs(gdrive_db_path)
-        else os.path.join(os.environ["HOME"], gdrive_db_path)
-    )
-    if os.path.isfile(gdrive_db):
-        try:
-            with sqlite3.connect(gdrive_db) as con:
-                cur = con.cursor()
-                query = (
-                    "SELECT data_value "
-                    "FROM data "
-                    "WHERE entry_key = 'local_sync_root_path';"
-                )
-                cur.execute(query)
-                data = cur.fetchone()
-                if data and data[0]:
-                    googledrive_home = str(data[0])
-        except sqlite3.Error:
-            googledrive_home = None
-
-    if googledrive_home:
-        return googledrive_home
-
-    error(
-        constants.ERROR_UNABLE_TO_FIND_STORAGE.format(
-            provider="Google Drive install",
-        ),
-    )
-
-
-def get_icloud_folder_location() -> str:
-    """
-    Try to locate the iCloud Drive folder.
-
-    Returns:
-        (str) Full path to the iCloud Drive folder.
-    """
-    yosemite_icloud_path = "~/Library/Mobile Documents/com~apple~CloudDocs/"
-
-    icloud_home = os.path.expanduser(yosemite_icloud_path)
-
-    if not os.path.isdir(icloud_home):
-        error(constants.ERROR_UNABLE_TO_FIND_STORAGE.format(provider="iCloud Drive"))
-
-    return str(icloud_home)
 
 
 def is_process_running(process_name: str) -> bool:

@@ -1,6 +1,0 @@
-[storage]
-engine = "icloud"
-
-[applications]
-ignore = ["subversion", "sequel-pro", "sabnzbd"]
-sync = ["sabnzbd", "sublime-text-3", "x11"]

@@ -22,18 +22,22 @@ def _reset_unknown_key_warning():
 
 
 def write_config(path, *, storage_path, directory="Mackup", sync=(), ignore=()):
-    """Write a file_system-engine TOML mackup config to `path`.
+    """Write a TOML mackup config to `path`.
+
+    `storage_path` and `directory` are joined into the single
+    `storage.backup_dir` the config now carries; they stay separate arguments
+    because every caller builds its backup folder that way and asserts
+    against the same two pieces.
 
     Creates `path`'s parent directory if needed. `sync` and `ignore` are
     iterables of app ids written as the `[applications]` arrays.
     """
     os.makedirs(os.path.dirname(path), exist_ok=True)
+    backup_dir = os.path.join(storage_path, directory)
     sync_entries = ", ".join(f'"{app}"' for app in sync)
     lines = [
         "[storage]\n",
-        'engine = "file_system"\n',
-        f'path = "{storage_path}"\n',
-        f'directory = "{directory}"\n',
+        f'backup_dir = "{backup_dir}"\n',
         "\n",
         "[applications]\n",
         f"sync = [{sync_entries}]\n",

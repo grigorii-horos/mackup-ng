@@ -23,9 +23,6 @@ LEGACY_HOME_DIR: str = ".mackup"
 # Distribution name (used for version lookup via importlib.metadata)
 MACKUP_APP_NAME: str = "mackup-ng"
 
-# Default Mackup backup path where it stores its files in Dropbox
-MACKUP_BACKUP_PATH: str = "Mackup"
-
 
 def get_version() -> str:
     """Return package version, or a safe fallback when metadata is unavailable."""
@@ -52,23 +49,7 @@ DCONF_DIRNAME: str = "dconf-backup"  # dconf dumps (*.dconf)
 # $XDG_CONFIG_HOME/mackup/markers/.
 MARKERS_DEFS_DIRNAME: str = "markers"  # package built-ins
 
-# Supported engines
-ENGINE_DROPBOX: str = "dropbox"
-ENGINE_FS: str = "file_system"
-ENGINE_GDRIVE: str = "google_drive"
-ENGINE_ICLOUD: str = "icloud"
-
 DOCUMENTATION_URL: str = (
     "https://github.com/grigorii-horos/mackup-ng/blob/master/doc/README.md"
 )
 
-# Error message displayed when mackup can't find the storage specified
-# in the config (or the default one).
-ERROR_UNABLE_TO_FIND_STORAGE: str = (
-    "Unable to find your {provider} =(\n"
-    f"If this is the first time you use {MACKUP_APP_NAME}, you may want "
-    "to use another provider.\n"
-    "Take a look at the documentation [1] to know more about "
-    "how to configure mackup.\n\n"
-    f"[1]: {DOCUMENTATION_URL}"
-)

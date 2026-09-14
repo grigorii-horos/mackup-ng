@@ -22,112 +22,40 @@ mackup-ng --config-file=~/.config/mackup-custom.toml sync
 
 ## Storage
 
-You can specify the storage type Mackup will use to store your configuration
-files.
-
-For now, you have 4 options: `dropbox`, `google_drive`, `icloud` and `file_system`.
-
-If none is specified, Mackup will try to use the default: `dropbox`.
-With the `dropbox` storage engine, Mackup will automatically figure out your
-Dropbox folder.
-
-### Dropbox
+Mackup backs your configuration files up into one folder, and restores them
+from it. That folder is the only storage setting there is:
 
 ```toml
 [storage]
-engine = "dropbox"
+backup_dir = "Sync/Configs/Mackup"
 ```
 
-### Google Drive
-
-If you choose the `google_drive` storage engine instead, Mackup will figure out
-where your Google Drive is and store your configuration files in it.
+A relative path is resolved against your home directory, so the example above
+means `~/Sync/Configs/Mackup`. An absolute path is used exactly as written:
 
 ```toml
 [storage]
-engine = "google_drive"
+backup_dir = "/mnt/backup/Mackup"
 ```
 
-### iCloud
+`backup_dir` is required. There is no default and nothing is auto-detected —
+if it is missing, mackup stops and says so rather than guessing a location.
 
-If you choose the `iCloud` storage engine, Mackup will store your
-configuration files in the `~/Library/Mobile\ Documents/com\~apple\~CloudDocs/`
-folder.
+The folder _containing_ `backup_dir` must already exist. Mackup creates the
+backup folder itself, on confirmation, but will not build a whole directory
+tree out of what may be a typo.
 
-```toml
-[storage]
-engine = "icloud"
-```
+Point it wherever your own syncing happens — a Syncthing share, a mounted
+drive, a cloud provider's local folder, or a plain second directory you copy
+elsewhere yourself. Mackup does not talk to any sync service; it only reads
+and writes that one folder.
 
-You can check if your files are synced using:
+### Switching storage
 
-```sh
-brctl monitor com.apple.CloudDocs
-```
-
-### File System
-
-If you want to specify another directory, you can use the `file_system` engine
-and Mackup won't try to detect any path for you: it will store your files where
-you explicitly told it to, using the `path` setting.
-The `path` can be absolute (from the `/` of your drive) or relative to your
-home directory.
-The `path` setting is mandatory when using the `file_system` engine.
-
-```toml
-[storage]
-engine = "file_system"
-path = "some/folder/in/your/home"
-# or path = "/some/folder/in/your/root"
-```
-
-Note: paths are TOML strings, so wrap them in quotes; spaces inside the quotes
-need no escaping. For example, the following paths are valid:
-
-```toml
-path = "some/path in your/home"
-path = "/some path/in/your/root"
-```
-
-### Custom Directory Name
-
-You can customize the directory name in which Mackup stores your files. By
-default, if not specified, Mackup creates a `Mackup` directory in the storage
-engine you chose, e.g. `~/Dropbox/Mackup`.
-
-```toml
-[storage]
-directory = "Mackup"
-```
-
-For example:
-
-```toml
-[storage]
-engine = "file_system"
-path = "dotfiles"
-directory = "backup"
-```
-
-This will store your files in the `~/dotfiles/backup` directory in your home.
-
-You can also select a subfolder:
-
-```toml
-[storage]
-engine = "icloud"
-directory = ".config/mackup"
-```
-
-### Switching Storage
-
-If you ever change your mind and switch storage solutions after Mackup is
-already setup (ex: from `dropbox` to `icloud`), complete the following steps.
-
-1. Run `mackup-ng sync` on all computers so the storage folder is up to date
-2. Copy your Mackup files to the new storage location
-3. Change the storage provider details in your `config.toml` file (see above)
-4. Run `mackup-ng sync` on each computer
+Move the existing backup folder to its new location, then update
+`backup_dir` to match. Mackup does not move it for you, and pointing
+`backup_dir` at an empty folder makes the next sync treat your machine as the
+only source of truth.
 
 ## Applications
 

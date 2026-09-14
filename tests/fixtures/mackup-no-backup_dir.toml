@@ -1,0 +1,2 @@
+[applications]
+ignore = ["subversion"]

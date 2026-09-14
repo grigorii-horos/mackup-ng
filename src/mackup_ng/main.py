@@ -45,9 +45,9 @@ dconf paths are backed up (dumped) on the backup-role machine and restored
 (loaded) on other machines during `mackup sync`, unless the `no-dconf` marker
 is set. Dumps live in ~/.local/share/mackup/dconf-backup/.
 
-By default, mackup-ng syncs all application data via
-Dropbox, but may be configured to exclude applications or use a different
-backend with a config.toml file.
+mackup-ng backs up application data into one folder you choose, set as
+storage.backup_dir in config.toml; the same file selects or excludes
+applications.
 
 See https://github.com/grigorii-horos/mackup-ng/tree/master/doc for more information.
 

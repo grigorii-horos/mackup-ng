@@ -28,6 +28,24 @@ _KNOWN_KEYS: dict[str, set[str]] = {
     "applications": {"ignore", "sync"},
 }
 
+# A single process can build several Config() instances that all read the
+# same file: the primary sync/apply flow builds one, and hooks.backup_dir()
+# builds its own to resolve MACKUP_BACKUP_DIR — once per [copy]/[chmod]/[run]
+# block. Without this flag every one of them would re-print the same
+# unknown-key warning; this makes it fire once per process instead. A class
+# (attribute assignment, not `global`) rather than a bare module variable —
+# ruff's PLW0603 disallows rebinding a module global from inside a function.
+# Tests that move $HOME/XDG_* must call _reset_unknown_key_warning() the way
+# ignore.load_globs.cache_clear() is used, or a warning from an earlier test
+# would be silently swallowed here.
+class _UnknownKeyWarningState:
+    warned: bool = False
+
+
+def _reset_unknown_key_warning() -> None:
+    """Test hook: let the once-per-process warning fire again."""
+    _UnknownKeyWarningState.warned = False
+
 
 class Config:
     """The Mackup Config class."""
@@ -147,11 +165,20 @@ class Config:
                 )
 
     def _warn_on_unknown_keys(self) -> None:
-        """Name anything we will not act on.
+        """Name anything we will not act on, once per process.
 
         A [colors] table sat in a real config being silently ignored for
         years; a typo such as applications.ignor fails the same silent way.
+
+        A run can build several Config() instances from the same file (the
+        primary sync/apply flow builds one; hooks.backup_dir() builds its own
+        per action block to resolve MACKUP_BACKUP_DIR), and the file cannot
+        change mid-run, so re-checking after the first instance would only
+        ever reprint the same lines.
         """
+        if _UnknownKeyWarningState.warned:
+            return
+        warned = False
         for name, value in self._data.items():
             if name not in _KNOWN_KEYS:
                 print(
@@ -159,6 +186,7 @@ class Config:
                         f"Warning: unknown config table [{name}], ignored",
                     ),
                 )
+                warned = True
                 continue
             if not isinstance(value, dict):
                 continue
@@ -170,6 +198,9 @@ class Config:
                         f"Warning: unknown key(s) in [{name}]: {names}, ignored",
                     ),
                 )
+                warned = True
+        if warned:
+            _UnknownKeyWarningState.warned = True
 
     @staticmethod
     def _reject_managed_fullpath(fullpath: str) -> None:

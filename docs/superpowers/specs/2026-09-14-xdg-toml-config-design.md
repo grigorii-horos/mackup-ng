@@ -44,6 +44,7 @@ $XDG_DATA_HOME/mackup/            (~/.local/share/mackup)   synced
 
 $XDG_STATE_HOME/mackup/           (~/.local/state/mackup)   NOT synced
     markers/                      marker state flags (machine-local)
+    sync-log.json                 per-machine record of the last sync
 ```
 
 `~/.mackup` and `~/.mackup.cfg` cease to exist and are never read.
@@ -195,14 +196,27 @@ definitions and dconf dumps.
 — syncing them would carry the `backup` role to another machine and invert the
 direction of the next sync.
 
-Known constraint, unchanged from the current behaviour: mackup syncs by moving
-a path into the storage folder and leaving a symlink behind, so
+> **Correction (final review, 2026-09-14):** the paragraph below originally
+> claimed mackup syncs by moving a path into storage and leaving a symlink
+> behind. That is false for this codebase and was never true of it — see the
+> Risks section for the full correction. Kept, struck through, so the
+> reasoning that motivated `config.py`'s loud legacy-layout error is visible
+> rather than silently rewritten.
+
+~~Known constraint, unchanged from the current behaviour: mackup syncs by
+moving a path into the storage folder and leaving a symlink behind, so
 `~/.config/mackup` becomes a symlink into `~/Sync/Configs/Mackup`, and mackup
 reads its own config through it. If that symlink breaks, no config is found
-and mackup silently falls back to the `dropbox` engine. This is a pre-existing
-property of syncing `~/.mackup` and is not made worse here, but it is the
-reason the legacy-layout check in `config.py` errors loudly rather than
-warning.
+and mackup silently falls back to the `dropbox` engine.~~ In fact
+`Application.sync_members_directory()` (`src/mackup_ng/application.py`)
+performs a union directory merge — newest entry wins, copied file by file —
+between every member (`~/.config/mackup` and the copy under the storage
+folder). Both stay real directories after a sync; neither is a symlink.
+There is no broken-symlink failure mode: at worst, a member missing or
+unreadable at sync time simply does not receive that sync's changes. This is
+a pre-existing property of syncing `~/.mackup` and is not made worse here,
+but it is the reason the legacy-layout check in `config.py` errors loudly
+rather than warning.
 
 ## Hook environment contract
 
@@ -303,12 +317,33 @@ Added:
 
 ## Risks
 
-- **Broken self-sync symlink yields silent dropbox fallback.** Pre-existing;
-  mitigated only by the loud legacy-layout error. Accepted.
+- ~~**Broken self-sync symlink yields silent dropbox fallback.** Pre-existing;
+  mitigated only by the loud legacy-layout error. Accepted.~~
+  **Correction (final review, 2026-09-14):** this risk does not exist. It
+  assumed mackup syncs `~/.config/mackup` by replacing it with a symlink into
+  storage, so a broken link would make `Config()` find nothing and silently
+  default to the `dropbox` engine. `src/mackup_ng/application.py` (around
+  `sync_members_directory`, lines 210-290) instead performs a union directory
+  merge with newest-entry-wins copies — `grep -rn symlink src/` returns only
+  two unrelated diagnostic strings, in `utils.py` and `info.py`. After a
+  sync, `~/.config/mackup` remains a real directory and the storage folder
+  holds a real copy beside it; there is no single link whose breakage could
+  cause a silent fallback. The loud legacy-layout error in `config.py`
+  remains correct — it protects against the legacy `~/.mackup`/`~/.mackup.cfg`
+  layout being mistaken for "nothing configured", not against a broken
+  symlink.
 - **Wide blast radius in tests.** Ten test modules write config inline. The
   risk is a mechanical translation error rather than a design flaw; the test
   suite itself is the check.
 - **Migration is manual and touches live synced data.** Step 9 removes files
-  from the sync storage. The runbook verifies with `mackup list` / `mackup info`
-  before `~/.mackup` is deleted, so there is a point of no return that is
-  explicitly last.
+  from the sync storage.
+  **Correction (final review, 2026-09-14):** the runbook cannot verify with
+  `mackup list` / `mackup info` *before* `~/.mackup` is deleted, as this bullet
+  originally claimed — `Config._reject_legacy_layout` tests existence, not
+  emptiness, so every command aborts loudly while `~/.mackup` still exists,
+  regardless of what has already been moved out of it. Verification now runs
+  *after* the legacy paths are removed (runbook step 8, formerly step 7); the
+  safety copy taken in step 1, plus moving every file mackup cares about out
+  of `~/.mackup` before it is removed (steps 3-6), is what makes deleting it
+  first safe. The point of no return is step 7 (`rm -rf ~/.mackup
+  ~/.mackup.cfg`, formerly step 8), not the verification step.

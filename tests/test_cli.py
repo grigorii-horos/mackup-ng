@@ -368,6 +368,27 @@ class TestCLI(unittest.TestCase):
             main()
         assert os.path.isfile(out)
 
+    def test_unknown_key_warning_printed_once_per_run(self):
+        """An unknown config table must warn once, not once per action block.
+
+        Every [copy]/[chmod]/[run] block resolves MACKUP_BACKUP_DIR via
+        hooks.backup_dir(), which used to build a fresh Config() (and
+        therefore re-print the warning) on every call. Two blocks used to
+        mean three prints: one from the primary Config(), one per block.
+        """
+        with open(self.config_path, "a") as f:
+            f.write('\n[colors]\nfoo = "bar"\n')
+        with open(os.path.join(self.custom_apps_dir, "multiblock.toml"), "w") as f:
+            f.write(
+                '[[block]]\n[block.run]\ncommands = ["true"]\n'
+                '[[block]]\n[block.run]\ncommands = ["true"]\n',
+            )
+        buf = io.StringIO()
+        with patch("sys.argv", ["mackup", "apply"]), patch("sys.stdout", buf):
+            main()
+        output = buf.getvalue()
+        assert output.count("unknown config table") == 1
+
     def _write_custom_app(self, app_id, body):
         path = os.path.join(self.custom_apps_dir, f"{app_id}.toml")
         with open(path, "w") as handle:

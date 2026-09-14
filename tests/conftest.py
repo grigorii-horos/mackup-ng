@@ -2,6 +2,23 @@
 
 import os
 
+import pytest
+
+from mackup_ng import config as _config
+
+
+@pytest.fixture(autouse=True)
+def _reset_unknown_key_warning():
+    """Config._warn_on_unknown_keys() fires at most once per process.
+
+    Without this, whichever test happens to run first and trip that warning
+    would permanently silence it for every test after — including the ones
+    in tests/test_config_errors.py that assert on its text.
+    """
+    _config._reset_unknown_key_warning()
+    yield
+    _config._reset_unknown_key_warning()
+
 
 def write_config(path, *, storage_path, directory="Mackup", sync=(), ignore=()):
     """Write a file_system-engine TOML mackup config to `path`.

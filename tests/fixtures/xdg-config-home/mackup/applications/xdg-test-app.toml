@@ -1,4 +1,0 @@
-name = "XDG Test App"
-files = [
-    ".xdg-test-app-config",
-]

@@ -1071,6 +1071,7 @@ $XDG_DATA_HOME/mackup/       (~/.local/share/mackup)  synced
     dconf-backup/*.dconf      dconf dumps
 $XDG_STATE_HOME/mackup/      (~/.local/state/mackup)  NOT synced
     markers/                  marker STATE flags, machine-local
+    sync-log.json             per-machine record of the last sync
 ```
 
 Marker *state* (which markers are on) is the only part of this that is
@@ -1081,6 +1082,14 @@ Marker state is not the only machine-local state: `sync` also records what it
 did to each destination in `$XDG_STATE_HOME/mackup/sync-log.json`, which is what
 `mackup-ng info` reports as "Last sync". Both stay out of the synced backup
 folder, since they describe this machine only.
+
+mackup-ng backs up its own configuration through the same mechanism, via the
+built-in `Mackup` profile (`applications/mackup.toml`): its file list is the
+literal, home-relative paths `.config/mackup` and `.local/share/mackup`, not
+`dirs.config_dir()` / `dirs.data_dir()`. If you point `$XDG_CONFIG_HOME` (or
+`$XDG_DATA_HOME`) somewhere other than its default, mackup-ng itself keeps
+working from the new location, but this profile keeps watching the old one —
+so it silently stops syncing mackup's own configuration.
 
 - **Markers** (`mark`/`unmark`/`markers`) are empty flag files gating behavior on
   one machine only. `backup` marks the source machine.

@@ -10,6 +10,7 @@ Layout across the XDG base directories::
         dconf-backup/   dconf dumps (*.dconf)
     $XDG_STATE_HOME/mackup/
         markers/        marker STATE flags
+        sync-log.json   per-machine record of the last sync (see synclog.py)
 
 Marker STATE (empty flag files toggling behaviour on this machine only, never
 synced) is the only part that is machine-local. ``backup`` marks the source

@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from unittest import mock
 
-from mackup_ng import blocks
+from mackup_ng import blocks, dirs
 
 
 class TestBlocks(unittest.TestCase):
@@ -167,6 +167,31 @@ class TestBlocks(unittest.TestCase):
         assert stops == ["syncthing"]
         assert starts == ["syncthing"]
         assert state["running"] is True
+
+    def test_dropin_path_uses_dirs_module(self):
+        """dropin_path resolves $XDG_CONFIG_HOME through dirs.py, not inline."""
+        path = blocks.dropin_path({"service": "syncthing", "name": "limits"})
+        assert path == os.path.join(
+            dirs.user_config_home(),
+            "systemd",
+            "user",
+            "syncthing.service.d",
+            "limits.conf",
+        )
+
+    def test_dropin_path_ignores_relative_xdg_config_home(self):
+        """A relative $XDG_CONFIG_HOME must fall back, like every other base."""
+        os.environ["XDG_CONFIG_HOME"] = "relative/cfg"
+        path = blocks.dropin_path({"service": "syncthing"})
+        assert path == os.path.join(
+            self.home,
+            ".config",
+            "systemd",
+            "user",
+            "syncthing.service.d",
+            "mackup-set.conf",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

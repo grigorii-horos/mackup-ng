@@ -15,6 +15,7 @@ from __future__ import annotations
 import json
 import os
 
+from . import dirs
 from .application import ApplicationProfile
 
 LOG_FILENAME: str = "sync-log.json"
@@ -22,12 +23,7 @@ LOG_FILENAME: str = "sync-log.json"
 
 def log_path() -> str:
     """Path of the sync log under ``$XDG_STATE_HOME``."""
-    base = os.environ.get("XDG_STATE_HOME") or os.path.join(
-        os.environ["HOME"],
-        ".local",
-        "state",
-    )
-    return os.path.join(base, "mackup", LOG_FILENAME)
+    return os.path.join(dirs.state_dir(), LOG_FILENAME)
 
 
 def read() -> dict[str, dict]:

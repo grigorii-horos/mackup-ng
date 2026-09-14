@@ -233,10 +233,11 @@ mackup/
 ├── application.py      # Per-application operations
 ├── utils.py            # Utility functions
 ├── constants.py        # Constants and defaults
+├── dirs.py             # XDG base directory resolution (single source of truth)
 └── applications/       # Built-in app configs
-    ├── git.cfg
-    ├── vim.cfg
-    ├── ssh.cfg
+    ├── git.toml
+    ├── vim.toml
+    ├── ssh.toml
     └── ... (600+ more)
 ```
 

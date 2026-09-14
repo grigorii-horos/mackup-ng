@@ -1,11 +1,13 @@
 """XDG base directory resolution for mackup-ng.
 
-Every mackup-ng path derives from one of three XDG bases. Resolving them in
-one place keeps the fallback identical everywhere: an environment value is
-honoured only when it is non-empty *and* absolute, which is what the XDG base
-directory specification requires. Before this module the rule was spelled two
-different ways, so an empty ``XDG_CONFIG_HOME`` meant ``~/.config`` in
-``ignore.py`` but ``/`` in ``appsdb.py``.
+Every mackup-ng path derives from one of the XDG bases (config, data, state,
+cache). Resolving them in one place keeps the fallback identical everywhere:
+an environment value is honoured only when it is non-empty *and* absolute,
+which is what the XDG base directory specification requires. Before this
+module the rule was spelled two different ways, so an empty
+``XDG_CONFIG_HOME`` meant ``~/.config`` in ``ignore.py`` but ``/`` in
+``appsdb.py``. This is the only module that may read an ``XDG_*`` environment
+variable — everything else calls in here.
 """
 
 from __future__ import annotations
@@ -43,6 +45,20 @@ def data_dir() -> str:
 def state_dir() -> str:
     """$XDG_STATE_HOME/mackup/ — machine-local state. Never synced."""
     return os.path.join(_base("XDG_STATE_HOME", ".local", "state"), MACKUP_DIRNAME)
+
+
+def cache_dir() -> str:
+    """$XDG_CACHE_HOME/mackup/ — disposable, machine-local. Never synced."""
+    return os.path.join(_base("XDG_CACHE_HOME", ".cache"), MACKUP_DIRNAME)
+
+
+def user_config_home() -> str:
+    """Raw $XDG_CONFIG_HOME (default ``~/.config``), unqualified by ``mackup/``.
+
+    For paths mackup writes into another application's own config tree (the
+    systemd user drop-in directory), not mackup's own ``config_dir()``.
+    """
+    return _base("XDG_CONFIG_HOME", ".config")
 
 
 def config_file() -> str:

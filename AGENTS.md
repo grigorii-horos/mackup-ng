@@ -194,13 +194,19 @@ paths (`Config._reject_legacy_layout`); markers left behind in that pre-XDG
 home directory are never picked up (`test_no_legacy_marker_migration`).
 
 Code: `src/mackup_ng/{appsdb,blocks,conditions,hooks,dconf,dirs}.py`. `dirs.py`
-resolves the three XDG bases and every path under them (`config_dir`,
-`data_dir`, `state_dir`, `config_file`, `custom_apps_dir`, `custom_ignores_dir`,
-`custom_markers_dir`, `markers_state_dir`, `dconf_backup_dir`); `constants.py`
-holds the dir/file names (`APPS_DIR`, `IGNORES_DIRNAME`, `MARKERS_DIRNAME`,
-`MARKERS_DEFS_DIRNAME`, `DCONF_DIRNAME`, `CONFIG_FILENAME`) plus the two
-pre-XDG names kept only to reject them (`LEGACY_CONFIG_FILE`, `LEGACY_HOME_DIR`
-— see `constants.py`).
+is the single resolver for every `XDG_*` environment variable mackup-ng reads
+— nothing else in `src/mackup_ng/` may read one directly (`grep -rn "XDG_"
+src/mackup_ng/` should only turn up comments/docstrings and `dirs.py`
+itself). It resolves the four XDG bases and every path under them
+(`config_dir`, `data_dir`, `state_dir`, `cache_dir`, `config_file`,
+`custom_apps_dir`, `custom_ignores_dir`, `custom_markers_dir`,
+`markers_state_dir`, `dconf_backup_dir`), plus `user_config_home()` — the raw
+`$XDG_CONFIG_HOME`, unqualified by `mackup/`, for the one path mackup-ng
+writes into another application's own config tree (the systemd user drop-in
+directory in `blocks.py`). `constants.py` holds the dir/file names
+(`APPS_DIR`, `IGNORES_DIRNAME`, `MARKERS_DIRNAME`, `MARKERS_DEFS_DIRNAME`,
+`DCONF_DIRNAME`, `CONFIG_FILENAME`) plus the two pre-XDG names kept only to
+reject them (`LEGACY_CONFIG_FILE`, `LEGACY_HOME_DIR` — see `constants.py`).
 
 ### `mackup sync` phases
 

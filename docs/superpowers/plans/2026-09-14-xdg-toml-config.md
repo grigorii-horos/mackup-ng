@@ -1706,10 +1706,19 @@ mkdir -p ~/.config/mackup ~/.local/share/mackup ~/.local/state/mackup/markers
 
 ```bash
 mv ~/.mackup/applications ~/.config/mackup/applications
-mv ~/.mackup/markers/*.toml ~/.config/mackup/markers/ 2>/dev/null || \
-  mkdir -p ~/.config/mackup/markers
+mkdir -p ~/.config/mackup/markers && \
+  mv ~/.mackup/markers/*.toml ~/.config/mackup/markers/ 2>/dev/null
 [ -d ~/.mackup/ignores ] && mv ~/.mackup/ignores ~/.config/mackup/ignores
 ```
+
+Note the order: the destination directory must exist *before* the `mv`. The
+original form (`mv ... 2>/dev/null || mkdir -p ...`) ran `mkdir` only when
+`mv` failed — which it always would, since `~/.config/mackup/markers` does
+not exist yet at this point (step 2 creates only `~/.config/mackup`) — so it
+silently created an empty directory and moved nothing. `eink.toml` (a marker
+*definition*, not a state flag — see step 4) would then be destroyed by
+step 7's `rm -rf ~/.mackup` with no warning, because the redirected stderr
+hid the failure.
 
 - [ ] **Step 4: Move state and data**
 
@@ -1744,7 +1753,7 @@ sync = []
 ```
 
 Cross-check the list against `~/.mackup.cfg` before deleting it — the old file
-had 21 entries under `[applications_to_ignore]`. The `[colors]` section is
+had 26 entries under `[applications_to_ignore]`. The `[colors]` section is
 dropped: no code ever read it.
 
 - [ ] **Step 6: Move the non-mackup files and delete the dead ones**
@@ -1760,7 +1769,25 @@ removed in the unified-config-blocks change; `backup.d` and `state` are empty.
 
 Update the first line of `~/.config/mackup/CLAUDE.md`, which names the old path.
 
-- [ ] **Step 7: Verify before the point of no return**
+- [ ] **Step 7: Remove the legacy paths — the point of no return**
+
+`Config._reject_legacy_layout` tests whether `~/.mackup` and `~/.mackup.cfg`
+*exist*, not whether they are empty — so every `mackup` command keeps
+aborting with the legacy-layout error until both are gone, no matter how
+thoroughly steps 3-6 emptied them out. Verification (step 8) is therefore
+only possible *after* this step, not before it; the safety copy from step 1
+is what makes that order safe.
+
+Caution: `~/.mackup` is this session's current working directory (it is
+where this runbook is being run from). `rm -rf` on the cwd leaves the shell
+in a removed directory. `cd` elsewhere first:
+
+```bash
+cd ~
+rm -rf ~/.mackup ~/.mackup.cfg
+```
+
+- [ ] **Step 8: Verify**
 
 ```bash
 cd ~/Projects/GitHub/grigorii-horos/mackup && uv run mackup list | head
@@ -1768,16 +1795,14 @@ uv run mackup info ~/.config/mackup/config.toml
 ```
 
 Expected: the application list renders, and `info` reports the config file as
-managed. If `mackup` still errors about a legacy layout, `~/.mackup` is not yet
-empty — find what is left with `find ~/.mackup`.
-
-- [ ] **Step 8: Remove the legacy paths**
-
-```bash
-rm -rf ~/.mackup ~/.mackup.cfg
-```
+managed.
 
 - [ ] **Step 9: Clean the sync storage and re-sync**
+
+Warning: `~/Sync/Configs` is under live Syncthing. `rm -rf` here does not
+stay local — deleting `~/Sync/Configs/Mackup/.mackup*` propagates that
+deletion to every peer device on the next sync. Make sure the safety copy
+from step 1 is somewhere Syncthing does not watch before running this.
 
 ```bash
 ls ~/Sync/Configs/Mackup/ | grep -i mackup
@@ -1791,10 +1816,18 @@ The stale copies would otherwise diverge from the new paths forever.
 
 ```bash
 ls -la ~/.config/mackup ~/.local/share/mackup
+ls ~/Sync/Configs/Mackup/.config/mackup/config.toml
+ls ~/Sync/Configs/Mackup/.local/state/mackup 2>&1
 ```
 
-Expected: both are symlinks into `~/Sync/Configs/Mackup/`, and
-`~/.local/state/mackup` is a real directory that was **not** symlinked.
+Expected: `~/.config/mackup` and `~/.local/share/mackup` are **real
+directories**, not symlinks — mackup syncs by merging directory contents
+(`Application.sync_members_directory`, newest-entry-wins copies), never by
+replacing a path with a link. `~/Sync/Configs/Mackup/.config/mackup/config.toml`
+exists (the storage-side copy of the config). The third command must fail —
+`~/.local/state/mackup` (machine-local marker state and the sync log) has
+**no** copy in storage; the `mackup.toml` self-sync profile lists only
+`.config/mackup` and `.local/share/mackup`, deliberately excluding state.
 
 ---
 

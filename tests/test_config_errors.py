@@ -90,6 +90,51 @@ def test_unknown_key_warns(tmp_path, monkeypatch, capsys):
     )
 
 
+def test_same_config_file_warns_only_once_across_instances(
+    tmp_path, monkeypatch, capsys,
+):
+    """hooks.backup_dir() builds its own Config() per action block, reading
+    the same file as the primary flow's instance — the warning must not
+    repeat for repeat reads of the *same* resolved path."""
+    config_dir = _xdg_home(tmp_path, monkeypatch)
+    (config_dir / "config.toml").write_text(
+        '[colors]\nfoo = "bar"\n\n[applications]\nignore = ["ssh"]\n',
+    )
+
+    Config()
+    Config()
+    Config()
+
+    assert capsys.readouterr().out.count("unknown config table [colors]") == 1
+
+
+def test_different_config_files_each_warn_independently(
+    tmp_path, monkeypatch, capsys,
+):
+    """`mackup apply --config-file other.toml` reads two different files in
+    one run: the primary flow honours --config-file, but hooks.backup_dir()
+    always builds Config() with no filename, i.e. the default location. Both
+    files' unknown keys must be reported — keying the once-only warning by a
+    bare per-process flag would silently swallow the second file's warning
+    once the first file had already tripped it.
+    """
+    config_dir = _xdg_home(tmp_path, monkeypatch)
+    (config_dir / "config.toml").write_text(
+        '[colors]\nfoo = "bar"\n\n[applications]\nignore = ["ssh"]\n',
+    )
+    other = tmp_path / "other.toml"
+    other.write_text(
+        '[weirdtable]\nfoo = "bar"\n\n[applications]\nignore = ["git"]\n',
+    )
+
+    Config()  # default location, as hooks.backup_dir() would build it
+    Config(str(other))  # --config-file, as the primary flow would build it
+
+    output = capsys.readouterr().out
+    assert "unknown config table [colors]" in output
+    assert "unknown config table [weirdtable]" in output
+
+
 def test_storage_directory_inside_a_managed_dir_is_rejected(tmp_path, monkeypatch):
     config_dir = _xdg_home(tmp_path, monkeypatch)
     (config_dir / "config.toml").write_text(

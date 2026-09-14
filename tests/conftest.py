@@ -9,11 +9,12 @@ from mackup_ng import config as _config
 
 @pytest.fixture(autouse=True)
 def _reset_unknown_key_warning():
-    """Config._warn_on_unknown_keys() fires at most once per process.
+    """Config._warn_on_unknown_keys() fires at most once per resolved path.
 
     Without this, whichever test happens to run first and trip that warning
-    would permanently silence it for every test after — including the ones
-    in tests/test_config_errors.py that assert on its text.
+    for a given config path would permanently silence it for every later
+    test that resolves to the same path — including the ones in
+    tests/test_config_errors.py that assert on its text.
     """
     _config._reset_unknown_key_warning()
     yield

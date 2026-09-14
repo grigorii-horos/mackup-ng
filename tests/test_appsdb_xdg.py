@@ -6,6 +6,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
+from mackup_ng import dirs
 from mackup_ng.appsdb import ApplicationsDatabase
 
 
@@ -35,84 +36,46 @@ class TestApplicationsDatabaseXDG(unittest.TestCase):
         else:
             os.environ["XDG_CONFIG_HOME"] = self._original_xdg_config_home
 
-    def test_legacy_custom_apps_dir(self):
-        """Test that legacy ~/.mackup/ directory is found."""
-        # Don't set XDG_CONFIG_HOME, only legacy should be found
+    def test_custom_apps_dir_is_found(self):
+        """A profile in $XDG_CONFIG_HOME/mackup/applications is picked up."""
         config_files = ApplicationsDatabase.get_config_files()
         filenames = {os.path.basename(f) for f in config_files}
 
-        assert "legacy-test-app.toml" in filenames
+        assert "custom-test-app.toml" in filenames
 
-    def test_xdg_custom_apps_dir(self):
-        """Test that XDG custom apps directory is found."""
-        xdg_config = os.path.join(self.fixtures_path, "xdg-config-home")
-        os.environ["XDG_CONFIG_HOME"] = xdg_config
-
+    def test_custom_shadows_stock_of_the_same_name(self):
+        """A custom file replaces the stock file with the same name."""
         config_files = ApplicationsDatabase.get_config_files()
-        filenames = {os.path.basename(f) for f in config_files}
+        matching = [
+            f
+            for f in config_files
+            if os.path.basename(f) == "priority-test-app.toml"
+        ]
 
-        assert "xdg-test-app.toml" in filenames
+        assert len(matching) == 1
+        assert matching[0].startswith(dirs.custom_apps_dir())
 
-    def test_legacy_takes_priority_over_xdg(self):
-        """Test that legacy directory takes priority when same app exists."""
-        xdg_config = os.path.join(self.fixtures_path, "xdg-config-home")
-        os.environ["XDG_CONFIG_HOME"] = xdg_config
-
+    def test_custom_files_come_last(self):
+        """Custom files sort after stock files, so they win on conflicts."""
         config_files = ApplicationsDatabase.get_config_files()
+        custom = [
+            i
+            for i, f in enumerate(config_files)
+            if f.startswith(dirs.custom_apps_dir())
+        ]
+        stock = [
+            i
+            for i, f in enumerate(config_files)
+            if not f.startswith(dirs.custom_apps_dir())
+        ]
 
-        # Find the priority-test-app.cfg file
-        priority_files = [f for f in config_files if "priority-test-app.toml" in f]
+        assert custom, "no custom files discovered"
+        assert min(custom) > max(stock)
 
-        # Should only have one file (legacy should win)
-        assert len(priority_files) == 1
-
-        # Should be from legacy directory
-        assert ".mackup" in priority_files[0]
-        assert "xdg-config-home" not in priority_files[0]
-
-    def test_both_directories_merged(self):
-        """Test that apps from both directories are available."""
-        xdg_config = os.path.join(self.fixtures_path, "xdg-config-home")
-        os.environ["XDG_CONFIG_HOME"] = xdg_config
-
-        config_files = ApplicationsDatabase.get_config_files()
-        filenames = {os.path.basename(f) for f in config_files}
-
-        # Both unique apps should be present
-        assert "legacy-test-app.toml" in filenames
-        assert "xdg-test-app.toml" in filenames
-
-    def test_xdg_default_fallback(self):
-        """Test that XDG falls back to ~/.config when XDG_CONFIG_HOME is not set."""
-        # Unset XDG_CONFIG_HOME - should fall back to ~/.config
-        os.environ.pop("XDG_CONFIG_HOME", None)
-
-        # This test just verifies the code doesn't crash
-        # In real scenario, ~/.config/mackup/applications/ would be checked
-        config_files = ApplicationsDatabase.get_config_files()
-
-        # Should at least contain stock apps and legacy custom apps
-        assert len(config_files) > 0
-
-    def test_applications_database_loads_xdg_apps(self):
-        """Test that ApplicationsDatabase correctly loads apps from XDG."""
-        xdg_config = os.path.join(self.fixtures_path, "xdg-config-home")
-        os.environ["XDG_CONFIG_HOME"] = xdg_config
-
+    def test_applications_database_resolves_name_from_custom_dir(self):
+        """ApplicationsDatabase reads the app name out of a custom-dir profile."""
         db = ApplicationsDatabase()
 
-        # XDG app should be loaded
-        assert "xdg-test-app" in db.get_app_names()
-        assert db.get_name("xdg-test-app") == "XDG Test App"
-
-    def test_applications_database_priority_loads_legacy(self):
-        """Test ApplicationsDatabase loads legacy version when app exists."""
-        xdg_config = os.path.join(self.fixtures_path, "xdg-config-home")
-        os.environ["XDG_CONFIG_HOME"] = xdg_config
-
-        db = ApplicationsDatabase()
-
-        # Priority app should load the legacy version
         assert "priority-test-app" in db.get_app_names()
         assert db.get_name("priority-test-app") == "Priority Test App Legacy"
 
@@ -120,12 +83,10 @@ class TestApplicationsDatabaseXDG(unittest.TestCase):
         """Brace groups in app cfg paths should expand into multiple files."""
         temp_home = tempfile.mkdtemp()
         temp_xdg = os.path.join(temp_home, ".config")
-        legacy_apps_dir = os.path.join(temp_home, ".mackup", "applications")
-        xdg_apps_dir = os.path.join(temp_xdg, "mackup", "applications")
-        os.makedirs(legacy_apps_dir, exist_ok=True)
-        os.makedirs(xdg_apps_dir, exist_ok=True)
+        custom_apps_dir = os.path.join(temp_xdg, "mackup", "applications")
+        os.makedirs(custom_apps_dir, exist_ok=True)
 
-        cfg_path = os.path.join(legacy_apps_dir, "brace-expand-test.toml")
+        cfg_path = os.path.join(custom_apps_dir, "brace-expand-test.toml")
         with open(cfg_path, "w") as f:
             f.write(
                 "[application]\n"
@@ -292,10 +253,10 @@ class TestApplicationsDatabaseXDG(unittest.TestCase):
         """Selectors are resolved first, then braces are expanded."""
         temp_home = tempfile.mkdtemp()
         temp_xdg = os.path.join(temp_home, ".config")
-        legacy_apps_dir = os.path.join(temp_home, ".mackup", "applications")
-        os.makedirs(legacy_apps_dir, exist_ok=True)
+        custom_apps_dir = os.path.join(temp_xdg, "mackup", "applications")
+        os.makedirs(custom_apps_dir, exist_ok=True)
 
-        cfg_path = os.path.join(legacy_apps_dir, "platform-selector-test.toml")
+        cfg_path = os.path.join(custom_apps_dir, "platform-selector-test.toml")
         with open(cfg_path, "w") as f:
             f.write(
                 "[application]\n"
@@ -336,10 +297,10 @@ class TestApplicationsDatabaseXDG(unittest.TestCase):
         """Mappings should preserve per-platform local path and canonical backup path."""
         temp_home = tempfile.mkdtemp()
         temp_xdg = os.path.join(temp_home, ".config")
-        legacy_apps_dir = os.path.join(temp_home, ".mackup", "applications")
-        os.makedirs(legacy_apps_dir, exist_ok=True)
+        custom_apps_dir = os.path.join(temp_xdg, "mackup", "applications")
+        os.makedirs(custom_apps_dir, exist_ok=True)
 
-        cfg_path = os.path.join(legacy_apps_dir, "mapping-test.toml")
+        cfg_path = os.path.join(custom_apps_dir, "mapping-test.toml")
         with open(cfg_path, "w") as f:
             f.write(
                 "[application]\n"
@@ -391,10 +352,10 @@ class TestApplicationsDatabaseXDG(unittest.TestCase):
         """Built-in vars should work after selectors and before brace expansion."""
         temp_home = tempfile.mkdtemp()
         temp_xdg = os.path.join(temp_home, ".config")
-        legacy_apps_dir = os.path.join(temp_home, ".mackup", "applications")
-        os.makedirs(legacy_apps_dir, exist_ok=True)
+        custom_apps_dir = os.path.join(temp_xdg, "mackup", "applications")
+        os.makedirs(custom_apps_dir, exist_ok=True)
 
-        cfg_path = os.path.join(legacy_apps_dir, "builtin-vars-test.toml")
+        cfg_path = os.path.join(custom_apps_dir, "builtin-vars-test.toml")
         with open(cfg_path, "w") as f:
             f.write(
                 "[application]\n"
@@ -431,10 +392,10 @@ class TestApplicationsDatabaseXDG(unittest.TestCase):
         """Cross-platform vars should resolve without requiring [] selectors."""
         temp_home = tempfile.mkdtemp()
         temp_xdg = os.path.join(temp_home, ".config")
-        legacy_apps_dir = os.path.join(temp_home, ".mackup", "applications")
-        os.makedirs(legacy_apps_dir, exist_ok=True)
+        custom_apps_dir = os.path.join(temp_xdg, "mackup", "applications")
+        os.makedirs(custom_apps_dir, exist_ok=True)
 
-        cfg_path = os.path.join(legacy_apps_dir, "cross-platform-vars-test.toml")
+        cfg_path = os.path.join(custom_apps_dir, "cross-platform-vars-test.toml")
         with open(cfg_path, "w") as f:
             f.write(
                 "[application]\n"

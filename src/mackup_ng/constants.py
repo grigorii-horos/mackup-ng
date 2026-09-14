@@ -42,12 +42,6 @@ VERSION: str = get_version()
 # Mackup home directory (under $HOME): custom apps + hooks + markers + sets + state
 MACKUP_HOME_DIR: str = ".mackup"
 
-# Directory that can contains user defined app configs: ~/.mackup/applications/
-CUSTOM_APPS_DIR: str = os.path.join(MACKUP_HOME_DIR, APPS_DIR)
-
-# XDG-compliant directory for user defined app configs (relative to XDG_CONFIG_HOME)
-CUSTOM_APPS_DIR_XDG: str = "mackup/applications"
-
 # Directories holding ignore definitions (*.toml with an [ignore] table):
 # built-ins ship in the package, local ones sit next to the custom app configs.
 IGNORES_DIRNAME: str = "ignores"

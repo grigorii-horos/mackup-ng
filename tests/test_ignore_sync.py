@@ -37,7 +37,7 @@ class TestIgnoredDuringSync(unittest.TestCase):
             self.test_home, ".config", "mackup", "config.toml",
         )
         write_config(self.config_path, storage_path=self.test_storage, sync=["notes"])
-        self.apps_dir = os.path.join(self.test_home, ".mackup", "applications")
+        self.apps_dir = os.path.join(self.test_home, ".config", "mackup", "applications")
         os.makedirs(self.apps_dir, exist_ok=True)
         self.write_app("notes", 'files = [".notes"]\n')
 

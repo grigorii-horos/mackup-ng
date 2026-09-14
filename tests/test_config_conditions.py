@@ -36,7 +36,7 @@ class TestConfigLevelConditions(unittest.TestCase):
             storage_path=self.storage,
             sync=["aaa-base", "zzz-override", "gated-blocks"],
         )
-        self.apps_dir = os.path.join(self.home, ".mackup", "applications")
+        self.apps_dir = os.path.join(self.home, ".config", "mackup", "applications")
         os.makedirs(self.apps_dir, exist_ok=True)
         utils.FORCE_YES = True
 

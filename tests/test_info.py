@@ -41,7 +41,7 @@ class TestInfo(unittest.TestCase):
         with open(self.test_file_path, "w") as handle:
             handle.write("test_config=value\n")
 
-        self.custom_apps_dir = os.path.join(self.test_home, ".mackup", "applications")
+        self.custom_apps_dir = os.path.join(self.test_home, ".config", "mackup", "applications")
         os.makedirs(self.custom_apps_dir, exist_ok=True)
         self.write_app("test-app", "test-app", [self.test_file_name])
 

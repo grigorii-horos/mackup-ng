@@ -11,14 +11,22 @@ from .constants import (
     ENGINE_FS,
     ENGINE_GDRIVE,
     ENGINE_ICLOUD,
+    LEGACY_CONFIG_FILE,
+    LEGACY_HOME_DIR,
     MACKUP_BACKUP_PATH,
 )
 from .utils import (
+    colorize_message,
     error,
     get_dropbox_folder_location,
     get_google_drive_folder_location,
     get_icloud_folder_location,
 )
+
+_KNOWN_KEYS: dict[str, set[str]] = {
+    "storage": {"engine", "path", "directory"},
+    "applications": {"ignore", "sync"},
+}
 
 
 class Config:
@@ -34,7 +42,10 @@ class Config:
         """
         assert isinstance(filename, str) or filename is None
 
+        self._reject_legacy_layout()
+
         self._data = self._load(self._best_config_path(filename))
+        self._warn_on_unknown_keys()
 
         self._engine = self._parse_engine()
         self._path = self._parse_path()
@@ -109,6 +120,73 @@ class Config:
             set. Set of application names to allow, lowercase
         """
         return set(self._apps_to_sync)
+
+    @staticmethod
+    def _reject_legacy_layout() -> None:
+        """Refuse to run while the pre-XDG layout is still in place.
+
+        Falling back silently would be worse than stopping: with no config
+        found, the storage engine defaults to dropbox and a sync would write
+        to the wrong place entirely.
+        """
+        home = Path.home()
+        for legacy in (home / LEGACY_CONFIG_FILE, home / LEGACY_HOME_DIR):
+            if legacy.exists():
+                error(
+                    f"Legacy layout detected: {legacy}\n"
+                    "\n"
+                    "mackup-ng now reads TOML from the XDG directories:\n"
+                    f"  config        {dirs.config_file()}\n"
+                    f"  applications  {dirs.custom_apps_dir()}\n"
+                    f"  ignores       {dirs.custom_ignores_dir()}\n"
+                    f"  markers       {dirs.custom_markers_dir()}\n"
+                    f"  dconf dumps   {dirs.dconf_backup_dir()}\n"
+                    "\n"
+                    "Move your files there, convert the config to TOML, and "
+                    "remove the legacy path above.",
+                )
+
+    def _warn_on_unknown_keys(self) -> None:
+        """Name anything we will not act on.
+
+        A [colors] table sat in a real config being silently ignored for
+        years; a typo such as applications.ignor fails the same silent way.
+        """
+        for name, value in self._data.items():
+            if name not in _KNOWN_KEYS:
+                print(
+                    colorize_message(
+                        f"Warning: unknown config table [{name}], ignored",
+                    ),
+                )
+                continue
+            if not isinstance(value, dict):
+                continue
+            unknown = sorted(set(value) - _KNOWN_KEYS[name])
+            if unknown:
+                names = ", ".join(unknown)
+                print(
+                    colorize_message(
+                        f"Warning: unknown key(s) in [{name}]: {names}, ignored",
+                    ),
+                )
+
+    @staticmethod
+    def _reject_managed_fullpath(fullpath: str) -> None:
+        """The storage folder must not sit inside a directory mackup manages.
+
+        Replaces two hard-coded path-string comparisons; a containment check
+        covers every managed directory and survives a rename.
+        """
+        target = os.path.realpath(fullpath)
+        for managed in (dirs.config_dir(), dirs.data_dir(), dirs.state_dir()):
+            managed_real = os.path.realpath(managed)
+            if target == managed_real or target.startswith(managed_real + os.sep):
+                raise ConfigError(
+                    f"The storage directory '{fullpath}' is inside "
+                    f"'{managed}', which mackup manages. "
+                    "Choose another directory.",
+                )
 
     @staticmethod
     def _load(path: str) -> dict:
@@ -233,6 +311,7 @@ class Config:
                 f"storage.directory must be a string, "
                 f"got {type(directory).__name__}",
             )
+        self._reject_managed_fullpath(os.path.join(self.path, directory))
         return directory
 
     def _parse_apps_to_ignore(self) -> set[str]:

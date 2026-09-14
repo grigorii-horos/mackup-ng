@@ -153,8 +153,6 @@ def test_custom_ignores_come_from_the_xdg_directory(tmp_path, monkeypatch):
         '[ignore]\npatterns = ["*.customsuffix"]\n',
     )
 
-    from mackup_ng import ignore
-
     # load_globs is lru_cached; a test that moves $HOME must clear it.
     ignore.load_globs.cache_clear()
     try:

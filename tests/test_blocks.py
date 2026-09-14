@@ -11,8 +11,13 @@ from mackup_ng import blocks
 class TestBlocks(unittest.TestCase):
     def setUp(self):
         self.home = tempfile.mkdtemp(prefix="mackup_blocks_")
-        self._orig = {k: os.environ.get(k) for k in ("HOME", "XDG_STATE_HOME")}
+        self._orig = {
+            k: os.environ.get(k)
+            for k in ("HOME", "XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_STATE_HOME")
+        }
         os.environ["HOME"] = self.home
+        os.environ["XDG_CONFIG_HOME"] = os.path.join(self.home, ".config")
+        os.environ["XDG_DATA_HOME"] = os.path.join(self.home, ".local", "share")
         os.environ["XDG_STATE_HOME"] = os.path.join(self.home, ".local", "state")
 
     def tearDown(self):

@@ -4,7 +4,7 @@ import os
 import tempfile
 import unittest
 
-from mackup_ng import hooks
+from mackup_ng import dirs, hooks
 
 
 class TestMarkers(unittest.TestCase):
@@ -66,8 +66,6 @@ def test_hook_env_exposes_the_three_xdg_roots(tmp_path, monkeypatch):
     for var in ("XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_STATE_HOME"):
         monkeypatch.delenv(var, raising=False)
 
-    from mackup_ng import dirs, hooks
-
     env = hooks.hook_env("pre")
 
     assert env["MACKUP_CONFIG_DIR"] == dirs.config_dir()
@@ -85,8 +83,6 @@ def test_no_legacy_marker_migration(tmp_path, monkeypatch):
     legacy = tmp_path / ".mackup" / "markers"
     legacy.mkdir(parents=True)
     (legacy / "backup").touch()
-
-    from mackup_ng import hooks
 
     assert hooks.has_marker("backup") is False
     assert (legacy / "backup").exists()

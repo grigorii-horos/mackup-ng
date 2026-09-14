@@ -1075,12 +1075,14 @@ Use `not_os = "macos"` rather than `os = ["linux", "windows"]` for
 machine's XDG paths, while `not_os` only excludes what it names.
 
 `mackup-ng show <app>` prints the resolved file mappings and then a `Units:`
-section naming every unit that carries an action or was skipped by its
-conditions — `slot N: <action>`, or `slot N: <action> — conditions not met
-(...)` when it didn't run (`files only` stands in for `<action>` when a
-skipped unit had none). A unit that simply synced files with nothing else to
-report isn't listed — this is how a unit dropped by `[when]` shows up
-instead of silently vanishing.
+section listing every `[[block]]` the config declares, whether or not it ran
+— `slot N: <action>` naming its action, or `slot N: files only` when it has
+none, with a trailing `— conditions not met (...)` when its `[when]` didn't
+hold. The implicit top-level unit is different: it shows up in `Units:` only
+when the top level itself carries an action — a bare top-level `files` (and
+`[mapped_files]`) with no action never appears there, even though its
+mappings already showed up under `Configuration files:` above. This is how a
+block dropped by `[when]` is named instead of silently vanishing.
 
 Conditions written at the top level of a config gate the **whole** config —
 its synced files as well as its units' actions. A config whose conditions do

@@ -382,12 +382,15 @@ ran the config: `hooks.os_kind()` reports `android` as its own value, not
 `not_os = "macos"` still matches it correctly.
 
 `mackup show <app>` prints the resolved file mappings and then a `Units:`
-section naming every unit that carries an action or was skipped by its
-conditions — `slot N: <action>`, or `slot N: <action> — conditions not met
-(...)` when it didn't run (`files only` in place of `<action>` when a
-skipped unit had none). A unit that only synced files, with nothing else to
-report, is left off the list; this is how a unit dropped by `[when]` shows
-up instead of silently vanishing.
+section (`main.py`, the `show` branch): every `[[block]]` entry is listed
+unconditionally — `Unit.block` is the raw block dict for each of them, action
+or not, passing or not — as `slot N: <action>`, or `slot N: files only` when
+the block has no action, with `— conditions not met (...)` appended when its
+`[when]` failed. The implicit top-level unit is the one exception: its
+`block` is `None` whenever the top level carries no action, so it is left off
+`Units:` in that case — even when it declares `files` (already reported
+above, under "Configuration files") — and shown only when it does have an
+action of its own.
 
 ### Config-level conditions (top-level `[when]`)
 

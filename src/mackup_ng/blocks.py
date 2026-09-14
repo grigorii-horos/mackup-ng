@@ -516,27 +516,3 @@ def flush_pending_starts(pending_starts: set[str]) -> None:
     for svc in sorted(pending_starts):
         svc_start(svc)
     pending_starts.clear()
-
-
-def apply_blocks(
-    blocks: list[dict],
-    phase: str,
-    env_files: list[str],
-    dry_run: bool,
-) -> Counter:
-    """Apply matching-phase blocks in order; return a Counter action -> changes."""
-    tally: Counter = Counter()
-    pending_starts: set[str] = set()
-    try:
-        for block in blocks:
-            if block.get("phase", "post") != phase:
-                continue
-            if not conditions.block_passes(block):
-                continue
-            action, count = apply_block(block, env_files, dry_run, pending_starts)
-            if action and count:
-                tally[action] += count
-    finally:
-        for svc in sorted(pending_starts):
-            svc_start(svc)
-    return tally

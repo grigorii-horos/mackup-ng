@@ -544,10 +544,20 @@ def main() -> None:
             if not app_db.config_enabled(app_name):
                 continue
             env_files = app_db.get_env_files(app_name)
-            cfg_blocks = app_db.get_blocks(app_name)
-            tally = blocks.apply_blocks(cfg_blocks, "pre", env_files, dry_run)
-            tally += blocks.apply_blocks(cfg_blocks, "during", env_files, dry_run)
-            tally += blocks.apply_blocks(cfg_blocks, "post", env_files, dry_run)
+            tally = Counter()
+            pending_starts = set()
+            try:
+                for unit in app_db.get_units(app_name):
+                    if not unit.passed or unit.block is None:
+                        continue
+                    tally += blocks.apply_unit_action(
+                        unit.block,
+                        env_files,
+                        dry_run,
+                        pending_starts,
+                    )
+            finally:
+                blocks.flush_pending_starts(pending_starts)
             phrase = blocks.summarize(tally)
             if phrase:
                 print(

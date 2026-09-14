@@ -4,7 +4,6 @@ import os
 import tempfile
 import unittest
 from collections import Counter
-from unittest import mock
 
 from mackup_ng import blocks, dirs
 
@@ -52,21 +51,6 @@ class TestBlocks(unittest.TestCase):
         # no action sub-table -> must not raise
         blocks.apply_block({"bogus": {}}, [], dry_run=False)
         blocks.apply_block({}, [], dry_run=False)
-
-    def test_apply_blocks_phase_and_order(self):
-        a = os.path.join(self.home, "a")
-        b = os.path.join(self.home, "b")
-        blocks.apply_blocks(
-            [
-                {"phase": "pre", "run": {"commands": [f'echo x > "{a}"']}},
-                {"phase": "post", "run": {"commands": [f'echo x > "{b}"']}},
-            ],
-            phase="pre",
-            env_files=[],
-            dry_run=False,
-        )
-        assert os.path.isfile(a)
-        assert not os.path.exists(b)
 
     def test_chmod_recursive_dir_file_modes(self):
         ssh = os.path.join(self.home, ".ssh")
@@ -119,55 +103,6 @@ class TestBlocks(unittest.TestCase):
             dry_run=False,
         )
         assert open(os.path.join(self.home, ".local/bin/tool")).read() == "bin"
-
-    def test_apply_blocks_condition_gate(self):
-        out = os.path.join(self.home, "gated")
-        blocks.apply_blocks(
-            [
-                {
-                    "when": {"marker": ["nope"]},
-                    "run": {"commands": [f'touch "{out}"']},
-                },
-            ],
-            phase="post",
-            env_files=[],
-            dry_run=False,
-        )
-        assert not os.path.exists(out)
-
-    def test_restart_service_coalesced_across_blocks(self):
-        """Many blocks touching one service must yield a single stop/start pair.
-
-        Bouncing the unit per block trips systemd's StartLimitBurst and leaves
-        the service dead (Result: start-limit-hit).
-        """
-        state = {"running": True}
-        stops: list[str] = []
-        starts: list[str] = []
-
-        def fake_is_active(svc):
-            return bool(svc) and state["running"]
-
-        def fake_stop(svc):
-            state["running"] = False
-            stops.append(svc)
-
-        def fake_start(svc):
-            state["running"] = True
-            starts.append(svc)
-
-        run_blocks = [
-            {"restart_service": "syncthing", "run": {"commands": ["true"]}}
-            for _ in range(6)
-        ]
-        with mock.patch.object(blocks, "svc_is_active", fake_is_active), \
-             mock.patch.object(blocks, "svc_stop", fake_stop), \
-             mock.patch.object(blocks, "svc_start", fake_start):
-            blocks.apply_blocks(run_blocks, phase="post", env_files=[], dry_run=False)
-
-        assert stops == ["syncthing"]
-        assert starts == ["syncthing"]
-        assert state["running"] is True
 
     def test_dropin_path_uses_dirs_module(self):
         """dropin_path resolves $XDG_CONFIG_HOME through dirs.py, not inline."""

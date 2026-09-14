@@ -29,7 +29,10 @@ class TestInfo(unittest.TestCase):
         os.environ["XDG_CACHE_HOME"] = os.path.join(self.test_home, ".cache")
         os.environ["XDG_STATE_HOME"] = os.path.join(self.test_home, ".local", "state")
 
-        self.config_path = os.path.join(self.test_home, ".mackup.cfg")
+        self.config_path = os.path.join(
+            self.test_home, ".config", "mackup", "config.toml",
+        )
+        os.makedirs(os.path.dirname(self.config_path), exist_ok=True)
         self.write_config(["test-app"])
 
         self.test_file_name = ".testrc"
@@ -62,13 +65,14 @@ class TestInfo(unittest.TestCase):
         utils.CAN_RUN_AS_ROOT = False
 
     def write_config(self, apps):
+        entries = ", ".join(f'"{app}"' for app in apps)
         with open(self.config_path, "w") as handle:
             handle.write("[storage]\n")
-            handle.write("engine = file_system\n")
-            handle.write(f"path = {self.test_storage}\n")
-            handle.write("directory = Mackup\n\n")
-            handle.write("[applications_to_sync]\n")
-            handle.writelines(f"{app}\n" for app in apps)
+            handle.write('engine = "file_system"\n')
+            handle.write(f'path = "{self.test_storage}"\n')
+            handle.write('directory = "Mackup"\n\n')
+            handle.write("[applications]\n")
+            handle.write(f"sync = [{entries}]\n")
 
     def write_app(self, filename, name, files, extra=""):
         path = os.path.join(self.custom_apps_dir, f"{filename}.toml")

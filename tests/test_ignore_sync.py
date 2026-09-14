@@ -31,12 +31,11 @@ class TestIgnoredDuringSync(unittest.TestCase):
         ignore.load_globs.cache_clear()
         self.addCleanup(ignore.load_globs.cache_clear)
 
-        with open(os.path.join(self.test_home, ".mackup.cfg"), "w") as handle:
-            handle.write(
-                "[storage]\nengine = file_system\n"
-                f"path = {self.test_storage}\ndirectory = Mackup\n\n"
-                "[applications_to_sync]\nnotes\n",
-            )
+        self.config_path = os.path.join(
+            self.test_home, ".config", "mackup", "config.toml",
+        )
+        os.makedirs(os.path.dirname(self.config_path), exist_ok=True)
+        self._write_config(["notes"])
         self.apps_dir = os.path.join(self.test_home, ".mackup", "applications")
         os.makedirs(self.apps_dir, exist_ok=True)
         self.write_app("notes", 'files = [".notes"]\n')
@@ -59,6 +58,15 @@ class TestIgnoredDuringSync(unittest.TestCase):
         shutil.rmtree(self.test_home, ignore_errors=True)
         shutil.rmtree(self.test_storage, ignore_errors=True)
         utils.FORCE_YES = False
+
+    def _write_config(self, apps):
+        entries = ", ".join(f'"{app}"' for app in apps)
+        with open(self.config_path, "w") as handle:
+            handle.write(
+                '[storage]\nengine = "file_system"\n'
+                f'path = "{self.test_storage}"\ndirectory = "Mackup"\n\n'
+                f"[applications]\nsync = [{entries}]\n",
+            )
 
     def write_app(self, name, body):
         with open(os.path.join(self.apps_dir, f"{name}.toml"), "w") as handle:
@@ -142,8 +150,7 @@ class TestIgnoredDuringSync(unittest.TestCase):
     def test_one_config_ignore_does_not_reach_another_config(self):
         self.write_app("notes", 'files = [".notes"]\nignore = ["*.bak"]\n')
         self.write_app("other", 'files = [".other"]\n')
-        with open(os.path.join(self.test_home, ".mackup.cfg"), "a") as handle:
-            handle.write("other\n")
+        self._write_config(["notes", "other"])
         self.write(os.path.join(self.test_home, ".other", "keep.md.bak"), "keep\n")
 
         self.sync()

@@ -28,11 +28,15 @@ class TestRemoveDestination(unittest.TestCase):
         # write into the real $XDG_STATE_HOME.
         os.environ["XDG_STATE_HOME"] = os.path.join(self.test_home, ".local", "state")
 
-        with open(os.path.join(self.test_home, ".mackup.cfg"), "w") as handle:
+        self.config_path = os.path.join(
+            self.test_home, ".config", "mackup", "config.toml",
+        )
+        os.makedirs(os.path.dirname(self.config_path), exist_ok=True)
+        with open(self.config_path, "w") as handle:
             handle.write(
-                "[storage]\nengine = file_system\n"
-                f"path = {self.test_storage}\ndirectory = Mackup\n\n"
-                "[applications_to_sync]\nfanout\n",
+                '[storage]\nengine = "file_system"\n'
+                f'path = "{self.test_storage}"\ndirectory = "Mackup"\n\n'
+                '[applications]\nsync = ["fanout"]\n',
             )
         apps_dir = os.path.join(self.test_home, ".mackup", "applications")
         os.makedirs(apps_dir, exist_ok=True)

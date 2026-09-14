@@ -26,11 +26,16 @@ class TestConfigLevelConditions(unittest.TestCase):
         os.environ["XDG_STATE_HOME"] = os.path.join(self.home, ".local", "state")
         os.environ["XDG_CACHE_HOME"] = os.path.join(self.home, ".cache")
 
-        with open(os.path.join(self.home, ".mackup.cfg"), "w") as handle:
+        self.config_path = os.path.join(
+            self.home, ".config", "mackup", "config.toml",
+        )
+        os.makedirs(os.path.dirname(self.config_path), exist_ok=True)
+        with open(self.config_path, "w") as handle:
             handle.write(
-                "[storage]\nengine = file_system\n"
-                f"path = {self.storage}\ndirectory = Mackup\n\n"
-                "[applications_to_sync]\naaa-base\nzzz-override\ngated-blocks\n",
+                '[storage]\nengine = "file_system"\n'
+                f'path = "{self.storage}"\ndirectory = "Mackup"\n\n'
+                "[applications]\n"
+                'sync = ["aaa-base", "zzz-override", "gated-blocks"]\n',
             )
         self.apps_dir = os.path.join(self.home, ".mackup", "applications")
         os.makedirs(self.apps_dir, exist_ok=True)

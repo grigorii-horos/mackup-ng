@@ -1,0 +1,7 @@
+[storage]
+engine = "file_system"
+path = "/some/absolute/folder"
+directory = "custom_folder"
+
+[applications]
+ignore = ["subversion", "sequel-pro"]

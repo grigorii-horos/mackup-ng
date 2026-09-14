@@ -36,15 +36,12 @@ class TestCLI(unittest.TestCase):
         os.environ["XDG_STATE_HOME"] = os.path.join(self.test_home, ".local", "state")
 
         # Create test config file
-        self.config_path = os.path.join(self.test_home, ".mackup.cfg")
-        with open(self.config_path, "w") as f:
-            f.write("[storage]\n")
-            f.write("engine = file_system\n")
-            f.write(f"path = {self.test_storage}\n")
-            f.write("directory = Mackup\n")
-            f.write("\n")
-            f.write("[applications_to_sync]\n")
-            f.write("test-app\n")
+        self.config_path = os.path.join(
+            self.test_home, ".config", "mackup", "config.toml",
+        )
+        os.makedirs(os.path.dirname(self.config_path), exist_ok=True)
+        self._synced_apps = ["test-app"]
+        self._write_config()
 
         # Create a test application config in the apps database
         self.test_app_name = "test-app"
@@ -368,12 +365,23 @@ class TestCLI(unittest.TestCase):
             main()
         assert os.path.isfile(out)
 
+    def _write_config(self):
+        entries = ", ".join(f'"{app}"' for app in self._synced_apps)
+        with open(self.config_path, "w") as f:
+            f.write("[storage]\n")
+            f.write('engine = "file_system"\n')
+            f.write(f'path = "{self.test_storage}"\n')
+            f.write('directory = "Mackup"\n')
+            f.write("\n")
+            f.write("[applications]\n")
+            f.write(f"sync = [{entries}]\n")
+
     def _write_custom_app(self, app_id, body):
         path = os.path.join(self.custom_apps_dir, f"{app_id}.toml")
         with open(path, "w") as handle:
             handle.write(f'name = "{app_id}"\n{body}')
-        with open(self.config_path, "a") as handle:
-            handle.write(f"{app_id}\n")
+        self._synced_apps.append(app_id)
+        self._write_config()
 
     def test_sync_fans_backup_out_to_two_destinations(self):
         self._write_custom_app(

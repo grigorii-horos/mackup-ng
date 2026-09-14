@@ -27,9 +27,6 @@ MACKUP_APP_NAME: str = "mackup-ng"
 # Default Mackup backup path where it stores its files in Dropbox
 MACKUP_BACKUP_PATH: str = "Mackup"
 
-# Mackup config file
-MACKUP_CONFIG_FILE: str = ".mackup.cfg"
-
 
 def get_version() -> str:
     """Return package version, or a safe fallback when metadata is unavailable."""

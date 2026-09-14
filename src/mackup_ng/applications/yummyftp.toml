@@ -1,4 +1,15 @@
 name = "Yummy FTP"
+
+[[block]]
 files = [
     "${MACKUP_XDG_CONFIG}/Yummy FTP/{Bookmarks,DefaultBookmark.bkmk}",
 ]
+[block.when]
+not_os = "macos"
+
+[[block]]
+files = [
+    "Library/Preferences/com.yummysoftware.yummy-ftp.plist",
+]
+[block.when]
+os = "macos"

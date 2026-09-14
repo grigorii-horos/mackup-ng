@@ -1,4 +1,15 @@
 name = "OBS"
+
+[[block]]
 files = [
     "${MACKUP_XDG_CONFIG}/obs-studio/{basic,global.ini}",
 ]
+[block.when]
+not_os = "macos"
+
+[[block]]
+files = [
+    "Library/Preferences/com.obsproject.obs-studio.plist",
+]
+[block.when]
+os = "macos"

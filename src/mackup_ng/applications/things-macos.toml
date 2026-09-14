@@ -1,7 +1,0 @@
-name = "Things (macOS)"
-files = [
-    "Library/Preferences/com.culturedcode.things.plist",
-]
-
-[when]
-os = "macos"

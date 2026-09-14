@@ -1,7 +1,0 @@
-name = "Jumpcut (macOS)"
-files = [
-    "Library/Preferences/net.sf.Jumpcut.plist",
-]
-
-[when]
-os = "macos"

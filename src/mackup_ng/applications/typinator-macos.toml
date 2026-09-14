@@ -1,7 +1,0 @@
-name = "Typinator (macOS)"
-files = [
-    "Library/Preferences/com.macility.typinator2.plist",
-]
-
-[when]
-os = "macos"

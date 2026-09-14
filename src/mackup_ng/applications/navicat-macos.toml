@@ -1,7 +1,0 @@
-name = "Navicat (macOS)"
-files = [
-    "Library/Preferences/{com.prect.Navicat.plist,com.prect.NavicatPremium.plist,com.prect.NavicatPremiumEssentials.plist}",
-]
-
-[when]
-os = "macos"

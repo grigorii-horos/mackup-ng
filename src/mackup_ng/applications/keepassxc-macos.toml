@@ -1,7 +1,0 @@
-name = "KeePassXC (macOS)"
-files = [
-    "Library/Preferences/org.keepassxc.keepassxc.plist",
-]
-
-[when]
-os = "macos"

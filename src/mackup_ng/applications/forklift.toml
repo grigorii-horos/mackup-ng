@@ -1,4 +1,15 @@
 name = "ForkLift"
+
+[[block]]
 files = [
     "${MACKUP_XDG_CONFIG}/ForkLift/Favorites/Favorites.json",
 ]
+[block.when]
+not_os = "macos"
+
+[[block]]
+files = [
+    "Library/Preferences/{com.binarynights.ForkLift-3.plist,com.binarynights.ForkLift2.plist}",
+]
+[block.when]
+os = "macos"

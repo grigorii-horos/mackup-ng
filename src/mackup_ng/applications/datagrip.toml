@@ -1,5 +1,16 @@
 name = "DataGrip"
+
+[[block]]
 files = [
     "${MACKUP_XDG_CONFIG}/{DataGrip2017.3,DataGrip2018.1,DataGrip2018.2,DataGrip2018.3,DataGrip2019.1}",
     "${MACKUP_XDG_CONFIG}/JetBrains/{DataGrip2023.1,DataGrip2023.2}",
 ]
+[block.when]
+not_os = "macos"
+
+[[block]]
+files = [
+    "Library/Preferences/{DataGrip2017.3,DataGrip2018.1,DataGrip2018.2,DataGrip2018.3,DataGrip2019.1,DataGrip2019.2}",
+]
+[block.when]
+os = "macos"

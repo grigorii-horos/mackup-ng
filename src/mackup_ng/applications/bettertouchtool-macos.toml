@@ -1,7 +1,0 @@
-name = "BetterTouchTool (macOS)"
-files = [
-    "Library/Preferences/com.hegenberg.BetterTouchTool.plist",
-]
-
-[when]
-os = "macos"

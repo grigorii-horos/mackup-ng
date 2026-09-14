@@ -1,7 +1,0 @@
-name = "Mou (macOS)"
-files = [
-    "Library/Preferences/{com.mouapp.Mou.LSSharedFileList.plist,com.mouapp.Mou.plist}",
-]
-
-[when]
-os = "macos"

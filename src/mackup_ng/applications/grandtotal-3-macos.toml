@@ -1,7 +1,0 @@
-name = "GrandTotal 3 (macOS)"
-files = [
-    "Library/Preferences/com.mediaatelier.GrandTotal3.plist",
-]
-
-[when]
-os = "macos"

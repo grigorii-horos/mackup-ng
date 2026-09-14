@@ -1,4 +1,15 @@
 name = "Dropzone 3"
+
+[[block]]
 files = [
     "${MACKUP_XDG_CONFIG}/Dropzone 3",
 ]
+[block.when]
+not_os = "macos"
+
+[[block]]
+files = [
+    "Library/Preferences/com.aptonic.Dropzone3.plist",
+]
+[block.when]
+os = "macos"

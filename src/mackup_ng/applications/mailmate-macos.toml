@@ -1,7 +1,0 @@
-name = "Mailmate (macOS)"
-files = [
-    "Library/Preferences/com.freron.MailMate.plist",
-]
-
-[when]
-os = "macos"

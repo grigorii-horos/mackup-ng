@@ -1,7 +1,0 @@
-name = "Transmit (macOS)"
-files = [
-    "Library/Preferences/com.panic.Transmit.plist",
-]
-
-[when]
-os = "macos"

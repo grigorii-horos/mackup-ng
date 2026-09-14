@@ -1,7 +1,0 @@
-name = "Spectacle (macOS)"
-files = [
-    "Library/Preferences/com.divisiblebyzero.Spectacle.plist",
-]
-
-[when]
-os = "macos"

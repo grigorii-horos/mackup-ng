@@ -1,4 +1,15 @@
 name = "BetterTouchTool"
+
+[[block]]
 files = [
     "${MACKUP_XDG_CONFIG}/BetterTouchTool/{bettersnaptool.bttlicense,bettertouchtool.license,btt_data_store.v2,btt_data_store.v2-shm,btt_data_store.v2-wal,bttdata2}",
 ]
+[block.when]
+not_os = "macos"
+
+[[block]]
+files = [
+    "Library/Preferences/com.hegenberg.BetterTouchTool.plist",
+]
+[block.when]
+os = "macos"

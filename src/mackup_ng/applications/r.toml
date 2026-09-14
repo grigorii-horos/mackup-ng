@@ -1,4 +1,6 @@
 name = "R"
+
+[[block]]
 files = [
     ".R",
     ".Rhistory",
@@ -7,3 +9,12 @@ files = [
     ".Renviron",
     ".Renviron.d",
 ]
+[block.when]
+not_os = "macos"
+
+[[block]]
+files = [
+    "Library/Preferences/org.R-project.R.plist",
+]
+[block.when]
+os = "macos"

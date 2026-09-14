@@ -1,7 +1,0 @@
-name = "Marked 2 (macOS)"
-files = [
-    "Library/Preferences/com.brettterpstra.marked2.plist",
-]
-
-[when]
-os = "macos"

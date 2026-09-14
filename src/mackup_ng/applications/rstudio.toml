@@ -1,5 +1,16 @@
 name = "RStudio"
+
+[[block]]
 files = [
     ".rstudio-desktop",
     "${MACKUP_XDG_CONFIG}/rstudio",
 ]
+[block.when]
+not_os = "macos"
+
+[[block]]
+files = [
+    "Library/Preferences/org.rstudio.RStudio.plist",
+]
+[block.when]
+os = "macos"

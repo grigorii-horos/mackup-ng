@@ -1,4 +1,15 @@
 name = "Querious"
+
+[[block]]
 files = [
     "${MACKUP_XDG_CONFIG}/Querious",
 ]
+[block.when]
+not_os = "macos"
+
+[[block]]
+files = [
+    "Library/Preferences/com.araeliumgroup.querious.plist",
+]
+[block.when]
+os = "macos"

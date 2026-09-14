@@ -1,7 +1,0 @@
-name = "SizeUp (macOS)"
-files = [
-    "Library/Preferences/com.irradiatedsoftware.SizeUp.plist",
-]
-
-[when]
-os = "macos"

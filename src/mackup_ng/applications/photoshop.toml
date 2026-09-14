@@ -1,4 +1,6 @@
 name = "Adobe Photoshop"
+
+[[block]]
 files = [
     "${MACKUP_XDG_CONFIG}/Adobe/Adobe Photoshop CC 2013/Presets",
     "${MACKUP_XDG_CONFIG}/Adobe/Adobe Photoshop CC 2014/Presets",
@@ -6,3 +8,17 @@ files = [
     "${MACKUP_XDG_CONFIG}/Adobe/Adobe Photoshop CC 2015.5/Presets",
     "${MACKUP_XDG_CONFIG}/Adobe/Adobe Photoshop CC 2019/Presets",
 ]
+[block.when]
+not_os = "macos"
+
+[[block]]
+files = [
+    "Library/Preferences/Adobe Photoshop CC 2013 Settings",
+    "Library/Preferences/Adobe Photoshop CC 2014 Settings",
+    "Library/Preferences/Adobe Photoshop CC 2015 Settings",
+    "Library/Preferences/Adobe Photoshop CC 2015.5 Settings",
+    "Library/Preferences/Adobe Photoshop CC 2019 Settings",
+    "Library/Preferences/com.adobe.Photoshop.plist",
+]
+[block.when]
+os = "macos"

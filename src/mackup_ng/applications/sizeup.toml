@@ -1,4 +1,15 @@
 name = "SizeUp"
+
+[[block]]
 files = [
     "${MACKUP_XDG_CONFIG}/SizeUp/SizeUp.sizeuplicense",
 ]
+[block.when]
+not_os = "macos"
+
+[[block]]
+files = [
+    "Library/Preferences/com.irradiatedsoftware.SizeUp.plist",
+]
+[block.when]
+os = "macos"

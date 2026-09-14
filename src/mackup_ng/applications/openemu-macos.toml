@@ -1,7 +1,0 @@
-name = "OpenEmu (macOS)"
-files = [
-    "Library/Preferences/org.openemu.OpenEmu.plist",
-]
-
-[when]
-os = "macos"

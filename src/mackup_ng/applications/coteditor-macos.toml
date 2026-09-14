@@ -1,8 +1,0 @@
-name = "CotEditor (macOS)"
-files = [
-    "Library/Preferences/com.coteditor.CotEditor.plist",
-    "Library/Containers/com.coteditor.CotEditor/Data/Library/Application Support/CotEditor",
-]
-
-[when]
-os = "macos"

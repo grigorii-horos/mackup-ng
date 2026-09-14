@@ -1,4 +1,15 @@
 name = "Android Studio 1.3"
+
+[[block]]
 files = [
     "${MACKUP_XDG_CONFIG}/AndroidStudio1.3",
 ]
+[block.when]
+not_os = "macos"
+
+[[block]]
+files = [
+    "Library/Preferences/AndroidStudio1.3",
+]
+[block.when]
+os = "macos"

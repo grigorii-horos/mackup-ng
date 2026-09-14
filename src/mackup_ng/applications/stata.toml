@@ -1,4 +1,17 @@
 name = "Stata"
+
+[[block]]
 files = [
     "${MACKUP_XDG_CONFIG}/Stata",
 ]
+[block.when]
+not_os = "macos"
+
+[[block]]
+files = [
+    "Library/Preferences/com.stata.stata12.plist",
+    "Library/Preferences/com.stata.stata13.plist",
+    "Library/Preferences/Stata 13 Preferences",
+]
+[block.when]
+os = "macos"

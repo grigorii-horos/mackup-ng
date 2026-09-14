@@ -1,4 +1,15 @@
 name = "GitKraken"
+
+[[block]]
 files = [
     ".gitkraken",
 ]
+[block.when]
+not_os = "macos"
+
+[[block]]
+files = [
+    "Library/Preferences/com.axosoft.gitkraken.plist",
+]
+[block.when]
+os = "macos"

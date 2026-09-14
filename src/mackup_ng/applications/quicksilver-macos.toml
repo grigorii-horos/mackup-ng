@@ -1,7 +1,0 @@
-name = "Quicksilver (macOS)"
-files = [
-    "Library/Preferences/com.blacktree.Quicksilver.plist",
-]
-
-[when]
-os = "macos"

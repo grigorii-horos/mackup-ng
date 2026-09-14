@@ -1,4 +1,17 @@
 name = "Cyberduck"
+
+[[block]]
 files = [
     "${MACKUP_XDG_CONFIG}/Cyberduck",
 ]
+[block.when]
+not_os = "macos"
+
+[[block]]
+files = [
+    "Library/Containers/ch.sudo.cyberduck/Data/Library/Application Support/Cyberduck",
+    "Library/Group Containers/G69SCX94XU.duck/Library/Application Support/duck",
+    "Library/Preferences/ch.sudo.cyberduck.plist",
+]
+[block.when]
+os = "macos"

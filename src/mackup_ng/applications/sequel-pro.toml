@@ -1,4 +1,15 @@
 name = "Sequel Pro"
+
+[[block]]
 files = [
     "${MACKUP_XDG_CONFIG}/Sequel Pro/{Bundles,Data,Themes}",
 ]
+[block.when]
+not_os = "macos"
+
+[[block]]
+files = [
+    "Library/Preferences/com.sequelpro.SequelPro.plist",
+]
+[block.when]
+os = "macos"

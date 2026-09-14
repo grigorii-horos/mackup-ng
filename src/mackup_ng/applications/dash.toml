@@ -1,5 +1,16 @@
 name = "Dash"
+
+[[block]]
 files = [
     "${MACKUP_XDG_CONFIG}/Dash/library.dash",
     "${MACKUP_XDG_CONFIG}/Dash/License/license.dash-license",
 ]
+[block.when]
+not_os = "macos"
+
+[[block]]
+files = [
+    "Library/Preferences/{com.kapeli.dash.plist,com.kapeli.dashdoc.plist}",
+]
+[block.when]
+os = "macos"

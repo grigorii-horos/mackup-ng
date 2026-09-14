@@ -1,4 +1,15 @@
 name = "XLD"
+
+[[block]]
 files = [
     "${MACKUP_XDG_CONFIG}/XLD",
 ]
+[block.when]
+not_os = "macos"
+
+[[block]]
+files = [
+    "Library/Preferences/jp.tmkk.XLD.plist",
+]
+[block.when]
+os = "macos"

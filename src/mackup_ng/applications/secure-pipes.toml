@@ -1,4 +1,15 @@
 name = "Secure Pipes"
+
+[[block]]
 files = [
     "${MACKUP_XDG_CONFIG}/Secure Pipes",
 ]
+[block.when]
+not_os = "macos"
+
+[[block]]
+files = [
+    "Library/Preferences/{net.edgeservices.connections.plist,net.edgeservices.Secure-Pipes.plist,net.edgeservices.sp-config.plist}",
+]
+[block.when]
+os = "macos"

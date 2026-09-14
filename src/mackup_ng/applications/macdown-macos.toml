@@ -1,7 +1,0 @@
-name = "MacDown (macOS)"
-files = [
-    "Library/Preferences/com.uranusjr.macdown.plist",
-]
-
-[when]
-os = "macos"

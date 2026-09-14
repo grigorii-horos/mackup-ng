@@ -1,7 +1,0 @@
-name = "Dolphin (macOS)"
-files = [
-    "Library/Preferences/org.dolphin-emu.dolphin.plist",
-]
-
-[when]
-os = "macos"

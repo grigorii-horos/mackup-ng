@@ -1,7 +1,0 @@
-name = "Gear Player (macOS)"
-files = [
-    "Library/Preferences/{com.treasurebox.gear.plist,com.treasurebox.magickeys.plist}",
-]
-
-[when]
-os = "macos"

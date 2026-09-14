@@ -1,7 +1,0 @@
-name = "Viscosity (macOS)"
-files = [
-    "Library/Preferences/com.viscosityvpn.Viscosity.plist",
-]
-
-[when]
-os = "macos"

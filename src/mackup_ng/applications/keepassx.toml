@@ -1,5 +1,16 @@
 name = "KeePassX"
+
+[[block]]
 files = [
     ".keepassx",
     "${MACKUP_XDG_CONFIG}/keepassx/keepassx2.ini",
 ]
+[block.when]
+not_os = "macos"
+
+[[block]]
+files = [
+    "Library/Preferences/org.keepassx.keepassx.plist",
+]
+[block.when]
+os = "macos"

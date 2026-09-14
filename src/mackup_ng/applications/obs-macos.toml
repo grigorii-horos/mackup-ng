@@ -1,7 +1,0 @@
-name = "OBS (macOS)"
-files = [
-    "Library/Preferences/com.obsproject.obs-studio.plist",
-]
-
-[when]
-os = "macos"

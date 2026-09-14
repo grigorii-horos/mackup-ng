@@ -1,4 +1,15 @@
 name = "Gear Player"
+
+[[block]]
 files = [
     "${MACKUP_XDG_CONFIG}/Gear Player/paddata.padl",
 ]
+[block.when]
+not_os = "macos"
+
+[[block]]
+files = [
+    "Library/Preferences/{com.treasurebox.gear.plist,com.treasurebox.magickeys.plist}",
+]
+[block.when]
+os = "macos"

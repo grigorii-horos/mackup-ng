@@ -1,7 +1,0 @@
-name = "MacDive (macOS)"
-files = [
-    "Library/Preferences/com.mintsoftware.MacDive2.plist",
-]
-
-[when]
-os = "macos"

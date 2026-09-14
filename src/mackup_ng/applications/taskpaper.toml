@@ -1,4 +1,15 @@
 name = "Task Paper"
+
+[[block]]
 files = [
     "${MACKUP_XDG_CONFIG}/TaskPaper",
 ]
+[block.when]
+not_os = "macos"
+
+[[block]]
+files = [
+    "Library/Preferences/com.hogbaysoftware.TaskPaper.mac.plist",
+]
+[block.when]
+os = "macos"

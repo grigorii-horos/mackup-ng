@@ -1,4 +1,15 @@
 name = "Mou"
+
+[[block]]
 files = [
     "${MACKUP_XDG_CONFIG}/Mou",
 ]
+[block.when]
+not_os = "macos"
+
+[[block]]
+files = [
+    "Library/Preferences/{com.mouapp.Mou.LSSharedFileList.plist,com.mouapp.Mou.plist}",
+]
+[block.when]
+os = "macos"

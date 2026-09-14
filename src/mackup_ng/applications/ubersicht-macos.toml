@@ -1,7 +1,0 @@
-name = "Ubersicht (macOS)"
-files = [
-    "Library/Preferences/tracesOf.Uebersicht.plist",
-]
-
-[when]
-os = "macos"

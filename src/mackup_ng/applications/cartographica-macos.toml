@@ -1,7 +1,0 @@
-name = "Cartographica (macOS)"
-files = [
-    "Library/Preferences/com.ClueTrust.Cartographica.plist",
-]
-
-[when]
-os = "macos"

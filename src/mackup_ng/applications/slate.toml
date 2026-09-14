@@ -1,5 +1,16 @@
 name = "Slate"
+
+[[block]]
 files = [
     ".slate",
     ".slate.js",
 ]
+[block.when]
+not_os = "macos"
+
+[[block]]
+files = [
+    "Library/Application Support/com.slate.Slate",
+]
+[block.when]
+os = "macos"

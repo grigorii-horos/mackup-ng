@@ -1,5 +1,16 @@
 name = "LightPaper"
+
+[[block]]
 files = [
     ".lightpaper",
     "${MACKUP_XDG_CONFIG}/LightPaper/customCSS.css",
 ]
+[block.when]
+not_os = "macos"
+
+[[block]]
+files = [
+    "Library/Preferences/com.42squares.LightPaper.plist",
+]
+[block.when]
+os = "macos"

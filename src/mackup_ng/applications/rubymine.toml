@@ -1,5 +1,16 @@
 name = "RubyMine"
+
+[[block]]
 files = [
     "${MACKUP_XDG_CONFIG}/{RubyMine2016.1,RubyMine2016.2,RubyMine2016.3,RubyMine2017.3,RubyMine2018.1,RubyMine40,RubyMine50,RubyMine60,RubyMine70,RubyMine80}",
     "${MACKUP_XDG_CONFIG}/JetBrains/{RubyMine2023.1,RubyMine2023.2}",
 ]
+[block.when]
+not_os = "macos"
+
+[[block]]
+files = [
+    "Library/Preferences/{RubyMine2016.1,RubyMine2016.2,RubyMine2016.3,RubyMine2017.3,RubyMine2018.1,RubyMine40,RubyMine50,RubyMine60,RubyMine70,RubyMine80}",
+]
+[block.when]
+os = "macos"

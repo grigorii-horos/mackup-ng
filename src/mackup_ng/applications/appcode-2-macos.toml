@@ -1,7 +1,0 @@
-name = "AppCode 2 (macOS)"
-files = [
-    "Library/Preferences/appCode20",
-]
-
-[when]
-os = "macos"

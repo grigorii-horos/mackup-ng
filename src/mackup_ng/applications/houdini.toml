@@ -1,4 +1,15 @@
 name = "Houdini"
+
+[[block]]
 files = [
     "${MACKUP_XDG_CONFIG}/Houdini",
 ]
+[block.when]
+not_os = "macos"
+
+[[block]]
+files = [
+    "Library/Preferences/com.uglyapps.Houdini.plist",
+]
+[block.when]
+os = "macos"

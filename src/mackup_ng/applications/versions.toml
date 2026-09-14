@@ -1,4 +1,15 @@
 name = "Versions"
+
+[[block]]
 files = [
     "${MACKUP_XDG_CONFIG}/Versions/License",
 ]
+[block.when]
+not_os = "macos"
+
+[[block]]
+files = [
+    "Library/Preferences/com.blackpixel.versions.plist",
+]
+[block.when]
+os = "macos"

@@ -1,7 +1,0 @@
-name = "Beyond Compare (macOS)"
-files = [
-    "Library/Preferences/com.ScooterSoftware.BeyondCompare.plist",
-]
-
-[when]
-os = "macos"

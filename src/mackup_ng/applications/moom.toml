@@ -1,4 +1,15 @@
 name = "Moom"
+
+[[block]]
 files = [
     "${MACKUP_XDG_CONFIG}/Many Tricks",
 ]
+[block.when]
+not_os = "macos"
+
+[[block]]
+files = [
+    "Library/Preferences/com.manytricks.Moom.plist",
+]
+[block.when]
+os = "macos"

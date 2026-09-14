@@ -1,5 +1,17 @@
 name = "Soulver"
+
+[[block]]
 files = [
     "${MACKUP_XDG_CONFIG}/Soulver",
     "${MACKUP_XDG_CONFIG}/Soulver 3",
 ]
+[block.when]
+not_os = "macos"
+
+[[block]]
+files = [
+    "Library/Preferences/com.acqualia.soulver.plist",
+    "Library/Preferences/app.soulver.mac.plist",
+]
+[block.when]
+os = "macos"

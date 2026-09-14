@@ -1,7 +1,0 @@
-name = "LaunchBar (macOS)"
-files = [
-    "Library/Preferences/at.obdev.LaunchBar.plist",
-]
-
-[when]
-os = "macos"

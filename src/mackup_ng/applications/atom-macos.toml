@@ -1,7 +1,0 @@
-name = "Atom (macOS)"
-files = [
-    "Library/Preferences/com.github.atom.plist",
-]
-
-[when]
-os = "macos"

@@ -1,5 +1,16 @@
 name = "Transmission"
+
+[[block]]
 files = [
     "${MACKUP_XDG_CONFIG}/[mac:Transmission,transmission]/{blocklists,settings.json,stats.json}",
     "${MACKUP_XDG_CONFIG}/transmission-daemon/{blocklists,settings.json,stats.json}",
 ]
+[block.when]
+not_os = "macos"
+
+[[block]]
+files = [
+    "Library/Preferences/org.m0k.transmission.plist",
+]
+[block.when]
+os = "macos"

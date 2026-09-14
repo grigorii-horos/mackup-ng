@@ -1,7 +1,0 @@
-name = "HyperDock (macOS)"
-files = [
-    "Library/Preferences/{de.bahoom.HyperDock.plist,de.bahoom.HyperDock.prefpane.plist}",
-]
-
-[when]
-os = "macos"

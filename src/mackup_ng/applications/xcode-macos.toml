@@ -1,9 +1,0 @@
-name = "Xcode (macOS)"
-files = [
-    "Library/Preferences/com.apple.dt.Xcode.plist",
-    "Library/Developer/Xcode/UserData/{CodeSnippets,Debugger,FontAndColorThemes,KeyBindings,SearchScopes.xcsclist,xcdebugger}",
-    "Library/Developer/Xcode/Templates",
-]
-
-[when]
-os = "macos"

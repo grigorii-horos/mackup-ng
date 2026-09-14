@@ -1,7 +1,0 @@
-name = "Slate (macOS)"
-files = [
-    "Library/Application Support/com.slate.Slate",
-]
-
-[when]
-os = "macos"

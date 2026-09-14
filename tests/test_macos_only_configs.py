@@ -3,8 +3,9 @@
 `~/Library` exists only on macOS. A config that syncs nothing else has no
 business being considered on Linux or Windows, so it declares
 `[when] os = "macos"` and is skipped whole. A config that syncs both kinds of
-path cannot say that — gating the file would take its Linux paths down with
-it — so those are split into two configs instead, one per platform.
+path cannot say that at the config level — gating the whole file would take
+its non-macOS paths down with it — so it carries two blocks instead, one
+gated `not_os = "macos"` and one gated `os = "macos"`.
 
 Both rules are enforced here so that a config added later cannot quietly
 reintroduce either shape.
@@ -12,8 +13,6 @@ reintroduce either shape.
 
 import pathlib
 import tomllib
-
-import pytest
 
 APPS_DIR = pathlib.Path(__file__).resolve().parent.parent / "src" / "mackup_ng" / "applications"
 
@@ -72,27 +71,36 @@ def test_library_only_configs_are_gated_to_macos():
     )
 
 
-def test_no_config_mixes_library_with_other_paths():
+def _unit_tables(data: dict) -> list[dict]:
+    """The config's file-bearing tables: the top level, then each block."""
+    return [data, *[b for b in data.get("block", []) if isinstance(b, dict)]]
+
+
+def _table_paths(table: dict) -> list[str]:
+    return [p for p in table.get("files", []) or [] if isinstance(p, str)]
+
+
+def test_no_library_path_is_offered_to_other_platforms():
+    """Every ~/Library path sits in a config or a block gated to macOS."""
     offenders = []
     for path, data in _all_configs():
-        library, other = _library_split(data)
-        if library and other:
-            offenders.append(path.name)
+        config_gated = data.get("when", {}).get("os") == "macos"
+        for table in _unit_tables(data):
+            if not any(p.startswith(LIBRARY_PREFIX) for p in _table_paths(table)):
+                continue
+            block_gated = table.get("when", {}).get("os") == "macos"
+            if not (config_gated or block_gated):
+                offenders.append(path.name)
+                break
 
     assert offenders == [], (
-        f"{len(offenders)} config(s) mix ~/Library with paths for other"
-        " platforms; a config-level [when] cannot express that, so split them"
-        f" into <app>.toml and <app>-macos.toml: {offenders[:10]}"
+        f"{len(offenders)} config(s) offer a ~/Library path on every platform:"
+        f" {offenders[:10]}"
     )
 
 
-@pytest.mark.parametrize("suffix", ["-macos"])
-def test_split_macos_configs_are_gated(suffix):
-    """The macOS half of a split pair must carry the gate."""
-    offenders = [
-        path.name
-        for path, data in _all_configs()
-        if path.stem.endswith(suffix) and data.get("when", {}).get("os") != "macos"
-    ]
+def test_no_split_macos_files_remain():
+    """The <app>-macos.toml convention is gone; blocks replaced it."""
+    leftovers = [path.name for path, _ in _all_configs() if path.stem.endswith("-macos")]
 
-    assert offenders == [], f"split macOS configs missing the gate: {offenders[:10]}"
+    assert leftovers == [], f"still split: {leftovers[:10]}"

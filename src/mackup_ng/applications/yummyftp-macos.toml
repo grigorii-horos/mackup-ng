@@ -1,7 +1,0 @@
-name = "Yummy FTP (macOS)"
-files = [
-    "Library/Preferences/com.yummysoftware.yummy-ftp.plist",
-]
-
-[when]
-os = "macos"

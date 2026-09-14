@@ -1,7 +1,0 @@
-name = "OmniFocus (macOS)"
-files = [
-    "Library/Preferences/com.omnigroup.OmniFocus.plist",
-]
-
-[when]
-os = "macos"

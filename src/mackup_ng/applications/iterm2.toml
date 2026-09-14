@@ -1,4 +1,15 @@
 name = "iTerm2"
+
+[[block]]
 files = [
     "${MACKUP_XDG_CONFIG}/iterm2/AppSupport/DynamicProfiles",
 ]
+[block.when]
+not_os = "macos"
+
+[[block]]
+files = [
+    "Library/Preferences/com.googlecode.iterm2.plist",
+]
+[block.when]
+os = "macos"

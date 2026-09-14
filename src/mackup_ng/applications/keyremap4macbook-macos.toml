@@ -1,7 +1,0 @@
-name = "KeyRemap4MacBook (macOS)"
-files = [
-    "Library/Preferences/{org.pqrs.KeyRemap4MacBook.multitouchextension.plist,org.pqrs.KeyRemap4MacBook.plist}",
-]
-
-[when]
-os = "macos"

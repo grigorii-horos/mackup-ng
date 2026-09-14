@@ -1,4 +1,20 @@
 name = "MacOSX"
+
+[[block]]
 files = [
     ".MacOSX",
 ]
+[block.when]
+not_os = "macos"
+
+[[block]]
+files = [
+    "Library/KeyBindings/DefaultKeyBinding.dict",
+    "Library/PDF Services",
+    "Library/Preferences/{.GlobalPreferences.plist,com.apple.symbolichotkeys.plist}",
+    "Library/Scripts",
+    "Library/Speech/Speakable Items",
+    "Library/Workflows",
+]
+[block.when]
+os = "macos"

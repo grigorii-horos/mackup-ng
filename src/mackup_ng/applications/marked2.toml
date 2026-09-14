@@ -1,4 +1,15 @@
 name = "Marked 2"
+
+[[block]]
 files = [
     "${MACKUP_XDG_CONFIG}/Marked 2",
 ]
+[block.when]
+not_os = "macos"
+
+[[block]]
+files = [
+    "Library/Preferences/com.brettterpstra.marked2.plist",
+]
+[block.when]
+os = "macos"

@@ -1,4 +1,15 @@
 name = "Kaleidoscope"
+
+[[block]]
 files = [
     "${MACKUP_XDG_CONFIG}/Kaleidoscope",
 ]
+[block.when]
+not_os = "macos"
+
+[[block]]
+files = [
+    "Library/Preferences/com.blackpixel.kaleidoscope.plist",
+]
+[block.when]
+os = "macos"

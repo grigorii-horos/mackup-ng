@@ -1,4 +1,15 @@
 name = "Transmit"
+
+[[block]]
 files = [
     "${MACKUP_XDG_CONFIG}/Transmit/{Favorites,Metadata}",
 ]
+[block.when]
+not_os = "macos"
+
+[[block]]
+files = [
+    "Library/Preferences/com.panic.Transmit.plist",
+]
+[block.when]
+os = "macos"

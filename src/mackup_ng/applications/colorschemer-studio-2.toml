@@ -1,4 +1,15 @@
 name = "ColorSchemer Studio 2"
+
+[[block]]
 files = [
     "${MACKUP_XDG_CONFIG}/ColorSchemer",
 ]
+[block.when]
+not_os = "macos"
+
+[[block]]
+files = [
+    "Library/Preferences/com.colorschemer.studio2.plist",
+]
+[block.when]
+os = "macos"

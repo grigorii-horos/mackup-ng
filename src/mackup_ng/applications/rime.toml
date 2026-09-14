@@ -1,4 +1,15 @@
 name = "Rime"
+
+[[block]]
 files = [
     "${MACKUP_XDG_CONFIG}/ibus/{rimedefault.custom.yaml,rimedefault.yaml,rimeinstallation.yaml,rimesquirrel.custom.yaml,rimesquirrel.yaml,rimesymbols.yaml,rimeuser.yaml}",
 ]
+[block.when]
+not_os = "macos"
+
+[[block]]
+files = [
+    "Library/Rime/{default.custom.yaml,default.yaml,installation.yaml,squirrel.custom.yaml,squirrel.yaml,symbols.yaml,user.yaml}",
+]
+[block.when]
+os = "macos"

@@ -1,4 +1,15 @@
 name = "SpamSieve"
+
+[[block]]
 files = [
     "${MACKUP_XDG_CONFIG}/SpamSieve",
 ]
+[block.when]
+not_os = "macos"
+
+[[block]]
+files = [
+    "Library/Preferences/com.c-command.SpamSieve.plist",
+]
+[block.when]
+os = "macos"

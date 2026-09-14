@@ -1,7 +1,0 @@
-name = "PyCharm (macOS)"
-files = [
-    "Library/Preferences/{PyCharm2016.1,PyCharm2016.2,PyCharm2016.3,PyCharm2017.1,PyCharm2017.2,PyCharm2017.3,PyCharm2019.2,PyCharm2019.3,PyCharm40,PyCharm50,PyCharmCE2016.1,PyCharmCE2016.2,PyCharmCE2016.3,PyCharmCE2017.1,PyCharmCE2017.2,PyCharmCE2017.3}",
-]
-
-[when]
-os = "macos"

@@ -1,4 +1,15 @@
 name = "Adium"
+
+[[block]]
 files = [
     "${MACKUP_XDG_CONFIG}/Adium 2.0",
 ]
+[block.when]
+not_os = "macos"
+
+[[block]]
+files = [
+    "Library/Preferences/com.adiumX.adiumX.plist",
+]
+[block.when]
+os = "macos"

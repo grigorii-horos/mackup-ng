@@ -1,7 +1,0 @@
-name = "Airflow (macOS)"
-files = [
-    "Library/Preferences/com.bitcavehq.Airflow.plist",
-]
-
-[when]
-os = "macos"

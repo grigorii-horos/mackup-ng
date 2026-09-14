@@ -1,4 +1,15 @@
 name = "Calibre"
+
+[[block]]
 files = [
     "${MACKUP_XDG_CONFIG}/calibre",
 ]
+[block.when]
+not_os = "macos"
+
+[[block]]
+files = [
+    "Library/Preferences/calibre",
+]
+[block.when]
+os = "macos"

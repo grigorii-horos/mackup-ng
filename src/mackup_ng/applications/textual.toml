@@ -1,4 +1,16 @@
 name = "Textual"
+
+[[block]]
 files = [
     "${MACKUP_XDG_CONFIG}/Textual IRC",
 ]
+[block.when]
+not_os = "macos"
+
+[[block]]
+files = [
+    "Library/Preferences/com.codeux.irc.textual.plist",
+    "Library/Containers/com.codeux.irc.textual/Data/Library/Preferences/com.codeux.irc.textual.plist",
+]
+[block.when]
+os = "macos"

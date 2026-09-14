@@ -1,7 +1,0 @@
-name = "Bartender (macOS)"
-files = [
-    "Library/Preferences/{com.surteesstudios.Bartender-setapp.plist,com.surteesstudios.Bartender.plist}",
-]
-
-[when]
-os = "macos"

@@ -1,4 +1,17 @@
 name = "Xcode"
+
+[[block]]
 files = [
     "${MACKUP_XDG_CONFIG}/Developer/Shared/Xcode/Plug-ins",
 ]
+[block.when]
+not_os = "macos"
+
+[[block]]
+files = [
+    "Library/Preferences/com.apple.dt.Xcode.plist",
+    "Library/Developer/Xcode/UserData/{CodeSnippets,Debugger,FontAndColorThemes,KeyBindings,SearchScopes.xcsclist,xcdebugger}",
+    "Library/Developer/Xcode/Templates",
+]
+[block.when]
+os = "macos"

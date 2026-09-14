@@ -1,4 +1,16 @@
 name = "CotEditor"
+
+[[block]]
 files = [
     "${MACKUP_XDG_CONFIG}/CotEditor",
 ]
+[block.when]
+not_os = "macos"
+
+[[block]]
+files = [
+    "Library/Preferences/com.coteditor.CotEditor.plist",
+    "Library/Containers/com.coteditor.CotEditor/Data/Library/Application Support/CotEditor",
+]
+[block.when]
+os = "macos"

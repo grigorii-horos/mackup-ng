@@ -1,7 +1,0 @@
-name = "Stay (macOS)"
-files = [
-    "Library/Preferences/com.cordlessdog.Stay.plist",
-]
-
-[when]
-os = "macos"

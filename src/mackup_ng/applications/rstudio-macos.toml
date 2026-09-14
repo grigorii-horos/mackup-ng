@@ -1,7 +1,0 @@
-name = "RStudio (macOS)"
-files = [
-    "Library/Preferences/org.rstudio.RStudio.plist",
-]
-
-[when]
-os = "macos"

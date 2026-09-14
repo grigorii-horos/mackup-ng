@@ -1,4 +1,15 @@
 name = "Colloquy"
+
+[[block]]
 files = [
     "${MACKUP_XDG_CONFIG}/Colloquy",
 ]
+[block.when]
+not_os = "macos"
+
+[[block]]
+files = [
+    "Library/Preferences/info.colloquy.plist",
+]
+[block.when]
+os = "macos"

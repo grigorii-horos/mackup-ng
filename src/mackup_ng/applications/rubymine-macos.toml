@@ -1,7 +1,0 @@
-name = "RubyMine (macOS)"
-files = [
-    "Library/Preferences/{RubyMine2016.1,RubyMine2016.2,RubyMine2016.3,RubyMine2017.3,RubyMine2018.1,RubyMine40,RubyMine50,RubyMine60,RubyMine70,RubyMine80}",
-]
-
-[when]
-os = "macos"

@@ -1,7 +1,0 @@
-name = "BetterSnapTool (macOS)"
-files = [
-    "Library/Preferences/com.hegenberg.BetterSnapTool.plist",
-]
-
-[when]
-os = "macos"

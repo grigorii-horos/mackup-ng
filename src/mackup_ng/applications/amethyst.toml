@@ -1,4 +1,15 @@
 name = "Amethyst"
+
+[[block]]
 files = [
     "${MACKUP_XDG_CONFIG}/amethyst/amethyst.yml",
 ]
+[block.when]
+not_os = "macos"
+
+[[block]]
+files = [
+    "Library/Preferences/com.amethyst.Amethyst.plist",
+]
+[block.when]
+os = "macos"

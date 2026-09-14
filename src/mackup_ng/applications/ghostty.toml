@@ -1,4 +1,15 @@
 name = "Ghostty"
+
+[[block]]
 files = [
     "${MACKUP_XDG_CONFIG}/ghostty/config",
 ]
+[block.when]
+not_os = "macos"
+
+[[block]]
+files = [
+    "Library/Application Support/com.mitchellh.ghostty",
+]
+[block.when]
+os = "macos"

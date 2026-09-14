@@ -1,4 +1,15 @@
 name = "Viscosity"
+
+[[block]]
 files = [
     "${MACKUP_XDG_CONFIG}/Viscosity/OpenVPN",
 ]
+[block.when]
+not_os = "macos"
+
+[[block]]
+files = [
+    "Library/Preferences/com.viscosityvpn.Viscosity.plist",
+]
+[block.when]
+os = "macos"

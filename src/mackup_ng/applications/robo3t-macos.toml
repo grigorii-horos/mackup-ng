@@ -1,7 +1,0 @@
-name = "Robo 3T (macOS)"
-files = [
-    "Library/Preferences/com.3t.Robomongo.plist",
-]
-
-[when]
-os = "macos"

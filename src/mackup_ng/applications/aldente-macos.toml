@@ -1,7 +1,0 @@
-name = "AlDente (macOS)"
-files = [
-    "Library/Preferences/com.apphousekitchen.aldente-pro.plist",
-]
-
-[when]
-os = "macos"

@@ -1,4 +1,15 @@
 name = "Atom"
+
+[[block]]
 files = [
     ".atom/{config.cson,init.coffee,keymap.cson,keymaps,snippets.cson,styles.less}",
 ]
+[block.when]
+not_os = "macos"
+
+[[block]]
+files = [
+    "Library/Preferences/com.github.atom.plist",
+]
+[block.when]
+os = "macos"

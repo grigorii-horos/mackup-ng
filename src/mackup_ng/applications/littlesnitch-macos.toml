@@ -1,7 +1,0 @@
-name = "LittleSnitch (macOS)"
-files = [
-    "Library/Preferences/{at.obdev.littlesnitch.networkmonitor.plist,at.obdev.LittleSnitchNetworkMonitor.plist}",
-]
-
-[when]
-os = "macos"

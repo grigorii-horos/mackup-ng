@@ -1,7 +1,0 @@
-name = "Calibre (macOS)"
-files = [
-    "Library/Preferences/calibre",
-]
-
-[when]
-os = "macos"

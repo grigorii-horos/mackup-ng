@@ -1,4 +1,6 @@
 name = "TextMate"
+
+[[block]]
 files = [
     "${MACKUP_XDG_CONFIG}/TextMate/Bundles",
     "${MACKUP_XDG_CONFIG}/TextMate/PlugIns",
@@ -6,3 +8,12 @@ files = [
     "${MACKUP_XDG_CONFIG}/TextMate/Managed/Bundles",
     ".tm_properties",
 ]
+[block.when]
+not_os = "macos"
+
+[[block]]
+files = [
+    "Library/Preferences/com.macromates.textmate.latex_config.plist",
+]
+[block.when]
+os = "macos"

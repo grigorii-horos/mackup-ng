@@ -1,4 +1,15 @@
 name = "LaunchBar"
+
+[[block]]
 files = [
     "${MACKUP_XDG_CONFIG}/LaunchBar/{Actions,Configuration.plist,CustomShortcuts.plist,Snippets}",
 ]
+[block.when]
+not_os = "macos"
+
+[[block]]
+files = [
+    "Library/Preferences/at.obdev.LaunchBar.plist",
+]
+[block.when]
+os = "macos"

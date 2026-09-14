@@ -142,12 +142,17 @@ def build_sync_plan(
     nothing, so it never claims — or evicts — a destination.
     """
     entries = [
-        mapping.Pair(source=backup, dest=local, owner_app=app_name)
+        mapping.Pair(
+            source=backup,
+            dest=local,
+            owner_app=app_name,
+            owner_slot=slot,
+        )
         for app_name in app_db.get_app_order()
         if app_name in apps_to_sync
         and app_db.app_has_sync(app_name)
         and app_db.config_enabled(app_name)
-        for local, backup, _slot in app_db.get_file_mappings(app_name)
+        for local, backup, slot in app_db.get_file_mappings(app_name)
     ]
     return mapping.build_pairs(entries)
 
@@ -399,9 +404,13 @@ def main() -> None:
         # A group is synced in the slot of the config that won its last live
         # destination — the config whose declaration actually decided it.
         owners = mapping.group_owners(live_pairs)
-        groups_by_owner: dict[str, list[tuple[str, list[str]]]] = {}
+        groups_by_slot: dict[tuple[str, int], list[tuple[str, list[str]]]] = {}
         for source, dests in groups.items():
-            groups_by_owner.setdefault(owners[source], []).append((source, dests))
+            groups_by_slot.setdefault(owners[source], []).append((source, dests))
+
+        groups_by_owner: dict[str, list[tuple[str, list[str]]]] = {}
+        for (app_key, _slot), owned_groups in groups_by_slot.items():
+            groups_by_owner.setdefault(app_key, []).extend(owned_groups)
 
         log_entries: dict[str, dict] = {}
         for app_name in sorted(app_db.get_app_names()):

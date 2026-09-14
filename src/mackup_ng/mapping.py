@@ -25,6 +25,7 @@ class Pair:
     source: str
     dest: str
     owner_app: str
+    owner_slot: int
 
 
 @dataclass(frozen=True)
@@ -73,13 +74,15 @@ def group_by_source(
     return groups, list(dict.fromkeys(orphans))
 
 
-def group_owners(pairs: Sequence[Pair]) -> dict[str, str]:
-    """Map each source to the app that owns its last pair.
+def group_owners(pairs: Sequence[Pair]) -> dict[str, tuple[str, int]]:
+    """Map each source to the (app, slot) that owns its last pair.
 
     A fanout group can gather destinations declared by several configs. It is
     attributed to the config that claimed the *last* destination in read order
-    — the strongest one, since read order is also override order. Feed this
-    the live (non-tombstoned) pairs so a group is never attributed to a config
-    that contributes no destination.
+    — the strongest one, since read order is also override order. The slot
+    says which of that config's units declared it, which is what puts the
+    group in the right place in the sync order. Feed this the live
+    (non-tombstoned) pairs so a group is never attributed to a config that
+    contributes no destination.
     """
-    return {pair.source: pair.owner_app for pair in pairs}
+    return {pair.source: (pair.owner_app, pair.owner_slot) for pair in pairs}

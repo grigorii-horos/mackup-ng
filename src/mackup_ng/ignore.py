@@ -7,12 +7,11 @@ Syncthing is the loud one: every concurrent edit leaves a
 conflict copy also makes its side look like the newest one, so it can beat a
 real edit on the other machine.
 
-Patterns live in ``<name>.toml`` files with an ``[ignore]`` table, in the same
-three places app configs come from: shipped with the package, then
-``~/.mackup/ignores/``, then ``$XDG_CONFIG_HOME/mackup/ignores/``. A local
-file replaces the built-in of the same name outright, so ``patterns = []`` in
-``~/.mackup/ignores/syncthing.toml`` turns the built-in set off. A single
-config can add its own patterns with a top-level ``ignore`` key.
+Patterns live in ``<name>.toml`` files with an ``[ignore]`` table, shipped
+with the package and supplemented by the XDG directory. A local file replaces
+the built-in of the same name outright, so ``patterns = []`` in
+``$XDG_CONFIG_HOME/mackup/ignores/syncthing.toml`` turns the built-in set off.
+A single config can add its own patterns with a top-level ``ignore`` key.
 
 mackup skips these names in both directions and never deletes them: they
 belong to the tool that made them.
@@ -26,7 +25,8 @@ from fnmatch import fnmatch
 from functools import lru_cache
 from typing import TYPE_CHECKING
 
-from .constants import CUSTOM_IGNORES_DIR, IGNORES_DIR_XDG, IGNORES_DIRNAME
+from . import dirs
+from .constants import IGNORES_DIRNAME
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -38,16 +38,6 @@ def _pkg_ignores_dir() -> str:
     """Built-in ignore definitions shipped inside the package."""
     here = os.path.dirname(os.path.realpath(__file__))
     return os.path.join(here, IGNORES_DIRNAME)
-
-
-def _custom_ignores_dirs() -> list[str]:
-    """Local ignore definitions: ~/.mackup/ignores/ and the XDG directory."""
-    home = os.environ["HOME"]
-    xdg = os.environ.get("XDG_CONFIG_HOME") or os.path.join(home, ".config")
-    return [
-        os.path.join(home, CUSTOM_IGNORES_DIR),
-        os.path.join(xdg, IGNORES_DIR_XDG),
-    ]
 
 
 def _read_patterns(path: str) -> list[str] | None:
@@ -74,7 +64,7 @@ def load_globs() -> Globs:
     ``$HOME`` call ``load_globs.cache_clear()``.
     """
     by_name: dict[str, list[str]] = {}
-    for directory in (_pkg_ignores_dir(), *_custom_ignores_dirs()):
+    for directory in (_pkg_ignores_dir(), dirs.custom_ignores_dir()):
         if not os.path.isdir(directory):
             continue
         for filename in sorted(os.listdir(directory)):

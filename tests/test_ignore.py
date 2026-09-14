@@ -108,7 +108,7 @@ class TestLoadGlobs(unittest.TestCase):
 
     def test_a_local_file_adds_its_patterns(self):
         self.write_ignore_file(
-            os.path.join(self.home, ".mackup", "ignores"),
+            os.path.join(os.environ["XDG_CONFIG_HOME"], "mackup", "ignores"),
             "mine",
             '[ignore]\nname = "Mine"\npatterns = ["*.bak"]\n',
         )
@@ -117,7 +117,7 @@ class TestLoadGlobs(unittest.TestCase):
 
     def test_a_local_file_overrides_the_built_in_of_the_same_name(self):
         self.write_ignore_file(
-            os.path.join(self.home, ".mackup", "ignores"),
+            os.path.join(os.environ["XDG_CONFIG_HOME"], "mackup", "ignores"),
             "syncthing",
             "[ignore]\npatterns = []\n",
         )
@@ -135,12 +135,32 @@ class TestLoadGlobs(unittest.TestCase):
 
     def test_a_malformed_file_is_skipped(self):
         self.write_ignore_file(
-            os.path.join(self.home, ".mackup", "ignores"),
+            os.path.join(os.environ["XDG_CONFIG_HOME"], "mackup", "ignores"),
             "broken",
             "not toml {",
         )
 
         assert "*.sync-conflict-*" in ignore.load_globs()
+
+
+def test_custom_ignores_come_from_the_xdg_directory(tmp_path, monkeypatch):
+    """An ignore definition in $XDG_CONFIG_HOME/mackup/ignores is honoured."""
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.delenv("XDG_CONFIG_HOME", raising=False)
+    ignores_dir = tmp_path / ".config" / "mackup" / "ignores"
+    ignores_dir.mkdir(parents=True)
+    (ignores_dir / "zz-custom.toml").write_text(
+        '[ignore]\npatterns = ["*.customsuffix"]\n',
+    )
+
+    from mackup_ng import ignore
+
+    # load_globs is lru_cached; a test that moves $HOME must clear it.
+    ignore.load_globs.cache_clear()
+    try:
+        assert "*.customsuffix" in ignore.load_globs()
+    finally:
+        ignore.load_globs.cache_clear()
 
 
 if __name__ == "__main__":

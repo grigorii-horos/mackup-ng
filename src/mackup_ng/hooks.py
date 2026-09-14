@@ -1,34 +1,32 @@
 """Machine-local markers and the MACKUP_* env contract for mackup-ng.
 
-Layout under the Mackup home (``~/.mackup/``)::
+Layout across the XDG base directories::
 
-    applications/   config .toml files: sync lists + action blocks (see blocks.py)
-    markers/        LOCAL marker definitions (*.toml, same format as apps)
-    dconf-backup/   dconf dumps (*.dconf)
+    $XDG_CONFIG_HOME/mackup/
+        applications/   config .toml files: sync lists + action blocks
+        ignores/        ignore definitions
+        markers/        LOCAL marker definitions (*.toml, same format as apps)
+    $XDG_DATA_HOME/mackup/
+        dconf-backup/   dconf dumps (*.dconf)
+    $XDG_STATE_HOME/mackup/
+        markers/        marker STATE flags
 
 Marker STATE (empty flag files toggling behaviour on this machine only, never
-synced) lives in ``$XDG_STATE_HOME/mackup/markers/``. ``backup`` marks the
-source machine.
+synced) is the only part that is machine-local. ``backup`` marks the source
+machine.
 
 Action blocks (`[run]`) receive a ``MACKUP_*`` environment contract via
 :func:`hook_env`.
 """
 
-import contextlib
 import os
 import platform
-import shutil
 import tomllib
 
-from . import utils
+from . import dirs, utils
 from .config import Config
 from .constants import (
-    CUSTOM_MARKERS_DIR,
-    DCONF_DIRNAME,
-    LEGACY_MARKERS_STATE_DIR,
-    MACKUP_HOME_DIR,
     MARKERS_DEFS_DIRNAME,
-    MARKERS_STATE_XDG,
     PLATFORM_DARWIN,
     PLATFORM_LINUX,
     PLATFORM_WINDOWS,
@@ -36,15 +34,10 @@ from .constants import (
 
 
 # ---------------------------------------------------------------- paths
-def mackup_home() -> str:
-    """Absolute path to ~/.mackup/."""
-    return os.path.join(os.environ["HOME"], MACKUP_HOME_DIR)
-
-
 def backup_dir() -> str:
     """Absolute path to the storage folder Mackup syncs into (``Config.fullpath``).
 
-    Resolves the configured storage engine/path from ``~/.mackup.cfg`` so hooks
+    Resolves the configured storage engine/path from the config file so hooks
     and sets never hard-code ``~/Sync/Configs/Mackup``; it differs per machine.
     Falls back to an empty string if the config can't be read.
     """
@@ -63,17 +56,13 @@ def _pkg_markers_dir() -> str:
 
 
 def custom_markers_dir() -> str:
-    """Local marker definitions: ~/.mackup/markers/."""
-    return os.path.join(os.environ["HOME"], CUSTOM_MARKERS_DIR)
+    """Local marker definitions: $XDG_CONFIG_HOME/mackup/markers/."""
+    return dirs.custom_markers_dir()
 
 
 def markers_dir() -> str:
-    """Directory holding marker STATE flags: $XDG_STATE_HOME/mackup/markers/."""
-    base = os.environ.get(
-        "XDG_STATE_HOME",
-        os.path.join(os.environ["HOME"], ".local", "state"),
-    )
-    return os.path.join(base, MARKERS_STATE_XDG)
+    """Marker STATE flags: $XDG_STATE_HOME/mackup/markers/."""
+    return dirs.markers_state_dir()
 
 
 # ---------------------------------------------------------------- markers
@@ -89,7 +78,7 @@ def _read_marker_def(path: str) -> dict | None:
 
 
 def load_marker_defs() -> dict[str, dict]:
-    """Known marker definitions: package built-ins + ~/.mackup/markers/.
+    """Known marker definitions: package built-ins + $XDG_CONFIG_HOME/mackup/markers/.
 
     Each definition is a ``<name>.toml`` file (id = filename stem) in the same
     TOML format as app definitions, with a ``[marker]`` table (``name`` = human
@@ -108,31 +97,7 @@ def load_marker_defs() -> dict[str, dict]:
     return defs
 
 
-def _migrate_legacy_markers() -> None:
-    """Move pre-XDG state flags from ~/.mackup/markers/ into the XDG state dir.
-
-    That directory now also holds marker *definitions* (``*.toml``); only the
-    extensionless flag files are migrated, definitions are left untouched.
-    """
-    legacy = os.path.join(os.environ["HOME"], LEGACY_MARKERS_STATE_DIR)
-    if not os.path.isdir(legacy):
-        return
-    dst = markers_dir()
-    if os.path.abspath(legacy) == os.path.abspath(dst):
-        return  # defs dir == state dir (misconfigured); nothing to migrate
-    for name in os.listdir(legacy):
-        src = os.path.join(legacy, name)
-        if name.endswith(".toml") or not os.path.isfile(src):
-            continue  # keep definitions and subdirs
-        os.makedirs(dst, exist_ok=True)
-        if not os.path.exists(os.path.join(dst, name)):
-            shutil.move(src, os.path.join(dst, name))
-    with contextlib.suppress(OSError):
-        os.rmdir(legacy)  # only succeeds when now empty (no defs, no flags)
-
-
 def has_marker(name: str) -> bool:
-    _migrate_legacy_markers()
     return os.path.isfile(os.path.join(markers_dir(), name))
 
 
@@ -149,13 +114,11 @@ def valid_marker_name(name: str) -> bool:
 
 
 def set_marker(name: str) -> None:
-    _migrate_legacy_markers()
     os.makedirs(markers_dir(), exist_ok=True)
     open(os.path.join(markers_dir(), name), "a").close()
 
 
 def unset_marker(name: str) -> None:
-    _migrate_legacy_markers()
     path = os.path.join(markers_dir(), name)
     if os.path.exists(path):
         os.remove(path)
@@ -213,7 +176,6 @@ def has_gui() -> bool:
 
 def hook_env(phase: str) -> dict[str, str]:
     """MACKUP_* contract exported to hook processes."""
-    home = mackup_home()
     env = dict(os.environ)
     env.update(
         {
@@ -222,10 +184,12 @@ def hook_env(phase: str) -> dict[str, str]:
             "MACKUP_OS": os_kind(),
             "MACKUP_ARCH": platform.machine(),
             "MACKUP_HAS_GUI": "1" if has_gui() else "0",
-            "MACKUP_CONFIG_DIR": home,
+            "MACKUP_CONFIG_DIR": dirs.config_dir(),
+            "MACKUP_DATA_DIR": dirs.data_dir(),
+            "MACKUP_STATE_DIR": dirs.state_dir(),
             "MACKUP_BACKUP_DIR": backup_dir(),
-            "MACKUP_MARKERS_DIR": markers_dir(),
-            "MACKUP_DCONF_BACKUP_DIR": os.path.join(home, DCONF_DIRNAME),
+            "MACKUP_MARKERS_DIR": dirs.markers_state_dir(),
+            "MACKUP_DCONF_BACKUP_DIR": dirs.dconf_backup_dir(),
         },
     )
     return env

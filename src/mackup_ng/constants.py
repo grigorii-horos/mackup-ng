@@ -11,6 +11,16 @@ PLATFORM_WINDOWS: str = "Windows"
 # Directory containing the application configs
 APPS_DIR: str = "applications"
 
+# Name of the mackup directory inside each XDG base
+MACKUP_DIRNAME: str = "mackup"
+
+# Main config file, inside $XDG_CONFIG_HOME/mackup/
+CONFIG_FILENAME: str = "config.toml"
+
+# Pre-XDG locations, kept only to reject them with a helpful message
+LEGACY_CONFIG_FILE: str = ".mackup.cfg"
+LEGACY_HOME_DIR: str = ".mackup"
+
 # Distribution name (used for version lookup via importlib.metadata)
 MACKUP_APP_NAME: str = "mackup-ng"
 

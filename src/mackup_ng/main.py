@@ -63,6 +63,7 @@ from docopt import docopt
 
 from . import (
     blocks,
+    conditions,
     dconf,
     hooks,
     ignore,
@@ -297,19 +298,33 @@ def main() -> None:
                         color=utils.AnsiColor.GRAY,
                     )
                 print(f"{dash} {local} <- {backup}{extra}")
-        cfg_blocks = app_db.get_blocks(requested_app_name)
-        if cfg_blocks:
-            print(bold("Action blocks:"))
-            for b in cfg_blocks:
-                phase = utils.style_text(
-                    b.get("phase", "post"),
-                    color=utils.AnsiColor.GRAY,
+        units = app_db.get_units(requested_app_name)
+        listed = [u for u in units if u.block is not None or not u.passed]
+        if listed:
+            print(bold("Units:"))
+            for unit in listed:
+                action = (
+                    utils.style_text(
+                        str(blocks.block_action(unit.block)),
+                        color=utils.AnsiColor.CYAN,
+                    )
+                    if unit.block is not None
+                    else utils.style_text("files only", color=utils.AnsiColor.GRAY)
                 )
-                action = utils.style_text(
-                    str(blocks.block_action(b)),
-                    color=utils.AnsiColor.CYAN,
-                )
-                print(f"{dash} {phase}: {action}")
+                if unit.passed:
+                    print(f"{dash} slot {unit.slot}: {action}")
+                else:
+                    unit_unmet = conditions.failing({"when": unit.when})
+                    detail = ", ".join(
+                        f"{k}={v}" for k, v in sorted(unit_unmet.items())
+                    )
+                    print(
+                        f"{dash} slot {unit.slot}: {action} — "
+                        + utils.style_text(
+                            f"conditions not met ({detail})",
+                            color=utils.AnsiColor.GRAY,
+                        ),
+                    )
 
     # mackup info <path>...
     elif args["info"]:

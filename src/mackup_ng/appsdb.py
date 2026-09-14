@@ -409,7 +409,6 @@ class ApplicationsDatabase:
         # Build the dict that will contain the properties of each application
         self.apps: dict[str, dict[str, str | list[str]]] = {}
         self.app_file_mappings: dict[str, list[tuple[str, str, int]]] = {}
-        self.app_blocks: dict[str, list[dict]] = {}
         self.app_units: dict[str, list[Unit]] = {}
         self.app_conditions: dict[str, dict] = {}
         self.app_env_files: dict[str, list[str]] = {}
@@ -622,9 +621,6 @@ class ApplicationsDatabase:
                     )
 
             self.app_units[app_name] = units
-            self.app_blocks[app_name] = [
-                u.block for u in units if u.passed and u.block is not None
-            ]
 
     @staticmethod
     def get_config_files() -> list[str]:
@@ -692,10 +688,6 @@ class ApplicationsDatabase:
     def get_app_order(self) -> list[str]:
         """Return app ids in config read order (weakest first)."""
         return list(self.app_order)
-
-    def get_blocks(self, name: str) -> list[dict]:
-        """Return the action blocks of the config's passing units, in slot order."""
-        return list(self.app_blocks.get(name, []))
 
     def get_ignore_patterns(self, name: str) -> list[str]:
         """Patterns this config ignores inside its own paths."""

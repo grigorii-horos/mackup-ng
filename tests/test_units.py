@@ -123,7 +123,7 @@ class TestUnits(unittest.TestCase):
         assert unit.block is not None
         assert "chmod" in unit.block
 
-    def test_get_blocks_returns_actions_of_passing_units_in_slot_order(self):
+    def test_get_units_returns_actions_of_passing_units_in_slot_order(self):
         self._write(
             "acts",
             'name = "Acts"\n'
@@ -139,7 +139,9 @@ class TestUnits(unittest.TestCase):
             'script = "echo early"\n',
         )
         scripts = [
-            b["run"]["script"] for b in ApplicationsDatabase().get_blocks("acts")
+            unit.block["run"]["script"]
+            for unit in ApplicationsDatabase().get_units("acts")
+            if unit.passed and unit.block is not None
         ]
 
         assert scripts == ["echo early", "echo late"]

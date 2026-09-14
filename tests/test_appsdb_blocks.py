@@ -39,7 +39,11 @@ class TestAppsdbBlocks(unittest.TestCase):
         )
         db = ApplicationsDatabase()
         assert ".ssh" in db.get_files("openssh")
-        cfg_blocks = db.get_blocks("openssh")
+        cfg_blocks = [
+            unit.block
+            for unit in db.get_units("openssh")
+            if unit.passed and unit.block is not None
+        ]
         assert len(cfg_blocks) == 1
         assert blocks.block_action(cfg_blocks[0]) == "chmod"
         assert db.app_has_sync("openssh")
@@ -49,7 +53,11 @@ class TestAppsdbBlocks(unittest.TestCase):
             "multi",
             '[run]\ncommands = ["a"]\n\n[[block]]\n[block.run]\ncommands = ["b"]\n',
         )
-        cfg_blocks = ApplicationsDatabase().get_blocks("multi")
+        cfg_blocks = [
+            unit.block
+            for unit in ApplicationsDatabase().get_units("multi")
+            if unit.passed and unit.block is not None
+        ]
         assert [b["run"]["commands"] for b in cfg_blocks] == [["a"], ["b"]]
 
     def test_block_only_config(self):
@@ -61,7 +69,11 @@ class TestAppsdbBlocks(unittest.TestCase):
         db = ApplicationsDatabase()
         assert "10-linger" in db.get_app_names()
         assert not db.app_has_sync("10-linger")
-        block = db.get_blocks("10-linger")[0]
+        block = next(
+            unit.block
+            for unit in db.get_units("10-linger")
+            if unit.passed and unit.block is not None
+        )
         assert blocks.block_action(block) == "run"
         assert db.get_conditions("10-linger")["os"] == ["linux"]
 
@@ -79,7 +91,11 @@ class TestAppsdbBlocks(unittest.TestCase):
             'name = "Stock"\nfiles = [".stockrc"]\n',
         )
         db = ApplicationsDatabase()
-        assert db.get_blocks("stock") == []
+        assert [
+            unit.block
+            for unit in db.get_units("stock")
+            if unit.passed and unit.block is not None
+        ] == []
         assert db.app_has_sync("stock")
 
     def test_legacy_application_table_tolerated(self):
@@ -127,7 +143,11 @@ class TestConfigLevelWhen(unittest.TestCase):
         )
         db = ApplicationsDatabase()
         assert db.get_conditions("gated") == {"os": ["android"]}
-        cfg_blocks = db.get_blocks("gated")
+        cfg_blocks = [
+            unit.block
+            for unit in db.get_units("gated")
+            if unit.passed and unit.block is not None
+        ]
         assert len(cfg_blocks) == 1
         assert "when" not in cfg_blocks[0]
         assert "chmod" in cfg_blocks[0]

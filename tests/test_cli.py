@@ -638,6 +638,31 @@ class TestCLI(unittest.TestCase):
         assert ".work.rc <- .shared.rc" in output
         assert "fanout: 2 destinations" in output
 
+    def test_show_names_a_unit_skipped_by_its_condition(self):
+        with open(os.path.join(self.custom_apps_dir, "gated.toml"), "w") as handle:
+            handle.write(
+                'name = "Gated"\n'
+                'files = [".always"]\n'
+                "\n"
+                "[[block]]\n"
+                'files = [".mac-only"]\n'
+                "[block.when]\n"
+                'os = "definitely-not-this-os"\n',
+            )
+        buffer = io.StringIO()
+        with (
+            patch("sys.stdout", buffer),
+            patch(
+                "sys.argv",
+                ["mackup", "show", "gated"],
+            ),
+        ):
+            main()
+        output = buffer.getvalue()
+
+        assert "conditions not met" in output
+        assert "definitely-not-this-os" in output
+
     def test_sync_reports_skipped_for_config_fully_evicted(self):
         """A selected config whose only pair loses its destination still reports."""
         self._write_custom_app("aaa-base", 'files = [".overridden"]\n')

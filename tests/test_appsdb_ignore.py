@@ -42,7 +42,10 @@ class TestPerConfigIgnore(unittest.TestCase):
     def test_the_ignore_key_is_not_mistaken_for_a_block(self):
         self._write("noisy", 'files = [".noisy"]\nignore = ["*.bak"]\n')
 
-        assert ApplicationsDatabase().get_blocks("noisy") == []
+        units = ApplicationsDatabase().get_units("noisy")
+        assert [
+            unit.block for unit in units if unit.passed and unit.block is not None
+        ] == []
 
 
 if __name__ == "__main__":

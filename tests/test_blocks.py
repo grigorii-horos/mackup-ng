@@ -3,6 +3,7 @@
 import os
 import tempfile
 import unittest
+from collections import Counter
 from unittest import mock
 
 from mackup_ng import blocks, dirs
@@ -191,6 +192,58 @@ class TestBlocks(unittest.TestCase):
             "syncthing.service.d",
             "mackup-set.conf",
         )
+
+
+def test_three_blocks_of_one_config_restart_a_service_once(monkeypatch):
+    """The deferral must span the whole config, not one phase: three blocks
+    that each declare restart_service = "x" are one stop and one start."""
+    calls = []
+    state = {"running": True}
+
+    def fake_is_active(svc):
+        return bool(svc) and state["running"]
+
+    def fake_stop(svc):
+        state["running"] = False
+        calls.append(("stop", svc))
+
+    def fake_start(svc):
+        state["running"] = True
+        calls.append(("start", svc))
+
+    monkeypatch.setattr(blocks, "svc_is_active", fake_is_active)
+    monkeypatch.setattr(blocks, "svc_stop", fake_stop)
+    monkeypatch.setattr(blocks, "svc_start", fake_start)
+
+    cfg_blocks = [
+        {"restart_service": "x", "run": {"script": "true"}},
+        {"restart_service": "x", "run": {"script": "true"}},
+        {"restart_service": "x", "run": {"script": "true"}},
+    ]
+    pending: set[str] = set()
+    for block in cfg_blocks:
+        blocks.apply_unit_action(block, [], dry_run=False, pending_starts=pending)
+    blocks.flush_pending_starts(pending)
+
+    assert calls.count(("stop", "x")) == 1
+    assert calls.count(("start", "x")) == 1
+    assert calls[-1] == ("start", "x")
+
+
+def test_apply_unit_action_honours_the_block_condition(tmp_path, monkeypatch):
+    monkeypatch.setattr(blocks, "svc_stop", lambda svc: None)
+    monkeypatch.setattr(blocks, "svc_start", lambda svc: None)
+    marker = tmp_path / "should-not-exist"
+
+    block = {
+        "when": {"os": "definitely-not-this-os"},
+        "run": {"script": f'touch "{marker}"'},
+    }
+    pending: set[str] = set()
+    tally = blocks.apply_unit_action(block, [], dry_run=False, pending_starts=pending)
+
+    assert tally == Counter()
+    assert not marker.exists(), "the action ran despite its condition failing"
 
 
 if __name__ == "__main__":

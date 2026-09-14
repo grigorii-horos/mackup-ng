@@ -489,6 +489,35 @@ def summarize(tally: Counter) -> str:
     return ", ".join(parts)
 
 
+def apply_unit_action(
+    block: dict,
+    env_files: list[str],
+    dry_run: bool,
+    pending_starts: set[str],
+) -> Counter:
+    """Apply one unit's action; return a Counter action -> changes.
+
+    Service starts are deferred into ``pending_starts``, which the caller owns
+    and flushes once per config with :func:`flush_pending_starts`. A block that
+    stops a service, and the next one that needs it stopped too, must not see
+    it restarted in between.
+    """
+    tally: Counter = Counter()
+    if not conditions.block_passes(block):
+        return tally
+    action, count = apply_block(block, env_files, dry_run, pending_starts)
+    if action and count:
+        tally[action] += count
+    return tally
+
+
+def flush_pending_starts(pending_starts: set[str]) -> None:
+    """Start every service deferred so far and clear the set."""
+    for svc in sorted(pending_starts):
+        svc_start(svc)
+    pending_starts.clear()
+
+
 def apply_blocks(
     blocks: list[dict],
     phase: str,

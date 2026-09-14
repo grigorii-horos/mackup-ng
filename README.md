@@ -12,7 +12,7 @@ Backup and keep your application settings in sync.
 > **mackup-ng** is a maintained fork of [mackup](https://github.com/lra/mackup)
 > by Laurent Raufaste. It replaces the backup/restore/link commands with a
 > single two-way `sync` plus an `rm` command, while keeping the same on-disk
-> conventions (`.mackup.cfg`, the `Mackup` storage folder).
+> conventions (`config.toml`, the `Mackup` storage folder).
 >
 > ⚠️ **Incompatible with the original `mackup`.** This package installs a
 > `mackup` command (and a `mackup-ng` alias) that **shadows the upstream
@@ -165,10 +165,10 @@ fresh conflict copy is skipped when picking the newer side too, so it cannot
 beat a real edit on another machine.
 
 Patterns live in `<name>.toml` files with an `[ignore]` table, read from the
-package, then `~/.mackup/ignores/`, then `$XDG_CONFIG_HOME/mackup/ignores/`:
+package, then `$XDG_CONFIG_HOME/mackup/ignores/`:
 
 ```toml
-# ~/.mackup/ignores/mine.toml
+# ~/.config/mackup/ignores/mine.toml
 [ignore]
 name = "My junk"
 patterns = ["*.bak", "*.orig"]
@@ -179,7 +179,7 @@ The built-in `syncthing.toml` covers `*.sync-conflict-*`, `~syncthing~*.tmp`,
 the same name replaces the built-in outright, so this turns the whole set off:
 
 ```toml
-# ~/.mackup/ignores/syncthing.toml
+# ~/.config/mackup/ignores/syncthing.toml
 [ignore]
 patterns = []
 ```
@@ -187,7 +187,7 @@ patterns = []
 A single application config can add patterns that apply to its own paths only:
 
 ```toml
-# ~/.mackup/applications/notes.toml
+# ~/.config/mackup/applications/notes.toml
 name = "notes"
 files = [".notes"]
 ignore = ["*.bak"]
@@ -842,7 +842,7 @@ Have an application that shouldn't be generally supported but that you use?
 Or some personal files you want to sync, e.g. various config files in a `~/.config/`
 directory or your personal `~/.gitignore`?
 
-- Create a `~/.mackup` directory to [sync an application or any file or directory](doc#add-support-for-an-application-or-any-file-or-directory)
+- Create files under `~/.config/mackup/applications/` to [sync an application or any file or directory](doc#add-support-for-an-application-or-any-file-or-directory)
 
 ## Fork Additions
 
@@ -984,9 +984,9 @@ is propagated to the others on the next `mackup sync`.
 Destinations are unique. If a later config maps the same local path to a
 different backup file, the earlier mapping is dropped — that is how you
 overwrite a stock config with your own. Configs are read stock first, then
-`$XDG_CONFIG_HOME/mackup/applications`, then `~/.mackup/applications`, so your
-own files always win. Run `mackup sync -v` to see which mappings were
-overridden and which backup files are left without a destination.
+`$XDG_CONFIG_HOME/mackup/applications`, so your own files always win. Run
+`mackup sync -v` to see which mappings were overridden and which backup files
+are left without a destination.
 
 An orphaned backup file (no destination maps to it) is left untouched; it is
 only reported by `mackup sync -v`, never deleted on its own. `mackup rm <path>`
@@ -1034,7 +1034,7 @@ destination. That is how one machine can take a different source for the same
 local file:
 
 ```toml
-# ~/.mackup/applications/zz-termux-colors-eink.toml
+# ~/.config/mackup/applications/zz-termux-colors-eink.toml
 [when]
 os = ["android"]
 marker = ["eink"]
@@ -1056,25 +1056,40 @@ silently syncs nothing. Loading a config warns about this: an unrecognized
 key inside `[when]` or a `[when]` that isn't a table at all both print a
 `Warning:` line naming the config and the problem.
 
-### 9. Machine-local extras (`~/.mackup/`)
+### 9. Machine-local extras
 
-Beyond custom app configs, `~/.mackup/` is the home for machine-local behavior:
+Beyond custom app configs, mackup-ng splits its own state across the three
+XDG base directories:
 
 ```text
-~/.mackup/
-├── applications/   config *.toml files: sync lists AND action blocks
-├── markers/        LOCAL marker definitions (*.toml, same format as apps)
-└── dconf-backup/   dconf dumps (*.dconf)
+$XDG_CONFIG_HOME/mackup/     (~/.config/mackup)       synced
+    config.toml               main config
+    applications/*.toml       config *.toml files: sync lists AND action blocks
+    ignores/*.toml            ignore definitions
+    markers/*.toml            LOCAL marker DEFINITIONS (same format as apps)
+$XDG_DATA_HOME/mackup/       (~/.local/share/mackup)  synced
+    dconf-backup/*.dconf      dconf dumps
+$XDG_STATE_HOME/mackup/      (~/.local/state/mackup)  NOT synced
+    markers/                  marker STATE flags, machine-local
+    sync-log.json             per-machine record of the last sync
 ```
 
-Marker *state* (which markers are on) lives in
-`$XDG_STATE_HOME/mackup/markers/` (default `~/.local/state/mackup/markers/`), not
-under `~/.mackup/`; a pre-XDG `~/.mackup/markers/` is migrated automatically.
+Marker *state* (which markers are on) is the only part of this that is
+machine-local and never synced; it lives under
+`$XDG_STATE_HOME/mackup/markers/` (default `~/.local/state/mackup/markers/`).
 
 Marker state is not the only machine-local state: `sync` also records what it
 did to each destination in `$XDG_STATE_HOME/mackup/sync-log.json`, which is what
 `mackup-ng info` reports as "Last sync". Both stay out of the synced backup
 folder, since they describe this machine only.
+
+mackup-ng backs up its own configuration through the same mechanism, via the
+built-in `Mackup` profile (`applications/mackup.toml`): its file list is the
+literal, home-relative paths `.config/mackup` and `.local/share/mackup`, not
+`dirs.config_dir()` / `dirs.data_dir()`. If you point `$XDG_CONFIG_HOME` (or
+`$XDG_DATA_HOME`) somewhere other than its default, mackup-ng itself keeps
+working from the new location, but this profile keeps watching the old one —
+so it silently stops syncing mackup's own configuration.
 
 - **Markers** (`mark`/`unmark`/`markers`) are empty flag files gating behavior on
   one machine only. `backup` marks the source machine.
@@ -1093,10 +1108,10 @@ folder, since they describe this machine only.
   `[block.<action>]`; at the top level `[when]` / `[<action>]`. Configs apply
   sorted by filename — cross-cutting hooks use numeric prefixes (`10-`, `40-`).
 - **Environment contract**: `[run]` blocks receive a `MACKUP_*` environment
-  (`MACKUP_ROLE`, `MACKUP_OS`, `MACKUP_ARCH`, `MACKUP_CONFIG_DIR`,
-  `MACKUP_BACKUP_DIR`, `MACKUP_MARKERS_DIR`,
-  `MACKUP_DCONF_BACKUP_DIR`, ...). A pre-sync executable is a `[run]` block with
-  `phase = "pre"`.
+  (`MACKUP_PHASE`, `MACKUP_ROLE`, `MACKUP_OS`, `MACKUP_ARCH`, `MACKUP_HAS_GUI`,
+  `MACKUP_CONFIG_DIR`, `MACKUP_DATA_DIR`, `MACKUP_STATE_DIR`,
+  `MACKUP_BACKUP_DIR`, `MACKUP_MARKERS_DIR`, `MACKUP_DCONF_BACKUP_DIR`). A
+  pre-sync executable is a `[run]` block with `phase = "pre"`.
 
 Requires Python 3.12+.
 

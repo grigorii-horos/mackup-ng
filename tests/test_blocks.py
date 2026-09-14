@@ -5,14 +5,19 @@ import tempfile
 import unittest
 from unittest import mock
 
-from mackup_ng import blocks
+from mackup_ng import blocks, dirs
 
 
 class TestBlocks(unittest.TestCase):
     def setUp(self):
         self.home = tempfile.mkdtemp(prefix="mackup_blocks_")
-        self._orig = {k: os.environ.get(k) for k in ("HOME", "XDG_STATE_HOME")}
+        self._orig = {
+            k: os.environ.get(k)
+            for k in ("HOME", "XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_STATE_HOME")
+        }
         os.environ["HOME"] = self.home
+        os.environ["XDG_CONFIG_HOME"] = os.path.join(self.home, ".config")
+        os.environ["XDG_DATA_HOME"] = os.path.join(self.home, ".local", "share")
         os.environ["XDG_STATE_HOME"] = os.path.join(self.home, ".local", "state")
 
     def tearDown(self):
@@ -162,6 +167,31 @@ class TestBlocks(unittest.TestCase):
         assert stops == ["syncthing"]
         assert starts == ["syncthing"]
         assert state["running"] is True
+
+    def test_dropin_path_uses_dirs_module(self):
+        """dropin_path resolves $XDG_CONFIG_HOME through dirs.py, not inline."""
+        path = blocks.dropin_path({"service": "syncthing", "name": "limits"})
+        assert path == os.path.join(
+            dirs.user_config_home(),
+            "systemd",
+            "user",
+            "syncthing.service.d",
+            "limits.conf",
+        )
+
+    def test_dropin_path_ignores_relative_xdg_config_home(self):
+        """A relative $XDG_CONFIG_HOME must fall back, like every other base."""
+        os.environ["XDG_CONFIG_HOME"] = "relative/cfg"
+        path = blocks.dropin_path({"service": "syncthing"})
+        assert path == os.path.join(
+            self.home,
+            ".config",
+            "systemd",
+            "user",
+            "syncthing.service.d",
+            "mackup-set.conf",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

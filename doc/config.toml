@@ -1,0 +1,25 @@
+# Sample mackup-ng configuration file.
+# Install it at ~/.config/mackup/config.toml
+
+[storage]
+# Where mackup stores your configuration files.
+#   "dropbox"      — mackup locates your Dropbox folder itself
+#   "google_drive" — likewise for Google Drive
+#   "icloud"       — likewise for iCloud Drive
+#   "file_system"  — you give the path, mackup detects nothing
+engine = "dropbox"
+
+# Required for "file_system", ignored otherwise. Relative paths are taken
+# from your home directory; absolute paths are used as given.
+# path = "some/folder/in/your/home"
+
+# The folder mackup creates inside the storage. Defaults to "Mackup".
+# directory = "Mackup"
+
+[applications]
+# Applications to sync. An empty list means every supported application.
+# Run `mackup list` for the names.
+sync = []
+
+# Applications never to sync. Wins over `sync`.
+ignore = ["ssh", "adium"]

@@ -16,7 +16,7 @@ import time
 import urllib.request
 from typing import TYPE_CHECKING
 
-from . import hooks, utils
+from . import dirs, hooks, utils
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -68,11 +68,7 @@ def upgrade_command(executable: str) -> str | None:
 
 def cache_path() -> str:
     """Path of the update-check cache file under ``$XDG_CACHE_HOME``."""
-    base = os.environ.get("XDG_CACHE_HOME") or os.path.join(
-        os.environ["HOME"],
-        ".cache",
-    )
-    return os.path.join(base, "mackup", "update-check.json")
+    return os.path.join(dirs.cache_dir(), "update-check.json")
 
 
 def read_cache(now: float) -> str | None:

@@ -31,6 +31,23 @@ class TestSyncLog(unittest.TestCase):
             "sync-log.json",
         )
 
+    def test_log_path_ignores_a_relative_xdg_state_home(self):
+        """log_path() must go through dirs.py's non-empty-and-absolute rule.
+
+        The inline `os.environ.get(VAR) or default` this used to use accepted
+        a relative value, unlike dirs._base — so a relative $XDG_STATE_HOME
+        would split marker flags (under dirs.py) from the sync log (under the
+        raw relative path) instead of keeping both under the same root.
+        """
+        os.environ["XDG_STATE_HOME"] = "relative/state"
+        assert synclog.log_path() == os.path.join(
+            self.home,
+            ".local",
+            "state",
+            "mackup",
+            "sync-log.json",
+        )
+
     def test_read_returns_nothing_without_a_log(self):
         assert synclog.read() == {}
 

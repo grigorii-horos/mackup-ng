@@ -11,6 +11,8 @@ import pytest
 from mackup_ng import utils
 from mackup_ng.main import main
 
+from .conftest import write_config
+
 
 class TestInfo(unittest.TestCase):
     """`mackup info <path>` reports how one path relates to the backup."""
@@ -29,7 +31,9 @@ class TestInfo(unittest.TestCase):
         os.environ["XDG_CACHE_HOME"] = os.path.join(self.test_home, ".cache")
         os.environ["XDG_STATE_HOME"] = os.path.join(self.test_home, ".local", "state")
 
-        self.config_path = os.path.join(self.test_home, ".mackup.cfg")
+        self.config_path = os.path.join(
+            self.test_home, ".config", "mackup", "config.toml",
+        )
         self.write_config(["test-app"])
 
         self.test_file_name = ".testrc"
@@ -37,7 +41,7 @@ class TestInfo(unittest.TestCase):
         with open(self.test_file_path, "w") as handle:
             handle.write("test_config=value\n")
 
-        self.custom_apps_dir = os.path.join(self.test_home, ".mackup", "applications")
+        self.custom_apps_dir = os.path.join(self.test_home, ".config", "mackup", "applications")
         os.makedirs(self.custom_apps_dir, exist_ok=True)
         self.write_app("test-app", "test-app", [self.test_file_name])
 
@@ -62,13 +66,7 @@ class TestInfo(unittest.TestCase):
         utils.CAN_RUN_AS_ROOT = False
 
     def write_config(self, apps):
-        with open(self.config_path, "w") as handle:
-            handle.write("[storage]\n")
-            handle.write("engine = file_system\n")
-            handle.write(f"path = {self.test_storage}\n")
-            handle.write("directory = Mackup\n\n")
-            handle.write("[applications_to_sync]\n")
-            handle.writelines(f"{app}\n" for app in apps)
+        write_config(self.config_path, storage_path=self.test_storage, sync=apps)
 
     def write_app(self, filename, name, files, extra=""):
         path = os.path.join(self.custom_apps_dir, f"{filename}.toml")

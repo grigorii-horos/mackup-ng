@@ -10,6 +10,8 @@ from unittest.mock import patch
 from mackup_ng import ignore, utils
 from mackup_ng.main import main
 
+from .conftest import write_config
+
 CONFLICT = "notes.sync-conflict-20260824-103000-ABCDEFG.md"
 
 
@@ -31,13 +33,11 @@ class TestIgnoredDuringSync(unittest.TestCase):
         ignore.load_globs.cache_clear()
         self.addCleanup(ignore.load_globs.cache_clear)
 
-        with open(os.path.join(self.test_home, ".mackup.cfg"), "w") as handle:
-            handle.write(
-                "[storage]\nengine = file_system\n"
-                f"path = {self.test_storage}\ndirectory = Mackup\n\n"
-                "[applications_to_sync]\nnotes\n",
-            )
-        self.apps_dir = os.path.join(self.test_home, ".mackup", "applications")
+        self.config_path = os.path.join(
+            self.test_home, ".config", "mackup", "config.toml",
+        )
+        write_config(self.config_path, storage_path=self.test_storage, sync=["notes"])
+        self.apps_dir = os.path.join(self.test_home, ".config", "mackup", "applications")
         os.makedirs(self.apps_dir, exist_ok=True)
         self.write_app("notes", 'files = [".notes"]\n')
 
@@ -142,8 +142,11 @@ class TestIgnoredDuringSync(unittest.TestCase):
     def test_one_config_ignore_does_not_reach_another_config(self):
         self.write_app("notes", 'files = [".notes"]\nignore = ["*.bak"]\n')
         self.write_app("other", 'files = [".other"]\n')
-        with open(os.path.join(self.test_home, ".mackup.cfg"), "a") as handle:
-            handle.write("other\n")
+        write_config(
+            self.config_path,
+            storage_path=self.test_storage,
+            sync=["notes", "other"],
+        )
         self.write(os.path.join(self.test_home, ".other", "keep.md.bak"), "keep\n")
 
         self.sync()

@@ -11,8 +11,8 @@ import re
 import tomllib
 from typing import ClassVar
 
-from . import blocks, conditions, constants, utils
-from .constants import APPS_DIR, CUSTOM_APPS_DIR, CUSTOM_APPS_DIR_XDG
+from . import blocks, conditions, constants, dirs, utils
+from .constants import APPS_DIR
 
 # ${VAR} token; NAME is captured. Reserved names below are the dual-path
 # built-ins; anything else is resolved from the environment / source_env.
@@ -548,10 +548,10 @@ class ApplicationsDatabase:
         """
         Return the application configuration files in precedence order.
 
-        Stock files come first (alphabetical), then the XDG custom directory,
-        then ``~/.mackup/applications`` — later files win when two configs
-        claim the same destination. A custom file still shadows a stock file
-        with the same name entirely.
+        Stock files ship in the package; custom files live in
+        ``$XDG_CONFIG_HOME/mackup/applications``. Later files win when two
+        configs claim the same destination, and a custom file shadows a stock
+        file of the same name entirely.
 
         Returns:
             list of absolute paths, weakest first.
@@ -560,29 +560,19 @@ class ApplicationsDatabase:
             os.path.dirname(os.path.realpath(__file__)),
             APPS_DIR,
         )
-        legacy_custom_apps_dir: str = os.path.join(os.environ["HOME"], CUSTOM_APPS_DIR)
-        xdg_config_home: str = os.environ.get(
-            "XDG_CONFIG_HOME",
-            os.path.join(os.environ["HOME"], ".config"),
-        )
-        xdg_custom_apps_dir: str = os.path.join(xdg_config_home, CUSTOM_APPS_DIR_XDG)
+        custom_apps_dir: str = dirs.custom_apps_dir()
 
         def toml_names(directory: str) -> set[str]:
             if not os.path.isdir(directory):
                 return set()
             return {name for name in os.listdir(directory) if name.endswith(".toml")}
 
-        legacy_names = toml_names(legacy_custom_apps_dir)
-        xdg_names = toml_names(xdg_custom_apps_dir) - legacy_names
-        stock_names = toml_names(apps_dir) - legacy_names - xdg_names
+        custom_names = toml_names(custom_apps_dir)
+        stock_names = toml_names(apps_dir) - custom_names
 
         return [
             *(os.path.join(apps_dir, name) for name in sorted(stock_names)),
-            *(os.path.join(xdg_custom_apps_dir, name) for name in sorted(xdg_names)),
-            *(
-                os.path.join(legacy_custom_apps_dir, name)
-                for name in sorted(legacy_names)
-            ),
+            *(os.path.join(custom_apps_dir, name) for name in sorted(custom_names)),
         ]
 
     def get_name(self, name: str) -> str:

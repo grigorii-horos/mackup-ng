@@ -23,13 +23,13 @@ First, pick the app you wish to keep in sync. Then determine which
 configuration files will be synced for that application by doing the following:
 
 1. [Install Mackup](./../INSTALL.md)
-2. Create a `.mackup.cfg` file in your home directory
-3. Add the following two lines to `.mackup.cfg`. Replace **bash**
+2. Create a `config.toml` file at `~/.config/mackup/config.toml`
+3. Add the following lines to `config.toml`. Replace **bash**
    in the example below with the name of your application.
 
-```text
-[applications_to_sync]
-bash
+```toml
+[applications]
+sync = ["bash"]
 ```
 
 You can get a list of supported apps by running `mackup-ng list`.
@@ -145,7 +145,7 @@ If you have other machines you are syncing with the master, back those up, too.
 ## Step 3: Push Out the Configuration Files with Mackup
 
 Now you are ready to use Mackup to push out the changes. You should have Mackup
-already installed and the `.mackup.cfg` file in place according to the
+already installed and the `config.toml` file in place according to the
 instructions provided above. If not, do that before proceeding.
 
 Run the following command on each machine:

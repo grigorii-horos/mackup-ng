@@ -16,17 +16,16 @@ class TestConfigFileOption(unittest.TestCase):
 
         # Clear environment variables that could interfere
         os.environ.pop("XDG_CONFIG_HOME", None)
-        os.environ.pop("MACKUP_CONFIG", None)
 
     def test_config_with_relative_path(self):
         """Test that a relative path to config file works."""
-        cfg = Config("mackup-apps_to_ignore.cfg")
+        cfg = Config("mackup-apps_to_ignore.toml")
 
         assert cfg.apps_to_ignore == {"subversion", "sequel-pro", "sabnzbd"}
 
     def test_config_with_absolute_path(self):
         """Test that an absolute path to config file works."""
-        abs_path = os.path.join(os.environ["HOME"], "mackup-apps_to_sync.cfg")
+        abs_path = os.path.join(os.environ["HOME"], "mackup-apps_to_sync.toml")
         cfg = Config(abs_path)
 
         assert cfg.apps_to_sync == {"sabnzbd", "sublime-text-3", "x11"}
@@ -34,7 +33,7 @@ class TestConfigFileOption(unittest.TestCase):
     def test_mackup_with_config_file(self):
         """Test that Mackup class accepts config_file parameter."""
         # This should not raise any errors
-        mckp = Mackup("mackup-empty.cfg")
+        mckp = Mackup("mackup-empty.toml")
 
         # Verify that the config was properly initialized
         assert isinstance(mckp.mackup_folder, str)

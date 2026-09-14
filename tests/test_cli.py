@@ -10,6 +10,8 @@ import pytest
 from mackup_ng import synclog, update, utils
 from mackup_ng.main import main
 
+from .conftest import write_config
+
 
 class TestCLI(unittest.TestCase):
     """Test suite for CLI sync and removal workflows."""
@@ -36,15 +38,13 @@ class TestCLI(unittest.TestCase):
         os.environ["XDG_STATE_HOME"] = os.path.join(self.test_home, ".local", "state")
 
         # Create test config file
-        self.config_path = os.path.join(self.test_home, ".mackup.cfg")
-        with open(self.config_path, "w") as f:
-            f.write("[storage]\n")
-            f.write("engine = file_system\n")
-            f.write(f"path = {self.test_storage}\n")
-            f.write("directory = Mackup\n")
-            f.write("\n")
-            f.write("[applications_to_sync]\n")
-            f.write("test-app\n")
+        self.config_path = os.path.join(
+            self.test_home, ".config", "mackup", "config.toml",
+        )
+        self._synced_apps = ["test-app"]
+        write_config(
+            self.config_path, storage_path=self.test_storage, sync=self._synced_apps,
+        )
 
         # Create a test application config in the apps database
         self.test_app_name = "test-app"
@@ -56,7 +56,7 @@ class TestCLI(unittest.TestCase):
             f.write("test_config=value\n")
 
         # Create custom application config
-        self.custom_apps_dir = os.path.join(self.test_home, ".mackup", "applications")
+        self.custom_apps_dir = os.path.join(self.test_home, ".config", "mackup", "applications")
         os.makedirs(self.custom_apps_dir, exist_ok=True)
 
         self.custom_app_config = os.path.join(self.custom_apps_dir, "test-app.toml")
@@ -368,12 +368,35 @@ class TestCLI(unittest.TestCase):
             main()
         assert os.path.isfile(out)
 
+    def test_unknown_key_warning_printed_once_per_run(self):
+        """An unknown config table must warn once, not once per action block.
+
+        Every [copy]/[chmod]/[run] block resolves MACKUP_BACKUP_DIR via
+        hooks.backup_dir(), which used to build a fresh Config() (and
+        therefore re-print the warning) on every call. Two blocks used to
+        mean three prints: one from the primary Config(), one per block.
+        """
+        with open(self.config_path, "a") as f:
+            f.write('\n[colors]\nfoo = "bar"\n')
+        with open(os.path.join(self.custom_apps_dir, "multiblock.toml"), "w") as f:
+            f.write(
+                '[[block]]\n[block.run]\ncommands = ["true"]\n'
+                '[[block]]\n[block.run]\ncommands = ["true"]\n',
+            )
+        buf = io.StringIO()
+        with patch("sys.argv", ["mackup", "apply"]), patch("sys.stdout", buf):
+            main()
+        output = buf.getvalue()
+        assert output.count("unknown config table") == 1
+
     def _write_custom_app(self, app_id, body):
         path = os.path.join(self.custom_apps_dir, f"{app_id}.toml")
         with open(path, "w") as handle:
             handle.write(f'name = "{app_id}"\n{body}')
-        with open(self.config_path, "a") as handle:
-            handle.write(f"{app_id}\n")
+        self._synced_apps.append(app_id)
+        write_config(
+            self.config_path, storage_path=self.test_storage, sync=self._synced_apps,
+        )
 
     def test_sync_fans_backup_out_to_two_destinations(self):
         self._write_custom_app(

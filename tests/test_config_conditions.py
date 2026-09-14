@@ -10,6 +10,8 @@ from unittest.mock import patch
 from mackup_ng import utils
 from mackup_ng.main import main
 
+from .conftest import write_config
+
 
 class TestConfigLevelConditions(unittest.TestCase):
     def setUp(self):
@@ -26,13 +28,15 @@ class TestConfigLevelConditions(unittest.TestCase):
         os.environ["XDG_STATE_HOME"] = os.path.join(self.home, ".local", "state")
         os.environ["XDG_CACHE_HOME"] = os.path.join(self.home, ".cache")
 
-        with open(os.path.join(self.home, ".mackup.cfg"), "w") as handle:
-            handle.write(
-                "[storage]\nengine = file_system\n"
-                f"path = {self.storage}\ndirectory = Mackup\n\n"
-                "[applications_to_sync]\naaa-base\nzzz-override\ngated-blocks\n",
-            )
-        self.apps_dir = os.path.join(self.home, ".mackup", "applications")
+        self.config_path = os.path.join(
+            self.home, ".config", "mackup", "config.toml",
+        )
+        write_config(
+            self.config_path,
+            storage_path=self.storage,
+            sync=["aaa-base", "zzz-override", "gated-blocks"],
+        )
+        self.apps_dir = os.path.join(self.home, ".config", "mackup", "applications")
         os.makedirs(self.apps_dir, exist_ok=True)
         utils.FORCE_YES = True
 

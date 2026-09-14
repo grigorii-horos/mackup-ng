@@ -10,6 +10,8 @@ from unittest.mock import patch
 from mackup_ng import utils
 from mackup_ng.main import main
 
+from .conftest import write_config
+
 
 class TestRemoveDestination(unittest.TestCase):
     def setUp(self):
@@ -28,13 +30,11 @@ class TestRemoveDestination(unittest.TestCase):
         # write into the real $XDG_STATE_HOME.
         os.environ["XDG_STATE_HOME"] = os.path.join(self.test_home, ".local", "state")
 
-        with open(os.path.join(self.test_home, ".mackup.cfg"), "w") as handle:
-            handle.write(
-                "[storage]\nengine = file_system\n"
-                f"path = {self.test_storage}\ndirectory = Mackup\n\n"
-                "[applications_to_sync]\nfanout\n",
-            )
-        apps_dir = os.path.join(self.test_home, ".mackup", "applications")
+        self.config_path = os.path.join(
+            self.test_home, ".config", "mackup", "config.toml",
+        )
+        write_config(self.config_path, storage_path=self.test_storage, sync=["fanout"])
+        apps_dir = os.path.join(self.test_home, ".config", "mackup", "applications")
         os.makedirs(apps_dir, exist_ok=True)
         with open(os.path.join(apps_dir, "fanout.toml"), "w") as handle:
             handle.write(
@@ -111,7 +111,7 @@ class TestRemoveDestination(unittest.TestCase):
 
     def test_rm_of_a_file_inside_a_fanout_directory_stays_removed(self):
         """A descendant removal must not be undone by the next sync."""
-        apps_dir = os.path.join(self.test_home, ".mackup", "applications")
+        apps_dir = os.path.join(self.test_home, ".config", "mackup", "applications")
         with open(os.path.join(apps_dir, "fanout.toml"), "w") as handle:
             handle.write(
                 'name = "fanout"\n\n[mapped_files]\n'
@@ -163,7 +163,7 @@ class TestRemoveDestination(unittest.TestCase):
 
     def test_descendant_tombstone_from_another_machine_is_enforced(self):
         """A tombstone synced in from elsewhere removes the entry everywhere."""
-        apps_dir = os.path.join(self.test_home, ".mackup", "applications")
+        apps_dir = os.path.join(self.test_home, ".config", "mackup", "applications")
         with open(os.path.join(apps_dir, "fanout.toml"), "w") as handle:
             handle.write(
                 'name = "fanout"\n\n[mapped_files]\n'

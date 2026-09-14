@@ -15,15 +15,13 @@ class TestReadOrder(unittest.TestCase):
         self._orig_xdg = os.environ.get("XDG_CONFIG_HOME")
         os.environ["HOME"] = self.home
         os.environ["XDG_CONFIG_HOME"] = os.path.join(self.home, ".config")
-        self.legacy_dir = os.path.join(self.home, ".mackup", "applications")
-        self.xdg_dir = os.path.join(
+        self.apps_dir = os.path.join(
             self.home,
             ".config",
             "mackup",
             "applications",
         )
-        os.makedirs(self.legacy_dir, exist_ok=True)
-        os.makedirs(self.xdg_dir, exist_ok=True)
+        os.makedirs(self.apps_dir, exist_ok=True)
 
     def tearDown(self):
         for key, orig in (
@@ -41,11 +39,9 @@ class TestReadOrder(unittest.TestCase):
             handle.write(f'name = "{name}"\n{body}')
 
     def test_custom_configs_are_read_after_stock_ones(self):
-        self._write(self.xdg_dir, "zzz-xdg", 'files = [".xdgrc"]\n')
-        self._write(self.legacy_dir, "aaa-legacy", 'files = [".legacyrc"]\n')
+        self._write(self.apps_dir, "zzz-custom", 'files = [".customrc"]\n')
         order = ApplicationsDatabase().get_app_order()
-        assert order.index("zzz-xdg") < order.index("aaa-legacy")
-        assert order.index("bash") < order.index("zzz-xdg")
+        assert order.index("bash") < order.index("zzz-custom")
 
     def test_stock_configs_are_ordered_alphabetically(self):
         order = ApplicationsDatabase().get_app_order()
@@ -54,7 +50,7 @@ class TestReadOrder(unittest.TestCase):
 
     def test_entries_keep_declaration_order(self):
         self._write(
-            self.legacy_dir,
+            self.apps_dir,
             "ordered",
             'files = [".zshrc", ".bashrc"]\n\n'
             "[mapped_files]\n"
@@ -69,6 +65,6 @@ class TestReadOrder(unittest.TestCase):
         assert db.get_files("ordered") == [".zshrc", ".bashrc", ".config/b"]
 
     def test_same_named_custom_config_replaces_the_stock_one(self):
-        self._write(self.legacy_dir, "bash", 'files = [".only-this"]\n')
+        self._write(self.apps_dir, "bash", 'files = [".only-this"]\n')
         db = ApplicationsDatabase()
         assert db.get_files("bash") == [".only-this"]

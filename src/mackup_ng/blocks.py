@@ -21,7 +21,7 @@ import xml.etree.ElementTree as ET
 from collections import Counter
 from typing import TYPE_CHECKING
 
-from . import conditions, hooks, utils
+from . import conditions, dirs, hooks, utils
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -214,10 +214,7 @@ def dropin_content(block: dict) -> str:
 def dropin_path(block: dict) -> str:
     svc = block["service"]
     name = block.get("name", "mackup-set")
-    xdg = os.environ.get(
-        "XDG_CONFIG_HOME",
-        os.path.join(os.environ["HOME"], ".config"),
-    )
+    xdg = dirs.user_config_home()
     return os.path.join(xdg, "systemd", "user", f"{svc}.service.d", f"{name}.conf")
 
 

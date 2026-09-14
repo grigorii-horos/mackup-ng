@@ -1,7 +1,8 @@
 """dconf backup/restore for mackup-ng (Linux/GNOME).
 
 Tracked dconf paths are stored as ``*.dconf`` dump files under
-``~/.mackup/dconf-backup/``. The file name encodes the path:
+``$XDG_DATA_HOME/mackup/dconf-backup/`` (``~/.local/share/mackup/dconf-backup/``
+unless the variable is set). The file name encodes the path:
 ``/org/gnome/terminal/`` <-> ``org.gnome.terminal.dconf``.
 
 On ``mackup sync``:
@@ -18,15 +19,15 @@ import re
 import shutil
 import subprocess
 
-from . import utils
-from .constants import DCONF_DIRNAME, MACKUP_HOME_DIR, PLATFORM_LINUX
+from . import dirs, utils
+from .constants import PLATFORM_LINUX
 
 # /org/gnome/terminal/ (trailing slash optional)
 _VALID_PATH = re.compile(r"^/[A-Za-z0-9]([A-Za-z0-9_-]*/)*[A-Za-z0-9_-]*/?$")
 
 
 def dconf_dir() -> str:
-    return os.path.join(os.environ["HOME"], MACKUP_HOME_DIR, DCONF_DIRNAME)
+    return dirs.dconf_backup_dir()
 
 
 def have_dconf() -> bool:

@@ -81,6 +81,27 @@ class TestCache(unittest.TestCase):
                 os.environ[key] = orig
         shutil.rmtree(self.home, ignore_errors=True)
 
+    def test_cache_path_lives_under_xdg_cache_home(self):
+        assert update.cache_path() == os.path.join(
+            os.environ["XDG_CACHE_HOME"],
+            "mackup",
+            "update-check.json",
+        )
+
+    def test_cache_path_ignores_a_relative_xdg_cache_home(self):
+        """cache_path() must go through dirs.py's non-empty-and-absolute rule.
+
+        The inline `os.environ.get(VAR) or default` this used to use accepted
+        a relative value, unlike dirs._base.
+        """
+        os.environ["XDG_CACHE_HOME"] = "relative/cache"
+        assert update.cache_path() == os.path.join(
+            self.home,
+            ".cache",
+            "mackup",
+            "update-check.json",
+        )
+
     def test_absent_cache_reads_as_none(self):
         assert update.read_cache(1000.0) is None
 

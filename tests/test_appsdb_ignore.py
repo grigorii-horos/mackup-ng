@@ -14,7 +14,7 @@ class TestPerConfigIgnore(unittest.TestCase):
         self._orig = {k: os.environ.get(k) for k in ("HOME", "XDG_CONFIG_HOME")}
         os.environ["HOME"] = self.home
         os.environ["XDG_CONFIG_HOME"] = os.path.join(self.home, ".config")
-        self.apps_dir = os.path.join(self.home, ".mackup", "applications")
+        self.apps_dir = os.path.join(self.home, ".config", "mackup", "applications")
         os.makedirs(self.apps_dir, exist_ok=True)
 
     def tearDown(self):

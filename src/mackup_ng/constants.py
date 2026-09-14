@@ -38,9 +38,6 @@ def get_version() -> str:
 # Current version
 VERSION: str = get_version()
 
-# Mackup home directory (under $HOME): custom apps + hooks + markers + sets + state
-MACKUP_HOME_DIR: str = ".mackup"
-
 # Directories holding ignore definitions (*.toml with an [ignore] table):
 # built-ins ship in the package, local ones sit next to the custom app configs.
 IGNORES_DIRNAME: str = "ignores"

@@ -3,7 +3,7 @@
 import os
 import unittest
 
-from mackup_ng import dirs
+from mackup_ng import dconf, dirs
 
 
 class TestDirs(unittest.TestCase):
@@ -53,3 +53,7 @@ class TestDirs(unittest.TestCase):
             dirs.dconf_backup_dir()
             == "/home/tester/.local/share/mackup/dconf-backup"
         )
+
+    def test_dconf_module_uses_the_data_directory(self):
+        assert dconf.dconf_dir() == dirs.dconf_backup_dir()
+        assert dconf.dconf_dir() == "/home/tester/.local/share/mackup/dconf-backup"

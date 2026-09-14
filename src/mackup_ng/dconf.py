@@ -18,15 +18,15 @@ import re
 import shutil
 import subprocess
 
-from . import utils
-from .constants import DCONF_DIRNAME, MACKUP_HOME_DIR, PLATFORM_LINUX
+from . import dirs, utils
+from .constants import PLATFORM_LINUX
 
 # /org/gnome/terminal/ (trailing slash optional)
 _VALID_PATH = re.compile(r"^/[A-Za-z0-9]([A-Za-z0-9_-]*/)*[A-Za-z0-9_-]*/?$")
 
 
 def dconf_dir() -> str:
-    return os.path.join(os.environ["HOME"], MACKUP_HOME_DIR, DCONF_DIRNAME)
+    return dirs.dconf_backup_dir()
 
 
 def have_dconf() -> bool:

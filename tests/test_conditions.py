@@ -7,7 +7,7 @@ import os
 import unittest
 from unittest.mock import patch
 
-from mackup_ng import conditions
+from mackup_ng import conditions, hooks
 
 
 def _b(**when):
@@ -91,6 +91,35 @@ class TestConfigConditions(unittest.TestCase):
         with patch("mackup_ng.hooks.has_marker", side_effect=lambda n: n == "eink"):
             assert conditions.config_passes({"when": {"marker": ["eink"]}})
             assert not conditions.config_passes({"when": {"marker": ["nope"]}})
+
+
+def test_not_os_is_the_complement_of_os(monkeypatch):
+    monkeypatch.setattr(hooks, "os_kind", lambda: "linux")
+
+    assert conditions.block_passes({"when": {"not_os": "macos"}})
+    assert not conditions.block_passes({"when": {"not_os": "linux"}})
+
+
+def test_not_os_accepts_a_list(monkeypatch):
+    monkeypatch.setattr(hooks, "os_kind", lambda: "windows")
+
+    assert conditions.block_passes({"when": {"not_os": ["macos", "linux"]}})
+    assert not conditions.block_passes(
+        {"when": {"not_os": ["macos", "windows"]}},
+    )
+
+
+def test_not_os_keeps_android_where_os_list_would_drop_it(monkeypatch):
+    """The reason not_os exists: os = ["linux", "windows"] silently excludes
+    android, which os_kind() reports separately."""
+    monkeypatch.setattr(hooks, "os_kind", lambda: "android")
+
+    assert conditions.block_passes({"when": {"not_os": "macos"}})
+    assert not conditions.block_passes({"when": {"os": ["linux", "windows"]}})
+
+
+def test_not_os_is_a_recognized_key():
+    assert conditions.unrecognized_keys({"not_os": "macos"}) == []
 
 
 if __name__ == "__main__":

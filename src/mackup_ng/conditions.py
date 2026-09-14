@@ -28,6 +28,8 @@ def _one(when: dict, key: str) -> bool:
         return True
     if key == "os":
         return hooks.os_kind() in _as_list(value)
+    if key == "not_os":
+        return hooks.os_kind() not in _as_list(value)
     if key == "arch":
         return platform.machine() in _as_list(value)
     if key == "marker":
@@ -51,6 +53,7 @@ def _one(when: dict, key: str) -> bool:
 
 CONDITION_KEYS = (
     "os",
+    "not_os",
     "arch",
     "marker",
     "not_marker",

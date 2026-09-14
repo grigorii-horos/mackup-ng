@@ -303,12 +303,14 @@ def main() -> None:
         if listed:
             print(bold("Units:"))
             for unit in listed:
-                action = (
-                    utils.style_text(
-                        str(blocks.block_action(unit.block)),
-                        color=utils.AnsiColor.CYAN,
-                    )
+                action_name = (
+                    blocks.block_action(unit.block)
                     if unit.block is not None
+                    else None
+                )
+                action = (
+                    utils.style_text(action_name, color=utils.AnsiColor.CYAN)
+                    if action_name is not None
                     else utils.style_text("files only", color=utils.AnsiColor.GRAY)
                 )
                 if unit.passed:

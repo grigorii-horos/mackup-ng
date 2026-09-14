@@ -662,6 +662,11 @@ class TestCLI(unittest.TestCase):
 
         assert "conditions not met" in output
         assert "definitely-not-this-os" in output
+        # The skipped unit has only `files`, no action sub-table: it must
+        # read as "files only", never as the stringified `None` that
+        # `blocks.block_action` returns for a block with no action.
+        assert "files only" in output
+        assert "None" not in output
 
     def test_sync_reports_skipped_for_config_fully_evicted(self):
         """A selected config whose only pair loses its destination still reports."""

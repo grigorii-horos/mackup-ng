@@ -4,35 +4,21 @@
 > [Architecture Guide](ARCHITECTURE.md) to understand how Mackup works
 > under the hood.
 
-All the configuration is done in a file named `.mackup.cfg` stored at the
-root of your home folder. This location can be overridden via environment
-variables or the `--config-file` command-line option.
-
-To configure Mackup, create a file named `.mackup.cfg` in your home
-directory.
+All the configuration is done in a file named `config.toml` stored in
+`$XDG_CONFIG_HOME/mackup/` (`~/.config/mackup/` unless you set the variable).
 
 ```bash
-vi ~/.mackup.cfg
+vi ~/.config/mackup/config.toml
 ```
 
 ## Configuration file location
 
-Config files are searched in the following order. If none is found, Mackup will
-use the default config location of `~/.mackup.cfg`
-
-- `~/.mackup.cfg`
-- `$MACKUP_CONFIG`
-- `$XDG_CONFIG_HOME/mackup/mackup.cfg` or `~/.config/mackup/mackup.cfg`
-
-You can also specify a custom config file location using the `--config-file`
-command-line option:
+`mackup --config-file=<path>` reads a different file instead; the path may be
+absolute or relative to your home directory, and must lie inside it.
 
 ```bash
-mackup-ng --config-file ~/.mackup-custom.cfg sync
+mackup-ng --config-file=~/.config/mackup-custom.toml sync
 ```
-
-The path can be absolute or relative to your home directory. Note that the
-config file must be located within your home directory for security reasons.
 
 ## Storage
 
@@ -47,9 +33,9 @@ Dropbox folder.
 
 ### Dropbox
 
-```ini
+```toml
 [storage]
-engine = dropbox
+engine = "dropbox"
 ```
 
 ### Google Drive
@@ -57,9 +43,9 @@ engine = dropbox
 If you choose the `google_drive` storage engine instead, Mackup will figure out
 where your Google Drive is and store your configuration files in it.
 
-```ini
+```toml
 [storage]
-engine = google_drive
+engine = "google_drive"
 ```
 
 ### iCloud
@@ -68,9 +54,9 @@ If you choose the `iCloud` storage engine, Mackup will store your
 configuration files in the `~/Library/Mobile\ Documents/com\~apple\~CloudDocs/`
 folder.
 
-```ini
+```toml
 [storage]
-engine = icloud
+engine = "icloud"
 ```
 
 You can check if your files are synced using:
@@ -88,19 +74,19 @@ The `path` can be absolute (from the `/` of your drive) or relative to your
 home directory.
 The `path` setting is mandatory when using the `file_system` engine.
 
-```ini
+```toml
 [storage]
-engine = file_system
-path = some/folder/in/your/home
-# or path = /some/folder/in/your/root
+engine = "file_system"
+path = "some/folder/in/your/home"
+# or path = "/some/folder/in/your/root"
 ```
 
-Note: you don't need to escape spaces or wrap the path in quotes.
-For example, the following paths are valid:
+Note: paths are TOML strings, so wrap them in quotes; spaces inside the quotes
+need no escaping. For example, the following paths are valid:
 
-```ini
-path = some/path in your/home
-path = /some path/in/your/root
+```toml
+path = "some/path in your/home"
+path = "/some path/in/your/root"
 ```
 
 ### Custom Directory Name
@@ -109,28 +95,28 @@ You can customize the directory name in which Mackup stores your files. By
 default, if not specified, Mackup creates a `Mackup` directory in the storage
 engine you chose, e.g. `~/Dropbox/Mackup`.
 
-```ini
+```toml
 [storage]
-directory = Mackup
+directory = "Mackup"
 ```
 
 For example:
 
-```ini
+```toml
 [storage]
-engine = file_system
-path = dotfiles
-directory = backup
+engine = "file_system"
+path = "dotfiles"
+directory = "backup"
 ```
 
 This will store your files in the `~/dotfiles/backup` directory in your home.
 
 You can also select a subfolder:
 
-```ini
+```toml
 [storage]
-engine = icloud
-directory = .config/mackup
+engine = "icloud"
+directory = ".config/mackup"
 ```
 
 ### Switching Storage
@@ -140,53 +126,51 @@ already setup (ex: from `dropbox` to `icloud`), complete the following steps.
 
 1. Run `mackup-ng sync` on all computers so the storage folder is up to date
 2. Copy your Mackup files to the new storage location
-3. Change the storage provider details in your `.mackup.cfg` file (see above)
+3. Change the storage provider details in your `config.toml` file (see above)
 4. Run `mackup-ng sync` on each computer
 
 ## Applications
 
 ### Only sync one or two applications
 
-In your home folder, create a file named `.mackup.cfg` and add the application
-names to allow in the `[applications_to_sync]` section, one per line.
+In `config.toml`, add the application names to allow in the `sync` list under
+`[applications]`.
 
-```ini
+```toml
 # Example, to only sync SSH and Adium:
-[applications_to_sync]
-ssh
-adium
+[applications]
+sync = ["ssh", "adium"]
 ```
 
-Use `mackup-ng list` to get a list of valid application names. Don't use fancy
-names (with spaces) here.
+Use `mackup-ng list` to get a list of valid application names.
 
-A [sample](.mackup.cfg) of this file is available in this folder. Just copy it
-to your home folder:
+A [sample](config.toml) of this file is available in this folder. Just copy it
+to `~/.config/mackup/`:
 
 ```bash
-cp mackup-ng/doc/.mackup.cfg ~/
+mkdir -p ~/.config/mackup
+cp mackup-ng/doc/config.toml ~/.config/mackup/config.toml
 ```
 
 ### Don't sync an application
 
-In your home folder, create a file named `.mackup.cfg` and add the application
-names to ignore in the `[applications_to_ignore]` section, one per line.
+In `config.toml`, add the application names to ignore in the `ignore` list
+under `[applications]`.
 
-```ini
+```toml
 # Example, to not sync SSH and Adium:
-[applications_to_ignore]
-ssh
-adium
+[applications]
+ignore = ["ssh", "adium"]
 ```
 
-Use `mackup-ng list` to get a list of valid application names. Don't use fancy
-names (with spaces) here.
+Use `mackup-ng list` to get a list of valid application names.
 
-A [sample](.mackup.cfg) of this file is available in this folder. Just copy it
-to your home folder:
+A [sample](config.toml) of this file is available in this folder. Just copy it
+to `~/.config/mackup/`:
 
 ```bash
-cp mackup-ng/doc/.mackup.cfg ~/
+mkdir -p ~/.config/mackup
+cp mackup-ng/doc/config.toml ~/.config/mackup/config.toml
 ```
 
 ### Get official support for an application
@@ -210,36 +194,24 @@ Let's say that you'd like to add support for Nethack (config file:
 `.nethackrc`), for the `bin` and `.hidden` directories and for the
 `.gitignore` file you keep in your home.
 
-In your home, create a `.mackup` directory and add a config file for the
-application you'd like to support:
-
-```bash
-mkdir ~/.mackup/applications
-touch ~/.mackup/applications/nethack.toml
-touch ~/.mackup/applications/my-files.toml
-```
-
-#### Custom applications directory location
-
-Custom application configs are searched in the following order:
-
-1. `~/.mackup/` (legacy location, takes priority)
-2. `$XDG_CONFIG_HOME/mackup/applications/` or `~/.config/mackup/applications/`
-
-If the same application config exists in both locations, the legacy location
-(`~/.mackup/`) takes priority.
-
-For XDG-compliant setups, you can use:
+Create the applications directory and add a config file for the application
+you'd like to support:
 
 ```bash
 mkdir -p ~/.config/mackup/applications
 touch ~/.config/mackup/applications/nethack.toml
+touch ~/.config/mackup/applications/my-files.toml
 ```
+
+#### Custom applications directory location
+
+Custom application configs live in `$XDG_CONFIG_HOME/mackup/applications/`
+(`~/.config/mackup/applications/` unless you set the variable).
 
 Edit those files:
 
 ```toml
-# ~/.mackup/applications/nethack.toml
+# ~/.config/mackup/applications/nethack.toml
 name = "Nethack"
 files = [
     ".nethackrc",
@@ -247,7 +219,7 @@ files = [
 ```
 
 ```toml
-# ~/.mackup/applications/my-files.toml
+# ~/.config/mackup/applications/my-files.toml
 name = "My personal synced files and dirs"
 files = [
     "bin",
@@ -279,7 +251,7 @@ mackup-ng sync
 If you override an application config that is already supported by Mackup, your
 new config for this application will replace the one provided by Mackup.
 
-You can find some sample configs in this directory.
+You can find some sample configs in the [config](config) directory.
 
 ### Locally test an application before submitting a Pull Request
 

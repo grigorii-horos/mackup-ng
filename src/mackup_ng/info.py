@@ -227,7 +227,7 @@ def sync_status(match: Match, ctx: Context) -> str:
     if match.app not in ctx.mckp.get_apps_to_backup() or not app_db.app_has_sync(
         match.app,
     ):
-        return "no — not selected for sync in .mackup.cfg"
+        return "no — not selected for sync in config.toml"
     if match.group_dest not in ctx.winners:
         return "no — not selected for sync"
     return "yes"

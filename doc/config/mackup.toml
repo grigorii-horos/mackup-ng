@@ -1,0 +1,5 @@
+name = "Mackup"
+files = [
+    ".config/mackup",
+    ".local/share/mackup",
+]

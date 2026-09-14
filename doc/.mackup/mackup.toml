@@ -1,5 +1,0 @@
-name = "Mackup"
-files = [
-    ".mackup.cfg",
-    ".mackup",
-]

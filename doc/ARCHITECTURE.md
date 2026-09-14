@@ -43,13 +43,12 @@ Entry point for the application. Parses command-line arguments using
 
 ### 2. Configuration Manager (`config.py`)
 
-Reads and parses the `.mackup.cfg` configuration file.
+Reads and parses the `config.toml` configuration file.
 
-**Configuration Sources (in order of precedence):**
-
-1. `~/.mackup.cfg`
-2. `$MACKUP_CONFIG` environment variable
-3. `$XDG_CONFIG_HOME/mackup/mackup.cfg` or `~/.config/mackup/mackup.cfg`
+**Configuration file:** `$XDG_CONFIG_HOME/mackup/config.toml`
+(`~/.config/mackup/config.toml` unless you set the variable), or the file
+given via `--config-file=<path>` (absolute, or relative to `$HOME`; must lie
+inside it).
 
 **Configuration Options:**
 
@@ -65,7 +64,7 @@ Manages the database of supported applications and their configuration files.
 **Sources:**
 
 - Built-in application configs (`mackup_ng/applications/*.toml`)
-- User-defined custom configs (`~/.mackup/applications/*.toml`)
+- User-defined custom configs (`$XDG_CONFIG_HOME/mackup/applications/*.toml`)
 
 **Application Config Format (flat TOML):**
 
@@ -140,7 +139,7 @@ User runs: mackup-ng sync
     ↓
 main.py parses command
     ↓
-config.py loads .mackup.cfg
+config.py loads config.toml
     ↓
 appsdb.py loads application definitions in precedence order
     ↓
@@ -172,7 +171,7 @@ User runs: mackup-ng rm <path>
     ↓
 main.py parses command
     ↓
-config.py loads .mackup.cfg
+config.py loads config.toml
     ↓
 appsdb.py loads application definitions
     ↓
@@ -206,8 +205,8 @@ Future syncs remove the same path on other machines
 
 - **Centralized definitions**: All supported apps in
   `mackup_ng/applications/`
-- **User extensibility**: Custom apps via `~/.mackup/*.cfg`
-- **Simple format**: INI-style configuration files
+- **User extensibility**: Custom apps via `$XDG_CONFIG_HOME/mackup/applications/*.toml`
+- **Simple format**: flat TOML configuration files
 - **Override capability**: User configs override built-in ones
 
 ### 3. Storage Abstraction
@@ -267,7 +266,8 @@ Submit PR with the new config file.
 
 ### Custom File Sync
 
-Users can sync any files by creating `~/.mackup/applications/custom.toml`:
+Users can sync any files by creating
+`$XDG_CONFIG_HOME/mackup/applications/custom.toml`:
 
 ```toml
 name = "My Custom Files"

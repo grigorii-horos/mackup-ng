@@ -1,7 +1,8 @@
 """dconf backup/restore for mackup-ng (Linux/GNOME).
 
 Tracked dconf paths are stored as ``*.dconf`` dump files under
-``~/.mackup/dconf-backup/``. The file name encodes the path:
+``$XDG_DATA_HOME/mackup/dconf-backup/`` (``~/.local/share/mackup/dconf-backup/``
+unless the variable is set). The file name encodes the path:
 ``/org/gnome/terminal/`` <-> ``org.gnome.terminal.dconf``.
 
 On ``mackup sync``:

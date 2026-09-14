@@ -43,11 +43,11 @@ Modes of action:
 
 dconf paths are backed up (dumped) on the backup-role machine and restored
 (loaded) on other machines during `mackup sync`, unless the `no-dconf` marker
-is set. Dumps live in ~/.mackup/dconf-backup/.
+is set. Dumps live in ~/.local/share/mackup/dconf-backup/.
 
 By default, mackup-ng syncs all application data via
 Dropbox, but may be configured to exclude applications or use a different
-backend with a .mackup.cfg file.
+backend with a config.toml file.
 
 See https://github.com/grigorii-horos/mackup-ng/tree/master/doc for more information.
 

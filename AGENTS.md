@@ -120,10 +120,9 @@ path is the source. Two consequences:
   entry, so all members converge to the union of their contents.
 - **Override** — when a later config claims a destination already claimed by
   an earlier one, the earlier pair is dropped. Read order decides: stock
-  configs (alphabetical), then `$XDG_CONFIG_HOME/mackup/applications`, then
-  `~/.mackup/applications`; within a file, `files` then `[mapped_files]` in
-  declaration order. A backup file left with no destination is untouched and
-  reported by `mackup sync -v`.
+  configs (alphabetical), then `$XDG_CONFIG_HOME/mackup/applications`; within
+  a file, `files` then `[mapped_files]` in declaration order. A backup file
+  left with no destination is untouched and reported by `mackup sync -v`.
 - `mackup rm <path>` removes one destination and tombstones it; the backup
   source is deleted only when no destination is left. Removing a path *inside*
   a managed directory removes it from every member of that directory's group
@@ -160,16 +159,25 @@ Paths are resolved in this order:
   `src/mackup_ng/appsdb.py`.
 - Upstream Mackup may not support these templates.
 
-## Machine-local markers and action blocks (`~/.mackup/`)
+## XDG layout, markers and action blocks
 
-This fork turns `~/.mackup/` into the machine-local home for more than custom
-app configs. Layout:
+Config, custom app definitions, ignore definitions and marker DEFINITIONS
+live under `$XDG_CONFIG_HOME/mackup/` and are synced (mackup's own app
+profile, `src/mackup_ng/applications/mackup.toml`, lists `.config/mackup`).
+dconf dumps live under `$XDG_DATA_HOME/mackup/` and are synced too
+(`.local/share/mackup`). Only marker STATE is machine-local, and is
+deliberately left out of that sync list:
 
 ```text
-~/.mackup/
-├── applications/   config *.toml files: sync lists AND action blocks
-├── markers/        LOCAL marker definitions (<name>.toml — same format as apps)
-└── dconf-backup/   dconf dumps (*.dconf)
+$XDG_CONFIG_HOME/mackup/     (~/.config/mackup)       synced
+    config.toml               main config, TOML
+    applications/*.toml       application profiles
+    ignores/*.toml            ignore definitions
+    markers/*.toml            marker DEFINITIONS
+$XDG_DATA_HOME/mackup/       (~/.local/share/mackup)  synced
+    dconf-backup/*.dconf      dconf dumps
+$XDG_STATE_HOME/mackup/      (~/.local/state/mackup)  NOT synced
+    markers/                  marker STATE flags, machine-local
 ```
 
 There is no separate `sets/` or `backup.d/` directory: everything imperative is
@@ -177,15 +185,22 @@ an action block inside an `applications/*.toml` config (a file may be sync-only,
 block-only, or both). A pre-sync executable is just a `[run]` block with
 `phase = "pre"`. See "Action blocks" below.
 
-Marker **state** (which markers are on) is machine-local runtime state and lives
-in `$XDG_STATE_HOME/mackup/markers/` (default `~/.local/state/mackup/markers/`),
-NOT under `~/.mackup/`. A pre-XDG `~/.mackup/markers/` state dir is migrated into
-the XDG location automatically on first marker access (`_migrate_legacy_markers`).
+Marker **state** (which markers are on) is the only machine-local part of this
+layout; it lives in `$XDG_STATE_HOME/mackup/markers/` (default
+`~/.local/state/mackup/markers/`). There is no legacy-layout migration: the
+pre-XDG config file and home directory (named by `constants.LEGACY_CONFIG_FILE`
+/ `LEGACY_HOME_DIR`) are rejected outright, with a message pointing at the new
+paths (`Config._reject_legacy_layout`); markers left behind in that pre-XDG
+home directory are never picked up (`test_no_legacy_marker_migration`).
 
-Code: `src/mackup_ng/{appsdb,blocks,conditions,hooks,dconf}.py`. `constants.py`
-holds the dir names (`CUSTOM_APPS_DIR = .mackup/applications`,
-`CUSTOM_MARKERS_DIR = .mackup/markers`, `MARKERS_DEFS_DIRNAME` (package
-built-ins), `MARKERS_STATE_XDG`, `LEGACY_MARKERS_STATE_DIR`, `DCONF_DIRNAME`).
+Code: `src/mackup_ng/{appsdb,blocks,conditions,hooks,dconf,dirs}.py`. `dirs.py`
+resolves the three XDG bases and every path under them (`config_dir`,
+`data_dir`, `state_dir`, `config_file`, `custom_apps_dir`, `custom_ignores_dir`,
+`custom_markers_dir`, `markers_state_dir`, `dconf_backup_dir`); `constants.py`
+holds the dir/file names (`APPS_DIR`, `IGNORES_DIRNAME`, `MARKERS_DIRNAME`,
+`MARKERS_DEFS_DIRNAME`, `DCONF_DIRNAME`, `CONFIG_FILENAME`) plus the two
+pre-XDG names kept only to reject them (`LEGACY_CONFIG_FILE`, `LEGACY_HOME_DIR`
+— see `constants.py`).
 
 ### `mackup sync` phases
 
@@ -197,11 +212,14 @@ built-ins), `MARKERS_STATE_XDG`, `LEGACY_MARKERS_STATE_DIR`, `DCONF_DIRNAME`).
 `mackup apply` runs every config's blocks (pre+post) without syncing files.
 
 `[run]` blocks receive a `MACKUP_*` environment contract (`hooks.hook_env`):
-`MACKUP_ROLE` (backup if the `backup` marker exists, else restore), `MACKUP_OS`,
-`MACKUP_ARCH`, `MACKUP_HAS_GUI`, `MACKUP_CONFIG_DIR` (=`~/.mackup`),
+`MACKUP_PHASE`, `MACKUP_ROLE` (backup if the `backup` marker exists, else
+restore), `MACKUP_OS`, `MACKUP_ARCH`, `MACKUP_HAS_GUI`,
+`MACKUP_CONFIG_DIR` (=`~/.config/mackup`), `MACKUP_DATA_DIR`
+(=`~/.local/share/mackup`), `MACKUP_STATE_DIR` (=`~/.local/state/mackup`),
 `MACKUP_BACKUP_DIR` (=`Config.fullpath`, the storage folder Mackup syncs into —
 resolves the configured engine/path, so configs never hard-code
-`~/Sync/Configs/Mackup`), `MACKUP_MARKERS_DIR`, `MACKUP_DCONF_BACKUP_DIR`.
+`~/Sync/Configs/Mackup`), `MACKUP_MARKERS_DIR` (=`~/.local/state/mackup/markers`),
+`MACKUP_DCONF_BACKUP_DIR` (=`~/.local/share/mackup/dconf-backup`).
 
 ### Markers CLI
 
@@ -216,9 +234,10 @@ Names are validated (`A-Z a-z 0-9 . _ -`, no `.`/`..`). Any name can be set
 definitions** (`tomllib`): a `[marker]` table with `name` (human label, mirrors
 the app `name` key) and optional `order`. Discovered like app defs — built-ins
 ship in the package (`src/mackup_ng/markers/*.toml`: backup, low-resource,
-no-linger, no-apikey, no-dconf), local ones live in `~/.mackup/markers/*.toml`
-and override a built-in of the same name. Loaded by `hooks.load_marker_defs()`;
-`markers_report()` lists them sorted by `order` then name.
+no-linger, no-apikey, no-dconf), local ones live in
+`$XDG_CONFIG_HOME/mackup/markers/*.toml` and override a built-in of the same
+name. Loaded by `hooks.load_marker_defs()`; `markers_report()` lists them
+sorted by `order` then name.
 
 ### Action blocks (`blocks.py`, `conditions.py`)
 
@@ -351,7 +370,8 @@ above the `[when]` header, or in its own table before it.
 ### dconf (`dconf.py`)
 
 Native dconf backup/restore (Linux/GNOME). Tracked paths are stored as
-`~/.mackup/dconf-backup/*.dconf` dumps (file name `org.gnome.terminal.dconf`
+`$XDG_DATA_HOME/mackup/dconf-backup/*.dconf` dumps (default
+`~/.local/share/mackup/dconf-backup/`; file name `org.gnome.terminal.dconf`
 <-> path `/org/gnome/terminal/`). On `mackup sync`: the backup-role machine
 dumps each path before the file sync; restore-role machines load them after.
 Gated off by the `no-dconf` marker. Register a path with

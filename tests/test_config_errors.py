@@ -85,7 +85,9 @@ def test_unknown_key_warns(tmp_path, monkeypatch, capsys):
 
     Config()
 
-    assert "ignor" in capsys.readouterr().out
+    assert (
+        "unknown key(s) in [applications]: ignor" in capsys.readouterr().out
+    )
 
 
 def test_storage_directory_inside_a_managed_dir_is_rejected(tmp_path, monkeypatch):

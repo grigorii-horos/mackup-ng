@@ -1,5 +1,5 @@
 name = "Mackup"
 files = [
-    ".mackup.cfg",
-    ".mackup",
+    ".config/mackup",
+    ".local/share/mackup",
 ]

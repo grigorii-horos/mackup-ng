@@ -123,3 +123,34 @@ class TestUnitOrder(unittest.TestCase):
 
         assert os.path.exists(os.path.join(self.home, ".topfile"))
         assert os.path.exists(marker), "the pre block ran after the top-level files"
+
+    def test_a_later_units_file_is_not_yet_synced_when_an_earlier_unit_acts(self):
+        """Two units, same (default) phase — each unit still completes in full
+        (files, then its action) before the next unit's files sync, rather
+        than every unit's files syncing first and every action running after.
+        """
+        for name in (".block1file", ".block2file"):
+            with open(os.path.join(self.storage, "Mackup", name), "w") as handle:
+                handle.write("from backup\n")
+        marker = os.path.join(self.home, "block2-not-yet-there")
+
+        self._write_app(
+            'name = "Ordered"\n'
+            "\n"
+            "[[block]]\n"
+            'files = [".block1file"]\n'
+            "[block.run]\n"
+            f'script = \'test ! -f "$HOME/.block2file" && touch "{marker}"\'\n'
+            "\n"
+            "[[block]]\n"
+            'files = [".block2file"]\n',
+        )
+
+        with patch("sys.argv", ["mackup", "sync"]):
+            main()
+
+        assert os.path.exists(os.path.join(self.home, ".block1file"))
+        assert os.path.exists(os.path.join(self.home, ".block2file"))
+        assert os.path.exists(marker), (
+            "block 2's file was already synced when block 1's action ran"
+        )

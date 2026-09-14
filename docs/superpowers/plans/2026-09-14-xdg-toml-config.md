@@ -1694,7 +1694,14 @@ cp -a ~/.mackup /tmp/mackup-backup-$(date +%Y%m%d)
 cp -a ~/.mackup.cfg /tmp/mackup-backup-$(date +%Y%m%d).cfg
 ```
 
-Note: `cp` is aliased to `cp -i` in this shell; use `command cp -a` if the alias interferes.
+Note: this shell aliases **both** `cp` to `cp -i` and `mv` to `mv -i`. Use
+`command cp` / `command mv` throughout this runbook. The `-i` form prompts
+before overwriting an existing destination, and when stdin is not a terminal
+the prompt reads EOF and the operation is *skipped* — so a `mv` whose
+destination already exists silently does nothing. Combined with the
+`2>/dev/null` in steps 3 and 4, that failure is invisible. This was hit in
+practice: step 4's marker-flag moves did nothing because the destination
+already held both flags.
 
 - [ ] **Step 2: Create the new directories**
 
@@ -1705,10 +1712,10 @@ mkdir -p ~/.config/mackup ~/.local/share/mackup ~/.local/state/mackup/markers
 - [ ] **Step 3: Move configuration**
 
 ```bash
-mv ~/.mackup/applications ~/.config/mackup/applications
+command mv ~/.mackup/applications ~/.config/mackup/applications
 mkdir -p ~/.config/mackup/markers && \
-  mv ~/.mackup/markers/*.toml ~/.config/mackup/markers/ 2>/dev/null
-[ -d ~/.mackup/ignores ] && mv ~/.mackup/ignores ~/.config/mackup/ignores
+  command mv ~/.mackup/markers/*.toml ~/.config/mackup/markers/
+[ -d ~/.mackup/ignores ] && command mv ~/.mackup/ignores ~/.config/mackup/ignores
 ```
 
 Note the order: the destination directory must exist *before* the `mv`. The
@@ -1723,13 +1730,17 @@ hid the failure.
 - [ ] **Step 4: Move state and data**
 
 ```bash
-mv ~/.mackup/markers/backup ~/.local/state/mackup/markers/ 2>/dev/null
-mv ~/.mackup/markers/low-resource ~/.local/state/mackup/markers/ 2>/dev/null
-mv ~/.mackup/dconf-backup ~/.local/share/mackup/dconf-backup
+command mv -f ~/.mackup/markers/backup ~/.local/state/mackup/markers/
+command mv -f ~/.mackup/markers/low-resource ~/.local/state/mackup/markers/
+command mv ~/.mackup/dconf-backup ~/.local/share/mackup/dconf-backup
 ```
 
-These two extensionless flags are still sitting in the pre-XDG directory; the
-automatic migration never moved them.
+These two extensionless flags are still sitting in the pre-XDG directory. The
+old automatic migration only moved a flag when the destination did *not*
+already exist, so on this machine it left duplicates behind: the XDG state
+directory already holds both. `-f` is therefore required — without it the
+alias-driven prompt skips the move and the stale copies survive. The flags are
+empty files, so overwriting is lossless.
 
 - [ ] **Step 5: Write the converted config**
 
@@ -1759,8 +1770,8 @@ dropped: no code ever read it.
 - [ ] **Step 6: Move the non-mackup files and delete the dead ones**
 
 ```bash
-mv ~/.mackup/CLAUDE.md ~/.mackup/GEMINI.md ~/.mackup/patch.py ~/.config/mackup/
-mv ~/.mackup/.codex ~/.config/mackup/
+command mv ~/.mackup/CLAUDE.md ~/.mackup/GEMINI.md ~/.mackup/patch.py ~/.config/mackup/
+command mv ~/.mackup/.codex ~/.config/mackup/
 rm -rf ~/.mackup/sets.d ~/.mackup/backup.d ~/.mackup/state
 ```
 

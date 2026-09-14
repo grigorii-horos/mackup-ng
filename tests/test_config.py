@@ -1,5 +1,7 @@
 import os
 import os.path
+import shutil
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -23,13 +25,23 @@ class TestConfig(unittest.TestCase):
             os.environ.pop(key, None)
 
     def test_config_default_location(self):
-        config_path = Path(dirs.config_file())
-        config_path.parent.mkdir(parents=True, exist_ok=True)
+        # Uses its own temporary $HOME rather than the shared fixtures tree:
+        # an interrupted run must not leave a stray config.toml behind that
+        # would silently break test_config_no_config on a later run.
+        tmp_home = tempfile.mkdtemp(prefix="mackup_cfgdefault_home_")
+        original_home = os.environ["HOME"]
         try:
-            config_path.write_text('[storage]\ndirectory = "test_config_default"\n')
+            os.environ["HOME"] = tmp_home
+            config_path = Path(dirs.config_file())
+            config_path.parent.mkdir(parents=True, exist_ok=True)
+            config_path.write_text(
+                '[storage]\nengine = "file_system"\n'
+                f'path = "{tmp_home}"\ndirectory = "test_config_default"\n',
+            )
             assert Config().directory == "test_config_default"
         finally:
-            config_path.unlink(missing_ok=True)
+            os.environ["HOME"] = original_home
+            shutil.rmtree(tmp_home, ignore_errors=True)
 
     def test_config_no_config(self):
         cfg = Config()

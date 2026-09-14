@@ -10,6 +10,8 @@ from unittest.mock import patch
 from mackup_ng import ignore, utils
 from mackup_ng.main import main
 
+from .conftest import write_config
+
 CONFLICT = "notes.sync-conflict-20260824-103000-ABCDEFG.md"
 
 
@@ -34,8 +36,7 @@ class TestIgnoredDuringSync(unittest.TestCase):
         self.config_path = os.path.join(
             self.test_home, ".config", "mackup", "config.toml",
         )
-        os.makedirs(os.path.dirname(self.config_path), exist_ok=True)
-        self._write_config(["notes"])
+        write_config(self.config_path, storage_path=self.test_storage, sync=["notes"])
         self.apps_dir = os.path.join(self.test_home, ".mackup", "applications")
         os.makedirs(self.apps_dir, exist_ok=True)
         self.write_app("notes", 'files = [".notes"]\n')
@@ -58,15 +59,6 @@ class TestIgnoredDuringSync(unittest.TestCase):
         shutil.rmtree(self.test_home, ignore_errors=True)
         shutil.rmtree(self.test_storage, ignore_errors=True)
         utils.FORCE_YES = False
-
-    def _write_config(self, apps):
-        entries = ", ".join(f'"{app}"' for app in apps)
-        with open(self.config_path, "w") as handle:
-            handle.write(
-                '[storage]\nengine = "file_system"\n'
-                f'path = "{self.test_storage}"\ndirectory = "Mackup"\n\n'
-                f"[applications]\nsync = [{entries}]\n",
-            )
 
     def write_app(self, name, body):
         with open(os.path.join(self.apps_dir, f"{name}.toml"), "w") as handle:
@@ -150,7 +142,11 @@ class TestIgnoredDuringSync(unittest.TestCase):
     def test_one_config_ignore_does_not_reach_another_config(self):
         self.write_app("notes", 'files = [".notes"]\nignore = ["*.bak"]\n')
         self.write_app("other", 'files = [".other"]\n')
-        self._write_config(["notes", "other"])
+        write_config(
+            self.config_path,
+            storage_path=self.test_storage,
+            sync=["notes", "other"],
+        )
         self.write(os.path.join(self.test_home, ".other", "keep.md.bak"), "keep\n")
 
         self.sync()

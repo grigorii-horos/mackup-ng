@@ -10,6 +10,8 @@ from unittest.mock import patch
 from mackup_ng import utils
 from mackup_ng.main import main
 
+from .conftest import write_config
+
 
 class TestRemoveDestination(unittest.TestCase):
     def setUp(self):
@@ -31,13 +33,7 @@ class TestRemoveDestination(unittest.TestCase):
         self.config_path = os.path.join(
             self.test_home, ".config", "mackup", "config.toml",
         )
-        os.makedirs(os.path.dirname(self.config_path), exist_ok=True)
-        with open(self.config_path, "w") as handle:
-            handle.write(
-                '[storage]\nengine = "file_system"\n'
-                f'path = "{self.test_storage}"\ndirectory = "Mackup"\n\n'
-                '[applications]\nsync = ["fanout"]\n',
-            )
+        write_config(self.config_path, storage_path=self.test_storage, sync=["fanout"])
         apps_dir = os.path.join(self.test_home, ".mackup", "applications")
         os.makedirs(apps_dir, exist_ok=True)
         with open(os.path.join(apps_dir, "fanout.toml"), "w") as handle:

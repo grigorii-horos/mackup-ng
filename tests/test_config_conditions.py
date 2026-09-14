@@ -10,6 +10,8 @@ from unittest.mock import patch
 from mackup_ng import utils
 from mackup_ng.main import main
 
+from .conftest import write_config
+
 
 class TestConfigLevelConditions(unittest.TestCase):
     def setUp(self):
@@ -29,14 +31,11 @@ class TestConfigLevelConditions(unittest.TestCase):
         self.config_path = os.path.join(
             self.home, ".config", "mackup", "config.toml",
         )
-        os.makedirs(os.path.dirname(self.config_path), exist_ok=True)
-        with open(self.config_path, "w") as handle:
-            handle.write(
-                '[storage]\nengine = "file_system"\n'
-                f'path = "{self.storage}"\ndirectory = "Mackup"\n\n'
-                "[applications]\n"
-                'sync = ["aaa-base", "zzz-override", "gated-blocks"]\n',
-            )
+        write_config(
+            self.config_path,
+            storage_path=self.storage,
+            sync=["aaa-base", "zzz-override", "gated-blocks"],
+        )
         self.apps_dir = os.path.join(self.home, ".mackup", "applications")
         os.makedirs(self.apps_dir, exist_ok=True)
         utils.FORCE_YES = True

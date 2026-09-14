@@ -1,0 +1,7 @@
+name = "LightPaper (macOS)"
+files = [
+    "Library/Preferences/com.42squares.LightPaper.plist",
+]
+
+[when]
+os = "macos"

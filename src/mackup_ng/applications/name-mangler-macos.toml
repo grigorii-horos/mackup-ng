@@ -1,0 +1,7 @@
+name = "Name Mangler (macOS)"
+files = [
+    "Library/Preferences/com.manytricks.NameMangler.plist",
+]
+
+[when]
+os = "macos"

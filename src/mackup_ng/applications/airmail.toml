@@ -2,3 +2,6 @@ name = "Airmail"
 files = [
     "Library/Containers/it.bloop.airmail2/Container.plist",
 ]
+
+[when]
+os = "macos"

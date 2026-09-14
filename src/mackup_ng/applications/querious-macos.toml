@@ -1,0 +1,7 @@
+name = "Querious (macOS)"
+files = [
+    "Library/Preferences/com.araeliumgroup.querious.plist",
+]
+
+[when]
+os = "macos"

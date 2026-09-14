@@ -1,0 +1,7 @@
+name = "Adobe Lightroom (macOS)"
+files = [
+    "Library/Preferences/{com.adobe.Lightroom4.plist,com.adobe.Lightroom5.plist,com.adobe.Lightroom6.plist}",
+]
+
+[when]
+os = "macos"

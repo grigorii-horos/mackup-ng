@@ -2,3 +2,6 @@ name = "Day-O"
 files = [
     "Library/Preferences/com.shauninman.Day-O.plist",
 ]
+
+[when]
+os = "macos"

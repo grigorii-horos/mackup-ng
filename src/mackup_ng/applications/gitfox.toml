@@ -2,3 +2,6 @@ name = "GitFox"
 files = [
     "Library/Preferences/{com.bytieful.Gitfox-retail.plist,com.bytieful.Gitfox-setapp.plist,com.bytieful.Gitfox.plist}",
 ]
+
+[when]
+os = "macos"

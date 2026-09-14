@@ -2,3 +2,6 @@ name = "AltTab"
 files = [
     "Library/Preferences/com.lwouis.alt-tab-macos.plist",
 ]
+
+[when]
+os = "macos"

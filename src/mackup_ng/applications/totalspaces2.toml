@@ -2,3 +2,6 @@ name = "TotalSpaces2"
 files = [
     "Library/Preferences/com.binaryage.TotalSpaces2.plist",
 ]
+
+[when]
+os = "macos"

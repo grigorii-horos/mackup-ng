@@ -1,0 +1,7 @@
+name = "Transmission (macOS)"
+files = [
+    "Library/Preferences/org.m0k.transmission.plist",
+]
+
+[when]
+os = "macos"

@@ -1,5 +1,4 @@
 name = "Quicksilver"
 files = [
-    "Library/Preferences/com.blacktree.Quicksilver.plist",
     "${MACKUP_XDG_CONFIG}/Quicksilver",
 ]

@@ -6,5 +6,4 @@ files = [
     ".Rprofile.d",
     ".Renviron",
     ".Renviron.d",
-    "Library/Preferences/org.R-project.R.plist",
 ]

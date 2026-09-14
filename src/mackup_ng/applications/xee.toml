@@ -2,3 +2,6 @@ name = "Xee"
 files = [
     "Library/Preferences/cx.c3.Xee3.plist",
 ]
+
+[when]
+os = "macos"

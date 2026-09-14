@@ -2,3 +2,6 @@ name = "Gmail Notifr"
 files = [
     "Library/Preferences/com.ashchan.GmailNotifr.plist",
 ]
+
+[when]
+os = "macos"

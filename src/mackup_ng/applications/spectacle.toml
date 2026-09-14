@@ -1,5 +1,4 @@
 name = "Spectacle"
 files = [
-    "Library/Preferences/com.divisiblebyzero.Spectacle.plist",
     "${MACKUP_XDG_CONFIG}/Spectacle",
 ]

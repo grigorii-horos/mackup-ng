@@ -2,3 +2,6 @@ name = "Tiles"
 files = [
     "Library/Preferences/com.sempliva.Tiles.plist",
 ]
+
+[when]
+os = "macos"

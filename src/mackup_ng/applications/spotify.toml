@@ -2,3 +2,6 @@ name = "Spotify"
 files = [
     "Library/Preferences/com.spotify.client.plist",
 ]
+
+[when]
+os = "macos"

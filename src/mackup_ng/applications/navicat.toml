@@ -3,5 +3,4 @@ files = [
     "${MACKUP_XDG_CONFIG}/PremiumSoft CyberTech",
     "${MACKUP_XDG_CONFIG}/Navicat for MySQL",
     "${MACKUP_XDG_CONFIG}/Navicat Premium",
-    "Library/Preferences/{com.prect.Navicat.plist,com.prect.NavicatPremium.plist,com.prect.NavicatPremiumEssentials.plist}",
 ]

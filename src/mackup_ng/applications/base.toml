@@ -3,3 +3,6 @@ files = [
     "Library/Containers/uk.co.menial.Base/Data/Library/Preferences/uk.co.menial.Base.plist",
     "Library/Containers/uk.co.menial.Base/Data/Library/Application Support/Base/",
 ]
+
+[when]
+os = "macos"

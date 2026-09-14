@@ -2,3 +2,6 @@ name = "Clementine"
 files = [
     "Library/Preferences/org.clementine-player.Clementine.plist",
 ]
+
+[when]
+os = "macos"

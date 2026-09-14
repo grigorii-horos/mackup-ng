@@ -2,3 +2,6 @@ name = "Mailplane"
 files = [
     "Library/Preferences/{com.mailplaneapp.Mailplane.plist,com.mailplaneapp.Mailplane3.plist}",
 ]
+
+[when]
+os = "macos"

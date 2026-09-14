@@ -1,0 +1,7 @@
+name = "BibDesk (macOS)"
+files = [
+    "Library/Preferences/edu.ucsd.cs.mmccrack.bibdesk.plist",
+]
+
+[when]
+os = "macos"

@@ -3,3 +3,6 @@ files = [
     "Library/Gas Mask",
     "Library/Preferences/ee.clockwise.gmask.plist",
 ]
+
+[when]
+os = "macos"

@@ -2,3 +2,6 @@ name = "Qv2ray"
 files = [
     "Library/Preferences/qv2ray/{plugin_settings,Qv2ray.conf}",
 ]
+
+[when]
+os = "macos"

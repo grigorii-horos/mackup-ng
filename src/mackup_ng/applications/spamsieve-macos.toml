@@ -1,0 +1,7 @@
+name = "SpamSieve (macOS)"
+files = [
+    "Library/Preferences/com.c-command.SpamSieve.plist",
+]
+
+[when]
+os = "macos"

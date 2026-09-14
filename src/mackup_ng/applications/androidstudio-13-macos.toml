@@ -1,0 +1,7 @@
+name = "Android Studio 1.3 (macOS)"
+files = [
+    "Library/Preferences/AndroidStudio1.3",
+]
+
+[when]
+os = "macos"

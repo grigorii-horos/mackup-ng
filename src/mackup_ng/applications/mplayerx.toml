@@ -2,3 +2,6 @@ name = "MPlayerX"
 files = [
     "Library/Preferences/org.niltsh.MPlayerX.plist",
 ]
+
+[when]
+os = "macos"

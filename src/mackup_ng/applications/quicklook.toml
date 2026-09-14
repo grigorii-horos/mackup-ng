@@ -2,3 +2,6 @@ name = "Quicklook"
 files = [
     "Library/Quicklook",
 ]
+
+[when]
+os = "macos"

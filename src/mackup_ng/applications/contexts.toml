@@ -2,3 +2,6 @@ name = "Contexts"
 files = [
     "Library/Preferences/com.contextsformac.Contexts.plist",
 ]
+
+[when]
+os = "macos"

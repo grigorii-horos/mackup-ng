@@ -2,3 +2,6 @@ name = "iTunes Scripts"
 files = [
     "Library/iTunes/Scripts",
 ]
+
+[when]
+os = "macos"

@@ -2,3 +2,6 @@ name = "Flux"
 files = [
     "Library/Preferences/org.herf.Flux.plist",
 ]
+
+[when]
+os = "macos"

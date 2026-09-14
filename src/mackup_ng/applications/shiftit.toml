@@ -2,3 +2,6 @@ name = "ShiftIt"
 files = [
     "Library/Preferences/org.shiftitapp.ShiftIt.plist",
 ]
+
+[when]
+os = "macos"

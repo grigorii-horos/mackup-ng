@@ -3,3 +3,6 @@ files = [
     "Library/Preferences/com.IdeaPunch.ColorSlurp.plist",
     "Library/Containers/com.IdeaPunch.ColorSlurp/Data/Library/Application Support/default.realm",
 ]
+
+[when]
+os = "macos"

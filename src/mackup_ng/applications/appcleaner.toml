@@ -2,3 +2,6 @@ name = "AppCleaner"
 files = [
     "Library/Preferences/{net.freemacsoft.AppCleaner-SmartDelete.plist,net.freemacsoft.AppCleaner.plist}",
 ]
+
+[when]
+os = "macos"

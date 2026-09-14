@@ -1,5 +1,4 @@
 name = "Jumpcut"
 files = [
     "${MACKUP_XDG_CONFIG}/Jumpcut",
-    "Library/Preferences/net.sf.Jumpcut.plist",
 ]

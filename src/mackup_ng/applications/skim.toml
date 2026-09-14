@@ -2,3 +2,6 @@ name = "Skim"
 files = [
     "Library/Preferences/net.sourceforge.skim-app.skim.plist",
 ]
+
+[when]
+os = "macos"

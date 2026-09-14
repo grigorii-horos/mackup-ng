@@ -2,3 +2,6 @@ name = "Droplr"
 files = [
     "Library/Preferences/com.droplr.droplr-mac.plist",
 ]
+
+[when]
+os = "macos"

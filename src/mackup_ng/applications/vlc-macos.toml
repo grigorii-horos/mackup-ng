@@ -1,0 +1,7 @@
+name = "VLC (macOS)"
+files = [
+    "Library/Preferences/{org.videolan.vlc,org.videolan.vlc.LSSharedFileList.plist,org.videolan.vlc.plist}",
+]
+
+[when]
+os = "macos"

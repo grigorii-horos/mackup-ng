@@ -4,3 +4,6 @@ files = [
     "Library/Preferences/MonoDevelop-Unity-5.0/MonoDevelopProperties.xml",
     "Library/MonoDevelop-Unity-5.0/Policies/Default.mdpolicy.xml",
 ]
+
+[when]
+os = "macos"

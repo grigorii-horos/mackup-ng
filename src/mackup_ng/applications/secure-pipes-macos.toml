@@ -1,0 +1,7 @@
+name = "Secure Pipes (macOS)"
+files = [
+    "Library/Preferences/{net.edgeservices.connections.plist,net.edgeservices.Secure-Pipes.plist,net.edgeservices.sp-config.plist}",
+]
+
+[when]
+os = "macos"

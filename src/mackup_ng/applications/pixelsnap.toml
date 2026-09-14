@@ -2,3 +2,6 @@ name = "PixelSnap"
 files = [
     "Library/Preferences/com.getpixelsnap.app.plist",
 ]
+
+[when]
+os = "macos"

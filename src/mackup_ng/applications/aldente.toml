@@ -1,5 +1,4 @@
 name = "AlDente"
 files = [
     "${MACKUP_XDG_CONFIG}/AlDente",
-    "Library/Preferences/com.apphousekitchen.aldente-pro.plist",
 ]

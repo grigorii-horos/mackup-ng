@@ -1,0 +1,7 @@
+name = "Hazel (macOS)"
+files = [
+    "Library/Preferences/com.noodlesoft.Hazel.plist",
+]
+
+[when]
+os = "macos"

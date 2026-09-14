@@ -2,3 +2,6 @@ name = "Ventrilo"
 files = [
     "Library/Preferences/Ventrilo",
 ]
+
+[when]
+os = "macos"

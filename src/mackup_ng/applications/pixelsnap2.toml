@@ -2,3 +2,6 @@ name = "PixelSnap 2"
 files = [
     "Library/Preferences/pl.maketheweb.pixelsnap2.plist",
 ]
+
+[when]
+os = "macos"

@@ -1,0 +1,8 @@
+name = "Soulver (macOS)"
+files = [
+    "Library/Preferences/com.acqualia.soulver.plist",
+    "Library/Preferences/app.soulver.mac.plist",
+]
+
+[when]
+os = "macos"

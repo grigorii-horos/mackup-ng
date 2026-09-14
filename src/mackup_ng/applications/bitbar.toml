@@ -2,3 +2,6 @@ name = "BitBar"
 files = [
     "Library/Preferences/com.matryer.BitBar.plist",
 ]
+
+[when]
+os = "macos"

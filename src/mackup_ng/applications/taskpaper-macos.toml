@@ -1,0 +1,7 @@
+name = "Task Paper (macOS)"
+files = [
+    "Library/Preferences/com.hogbaysoftware.TaskPaper.mac.plist",
+]
+
+[when]
+os = "macos"

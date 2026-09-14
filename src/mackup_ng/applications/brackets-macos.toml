@@ -1,0 +1,7 @@
+name = "Brackets (macOS)"
+files = [
+    "Library/Preferences/io.brackets.appshell.plist",
+]
+
+[when]
+os = "macos"

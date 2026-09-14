@@ -2,3 +2,6 @@ name = "NSLogger"
 files = [
     "Library/Preferences/com.florentpillet.NSLogger.plist",
 ]
+
+[when]
+os = "macos"

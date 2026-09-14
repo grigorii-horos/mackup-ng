@@ -3,3 +3,6 @@ files = [
     "Library/Music/Scripts",
     "Library/Preferences/{com.apple.Music.eq.plist,com.apple.Music.plist}",
 ]
+
+[when]
+os = "macos"

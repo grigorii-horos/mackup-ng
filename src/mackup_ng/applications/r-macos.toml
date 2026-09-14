@@ -1,0 +1,7 @@
+name = "R (macOS)"
+files = [
+    "Library/Preferences/org.R-project.R.plist",
+]
+
+[when]
+os = "macos"

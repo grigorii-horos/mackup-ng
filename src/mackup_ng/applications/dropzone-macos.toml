@@ -1,0 +1,7 @@
+name = "Dropzone 3 (macOS)"
+files = [
+    "Library/Preferences/com.aptonic.Dropzone3.plist",
+]
+
+[when]
+os = "macos"

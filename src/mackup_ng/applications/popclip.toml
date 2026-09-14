@@ -1,5 +1,4 @@
 name = "PopClip"
 files = [
-    "Library/Preferences/com.pilotmoon.popclip.plist",
     "${MACKUP_XDG_CONFIG}/PopClip/Extensions",
 ]

@@ -1,0 +1,7 @@
+name = "Coda 2 (macOS)"
+files = [
+    "Library/Preferences/com.panic.Coda2.plist",
+]
+
+[when]
+os = "macos"

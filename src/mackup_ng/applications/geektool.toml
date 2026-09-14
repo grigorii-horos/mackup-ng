@@ -2,3 +2,6 @@ name = "GeekTool"
 files = [
     "Library/Preferences/{org.tynsoe.geeklet.file.plist,org.tynsoe.geeklet.image.plist,org.tynsoe.geeklet.shell.plist,org.tynsoe.geeklet.web.plist,org.tynsoe.GeekTool.plist,org.tynsoe.geektool3.plist}",
 ]
+
+[when]
+os = "macos"

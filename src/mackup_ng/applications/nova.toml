@@ -2,3 +2,6 @@ name = "Nova"
 files = [
     "Library/Preferences/com.panic.Nova.plist",
 ]
+
+[when]
+os = "macos"

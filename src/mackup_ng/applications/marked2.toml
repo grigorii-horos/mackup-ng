@@ -1,5 +1,4 @@
 name = "Marked 2"
 files = [
     "${MACKUP_XDG_CONFIG}/Marked 2",
-    "Library/Preferences/com.brettterpstra.marked2.plist",
 ]

@@ -2,3 +2,6 @@ name = "Hexels"
 files = [
     "Library/Preferences/com.hex-ray.hexels.plist",
 ]
+
+[when]
+os = "macos"

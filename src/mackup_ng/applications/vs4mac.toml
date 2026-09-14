@@ -4,3 +4,6 @@ files = [
     "Library/Preferences/VisualStudio/7.0/{EditingLayout.xml,MonoDevelopProperties.xml}",
     "Library/Preferences/VisualStudio/8.0/{EditingLayout.xml,MonoDevelopProperties.xml}",
 ]
+
+[when]
+os = "macos"

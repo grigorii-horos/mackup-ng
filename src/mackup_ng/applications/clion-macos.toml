@@ -1,0 +1,7 @@
+name = "CLion (macOS)"
+files = [
+    "Library/Preferences/CLion2016.2",
+]
+
+[when]
+os = "macos"

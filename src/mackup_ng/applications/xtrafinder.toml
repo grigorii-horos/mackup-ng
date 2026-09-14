@@ -2,3 +2,6 @@ name = "XtraFinder"
 files = [
     "Library/Preferences/com.trankynam.XtraFinder.plist",
 ]
+
+[when]
+os = "macos"

@@ -2,3 +2,6 @@ name = "Hands Off!"
 files = [
     "Library/Preferences/com.metakine.handsoff.plist",
 ]
+
+[when]
+os = "macos"

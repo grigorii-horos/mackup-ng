@@ -2,3 +2,6 @@ name = "Skitch"
 files = [
     "Library/Preferences/{com.plasq.skitch.history,com.plasq.skitch.plist}",
 ]
+
+[when]
+os = "macos"

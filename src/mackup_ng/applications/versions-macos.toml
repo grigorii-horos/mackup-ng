@@ -1,0 +1,7 @@
+name = "Versions (macOS)"
+files = [
+    "Library/Preferences/com.blackpixel.versions.plist",
+]
+
+[when]
+os = "macos"

@@ -1,5 +1,4 @@
 name = "espanso"
 files = [
-    "Library/Preferences/espanso",
     "${MACKUP_XDG_CONFIG}/espanso",
 ]

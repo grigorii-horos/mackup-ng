@@ -1,0 +1,7 @@
+name = "Amethyst (macOS)"
+files = [
+    "Library/Preferences/com.amethyst.Amethyst.plist",
+]
+
+[when]
+os = "macos"

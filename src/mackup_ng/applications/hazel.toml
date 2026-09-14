@@ -1,5 +1,4 @@
 name = "Hazel"
 files = [
     "${MACKUP_XDG_CONFIG}/Hazel",
-    "Library/Preferences/com.noodlesoft.Hazel.plist",
 ]

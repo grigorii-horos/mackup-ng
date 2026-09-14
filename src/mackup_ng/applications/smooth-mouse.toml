@@ -2,3 +2,6 @@ name = "Smooth Mouse"
 files = [
     "Library/Preferences/com.cyberic.SmoothMouse.plist",
 ]
+
+[when]
+os = "macos"

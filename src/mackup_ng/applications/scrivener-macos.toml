@@ -1,0 +1,7 @@
+name = "Scrivener (macOS)"
+files = [
+    "Library/Preferences/com.literatureandlatte.scrivener2.plist",
+]
+
+[when]
+os = "macos"

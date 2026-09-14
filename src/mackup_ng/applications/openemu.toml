@@ -1,5 +1,4 @@
 name = "OpenEmu"
 files = [
-    "Library/Preferences/org.openemu.OpenEmu.plist",
     "${MACKUP_XDG_CONFIG}/OpenEmu",
 ]

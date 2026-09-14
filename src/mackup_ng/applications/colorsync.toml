@@ -2,3 +2,6 @@ name = "ColorSync"
 files = [
     "Library/ColorSync/Profiles",
 ]
+
+[when]
+os = "macos"

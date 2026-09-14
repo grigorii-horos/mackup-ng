@@ -2,3 +2,6 @@ name = "2Do"
 files = [
     "Library/Preferences/com.guidedways.TodoMac.plist",
 ]
+
+[when]
+os = "macos"

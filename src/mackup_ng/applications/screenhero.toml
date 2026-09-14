@@ -2,3 +2,6 @@ name = "Screenhero"
 files = [
     "Library/Preferences/com.screenhero.screenhero.plist",
 ]
+
+[when]
+os = "macos"

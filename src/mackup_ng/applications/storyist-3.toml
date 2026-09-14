@@ -2,3 +2,6 @@ name = "storyist-3"
 files = [
     "Library/Preferences/{.com.storyist.storyist.plist,com.storyist.storyist.plist}",
 ]
+
+[when]
+os = "macos"

@@ -2,3 +2,6 @@ name = "CleanShot"
 files = [
     "Library/Preferences/{com.getcleanshot.app-setapp.plist,pl.maketheweb.cleanshotx.plist}",
 ]
+
+[when]
+os = "macos"

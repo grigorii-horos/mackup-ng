@@ -2,3 +2,6 @@ name = "HyperSwitch"
 files = [
     "Library/Preferences/com.bahoom.HyperSwitch.plist",
 ]
+
+[when]
+os = "macos"

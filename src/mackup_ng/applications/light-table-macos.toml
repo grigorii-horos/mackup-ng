@@ -1,0 +1,7 @@
+name = "Light Table (macOS)"
+files = [
+    "Library/Preferences/com.kodowa.LightTable.plist",
+]
+
+[when]
+os = "macos"

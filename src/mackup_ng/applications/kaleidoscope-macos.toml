@@ -1,0 +1,7 @@
+name = "Kaleidoscope (macOS)"
+files = [
+    "Library/Preferences/com.blackpixel.kaleidoscope.plist",
+]
+
+[when]
+os = "macos"

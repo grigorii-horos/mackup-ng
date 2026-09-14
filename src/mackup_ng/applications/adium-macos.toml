@@ -1,0 +1,7 @@
+name = "Adium (macOS)"
+files = [
+    "Library/Preferences/com.adiumX.adiumX.plist",
+]
+
+[when]
+os = "macos"

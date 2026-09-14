@@ -1,0 +1,7 @@
+name = "GitKraken (macOS)"
+files = [
+    "Library/Preferences/com.axosoft.gitkraken.plist",
+]
+
+[when]
+os = "macos"

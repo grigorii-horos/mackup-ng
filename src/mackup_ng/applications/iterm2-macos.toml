@@ -1,0 +1,7 @@
+name = "iTerm2 (macOS)"
+files = [
+    "Library/Preferences/com.googlecode.iterm2.plist",
+]
+
+[when]
+os = "macos"

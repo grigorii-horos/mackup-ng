@@ -1,0 +1,9 @@
+name = "Stata (macOS)"
+files = [
+    "Library/Preferences/com.stata.stata12.plist",
+    "Library/Preferences/com.stata.stata13.plist",
+    "Library/Preferences/Stata 13 Preferences",
+]
+
+[when]
+os = "macos"

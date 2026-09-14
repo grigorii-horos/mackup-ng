@@ -1,0 +1,7 @@
+name = "Boxer (macOS)"
+files = [
+    "Library/Preferences/net.washboardabs.boxer.plist",
+]
+
+[when]
+os = "macos"

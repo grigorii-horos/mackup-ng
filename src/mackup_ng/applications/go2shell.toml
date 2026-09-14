@@ -2,3 +2,6 @@ name = "Go2Shell"
 files = [
     "Library/Preferences/com.zipzapmac.Go2Shell.plist",
 ]
+
+[when]
+os = "macos"

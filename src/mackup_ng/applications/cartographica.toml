@@ -1,5 +1,4 @@
 name = "Cartographica"
 files = [
     "${MACKUP_XDG_CONFIG}/Cartographica",
-    "Library/Preferences/com.ClueTrust.Cartographica.plist",
 ]

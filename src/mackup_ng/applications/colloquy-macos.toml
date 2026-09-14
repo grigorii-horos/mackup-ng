@@ -1,0 +1,7 @@
+name = "Colloquy (macOS)"
+files = [
+    "Library/Preferences/info.colloquy.plist",
+]
+
+[when]
+os = "macos"

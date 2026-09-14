@@ -2,3 +2,6 @@ name = "Seil"
 files = [
     "Library/Preferences/{org.pqrs.PCKeyboardHack.plist,org.pqrs.Seil.plist}",
 ]
+
+[when]
+os = "macos"

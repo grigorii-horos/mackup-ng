@@ -1,0 +1,7 @@
+name = "SecureCRT (macOS)"
+files = [
+    "Library/Preferences/com.vandyke.SecureCRT.plist",
+]
+
+[when]
+os = "macos"

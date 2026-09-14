@@ -1,0 +1,7 @@
+name = "MySQL Workbench (macOS)"
+files = [
+    "Library/Preferences/com.oracle.mysql.workbench.plist",
+]
+
+[when]
+os = "macos"

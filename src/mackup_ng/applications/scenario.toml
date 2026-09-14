@@ -3,3 +3,6 @@ files = [
     "Library/Preferences/com.lagente.scenario.plist",
     "Library/Scenario",
 ]
+
+[when]
+os = "macos"

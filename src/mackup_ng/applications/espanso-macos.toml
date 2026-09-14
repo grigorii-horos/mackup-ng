@@ -1,0 +1,7 @@
+name = "espanso (macOS)"
+files = [
+    "Library/Preferences/espanso",
+]
+
+[when]
+os = "macos"

@@ -1,0 +1,7 @@
+name = "Ghostty (macOS)"
+files = [
+    "Library/Application Support/com.mitchellh.ghostty",
+]
+
+[when]
+os = "macos"

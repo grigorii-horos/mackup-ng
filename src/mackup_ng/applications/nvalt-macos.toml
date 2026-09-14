@@ -1,0 +1,7 @@
+name = "nvALT (macOS)"
+files = [
+    "Library/Preferences/net.elasticthreads.nv.plist",
+]
+
+[when]
+os = "macos"

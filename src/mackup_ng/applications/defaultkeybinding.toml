@@ -2,3 +2,6 @@ name = "DefaultKeyBinding"
 files = [
     "Library/KeyBindings/DefaultKeyBinding.dict",
 ]
+
+[when]
+os = "macos"

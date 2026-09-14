@@ -1,0 +1,7 @@
+name = "ClipMenu (macOS)"
+files = [
+    "Library/Preferences/com.naotaka.ClipMenu.plist",
+]
+
+[when]
+os = "macos"

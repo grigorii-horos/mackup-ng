@@ -2,5 +2,4 @@ name = "LightPaper"
 files = [
     ".lightpaper",
     "${MACKUP_XDG_CONFIG}/LightPaper/customCSS.css",
-    "Library/Preferences/com.42squares.LightPaper.plist",
 ]

@@ -1,0 +1,7 @@
+name = "Houdini (macOS)"
+files = [
+    "Library/Preferences/com.uglyapps.Houdini.plist",
+]
+
+[when]
+os = "macos"

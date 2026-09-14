@@ -1,0 +1,7 @@
+name = "Rocket (macOS)"
+files = [
+    "Library/Preferences/net.matthewpalmer.Rocket.plist",
+]
+
+[when]
+os = "macos"

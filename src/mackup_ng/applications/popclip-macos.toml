@@ -1,0 +1,7 @@
+name = "PopClip (macOS)"
+files = [
+    "Library/Preferences/com.pilotmoon.popclip.plist",
+]
+
+[when]
+os = "macos"

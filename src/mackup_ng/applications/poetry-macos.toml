@@ -1,0 +1,7 @@
+name = "poetry (macOS)"
+files = [
+    "Library/Preferences/pypoetry/config.toml",
+]
+
+[when]
+os = "macos"

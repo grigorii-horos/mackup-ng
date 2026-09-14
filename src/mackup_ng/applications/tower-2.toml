@@ -3,3 +3,6 @@ files = [
     "Library/Application Support/com.fournova.Tower2",
     "Library/Preferences/com.fournova.Tower2.plist",
 ]
+
+[when]
+os = "macos"

@@ -2,3 +2,6 @@ name = "Swish"
 files = [
     "Library/Preferences/co.highlyopinionated.swish.plist",
 ]
+
+[when]
+os = "macos"

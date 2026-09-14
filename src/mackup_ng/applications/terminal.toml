@@ -2,3 +2,6 @@ name = "Terminal"
 files = [
     "Library/Preferences/com.apple.Terminal.plist",
 ]
+
+[when]
+os = "macos"

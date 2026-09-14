@@ -1,0 +1,7 @@
+name = "Shimo (macOS)"
+files = [
+    "Library/Preferences/com.chungwasoft.Shimo.plist",
+]
+
+[when]
+os = "macos"

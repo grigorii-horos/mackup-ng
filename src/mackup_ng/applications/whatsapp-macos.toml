@@ -1,0 +1,7 @@
+name = "WhatsApp Web (macOS)"
+files = [
+    "Library/Preferences/{WhatsApp-Helper.plist,WhatsApp.plist}",
+]
+
+[when]
+os = "macos"

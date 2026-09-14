@@ -1,0 +1,7 @@
+name = "ColorSchemer Studio 2 (macOS)"
+files = [
+    "Library/Preferences/com.colorschemer.studio2.plist",
+]
+
+[when]
+os = "macos"

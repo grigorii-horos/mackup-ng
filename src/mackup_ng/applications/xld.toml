@@ -1,5 +1,4 @@
 name = "XLD"
 files = [
     "${MACKUP_XDG_CONFIG}/XLD",
-    "Library/Preferences/jp.tmkk.XLD.plist",
 ]

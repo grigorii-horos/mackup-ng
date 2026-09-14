@@ -2,3 +2,6 @@ name = "HandBrake"
 files = [
     "Library/Containers/fr.handbrake.HandBrake/Data/Library/Application Support/HandBrake/UserPresets.json",
 ]
+
+[when]
+os = "macos"

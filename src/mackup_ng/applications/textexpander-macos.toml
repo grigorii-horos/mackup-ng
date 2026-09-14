@@ -1,0 +1,7 @@
+name = "TextExpander (macOS)"
+files = [
+    "Library/Preferences/com.smileonmymac.textexpander.plist",
+]
+
+[when]
+os = "macos"

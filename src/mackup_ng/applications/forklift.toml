@@ -1,5 +1,4 @@
 name = "ForkLift"
 files = [
-    "Library/Preferences/{com.binarynights.ForkLift-3.plist,com.binarynights.ForkLift2.plist}",
     "${MACKUP_XDG_CONFIG}/ForkLift/Favorites/Favorites.json",
 ]

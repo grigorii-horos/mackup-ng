@@ -1,0 +1,7 @@
+name = "Swinsian (macOS)"
+files = [
+    "Library/Preferences/{com.swinsian.Swinsian.plist,com.swinsian.SwinsianDesktopWindow.plist}",
+]
+
+[when]
+os = "macos"

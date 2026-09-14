@@ -1,5 +1,4 @@
 name = "KeePassXC"
 files = [
-    "Library/Preferences/org.keepassxc.keepassxc.plist",
     "${MACKUP_XDG_CONFIG}/keepassxc/keepassxc.ini",
 ]

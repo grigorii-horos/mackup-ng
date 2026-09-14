@@ -1,0 +1,7 @@
+name = "Charles (macOS)"
+files = [
+    "Library/Preferences/com.xk72.charles.config",
+]
+
+[when]
+os = "macos"

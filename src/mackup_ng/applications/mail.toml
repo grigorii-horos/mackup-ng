@@ -2,3 +2,6 @@ name = "Mail"
 files = [
     "Library/Preferences/com.apple.mail.plist",
 ]
+
+[when]
+os = "macos"

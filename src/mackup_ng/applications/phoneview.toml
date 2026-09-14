@@ -2,3 +2,6 @@ name = "PhoneView"
 files = [
     "Library/Preferences/com.ecamm.PhoneView.plist",
 ]
+
+[when]
+os = "macos"

@@ -1,0 +1,7 @@
+name = "FastScripts (macOS)"
+files = [
+    "Library/Preferences/com.red-sweater.fastscripts.plist",
+]
+
+[when]
+os = "macos"

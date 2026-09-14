@@ -1,0 +1,7 @@
+name = "AppCode 3.1 (macOS)"
+files = [
+    "Library/Preferences/appCode31",
+]
+
+[when]
+os = "macos"

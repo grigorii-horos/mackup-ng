@@ -2,3 +2,6 @@ name = "SmartGit"
 files = [
     "Library/Preferences/SmartGit/smartgit.vmoptions",
 ]
+
+[when]
+os = "macos"

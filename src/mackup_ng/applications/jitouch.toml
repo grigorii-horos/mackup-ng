@@ -2,3 +2,6 @@ name = "Jitouch"
 files = [
     "Library/Preferences/com.jitouch.Jitouch.plist",
 ]
+
+[when]
+os = "macos"

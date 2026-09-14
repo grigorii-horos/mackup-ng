@@ -1,0 +1,7 @@
+name = "Loopback (macOS)"
+files = [
+    "Library/Preferences/com.rogueamoeba.Loopback.plist",
+]
+
+[when]
+os = "macos"

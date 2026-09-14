@@ -1,5 +1,4 @@
 name = "Name Mangler"
 files = [
     "${MACKUP_XDG_CONFIG}/Name Mangler",
-    "Library/Preferences/com.manytricks.NameMangler.plist",
 ]

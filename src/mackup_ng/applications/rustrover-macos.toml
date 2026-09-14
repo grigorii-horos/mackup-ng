@@ -1,0 +1,7 @@
+name = "RustRover (macOS)"
+files = [
+    "Library/Preferences/{RustRover2025.2,RustRover2025.3}",
+]
+
+[when]
+os = "macos"

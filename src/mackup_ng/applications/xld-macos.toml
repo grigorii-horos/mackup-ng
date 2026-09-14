@@ -1,0 +1,7 @@
+name = "XLD (macOS)"
+files = [
+    "Library/Preferences/jp.tmkk.XLD.plist",
+]
+
+[when]
+os = "macos"

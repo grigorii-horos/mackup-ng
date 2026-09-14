@@ -2,3 +2,6 @@ name = "Magnet"
 files = [
     "Library/Preferences/com.crowdcafe.windowmagnet.plist",
 ]
+
+[when]
+os = "macos"

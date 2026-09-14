@@ -2,3 +2,6 @@ name = "Processing"
 files = [
     "Library/Processing/preferences.txt",
 ]
+
+[when]
+os = "macos"

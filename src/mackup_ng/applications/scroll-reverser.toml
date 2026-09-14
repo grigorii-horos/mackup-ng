@@ -2,3 +2,6 @@ name = "Scroll Reverser"
 files = [
     "Library/Preferences/com.pilotmoon.scroll-reverser.plist",
 ]
+
+[when]
+os = "macos"

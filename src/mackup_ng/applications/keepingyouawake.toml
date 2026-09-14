@@ -2,3 +2,6 @@ name = "KeepingYouAwake"
 files = [
     "Library/Preferences/info.marcel-dierkes.KeepingYouAwake.plist",
 ]
+
+[when]
+os = "macos"

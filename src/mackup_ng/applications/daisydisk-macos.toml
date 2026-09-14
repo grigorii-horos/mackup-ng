@@ -1,0 +1,7 @@
+name = "DaisyDisk (macOS)"
+files = [
+    "Library/Preferences/com.daisydiskapp.DaisyDiskStandAlone.plist",
+]
+
+[when]
+os = "macos"

@@ -1,0 +1,7 @@
+name = "Royal TSX (macOS)"
+files = [
+    "Library/Preferences/com.lemonmojo.RoyalTSX.App.plist",
+]
+
+[when]
+os = "macos"

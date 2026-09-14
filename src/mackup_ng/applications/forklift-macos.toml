@@ -1,0 +1,7 @@
+name = "ForkLift (macOS)"
+files = [
+    "Library/Preferences/{com.binarynights.ForkLift-3.plist,com.binarynights.ForkLift2.plist}",
+]
+
+[when]
+os = "macos"

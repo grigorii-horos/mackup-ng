@@ -1,0 +1,7 @@
+name = "Opera (macOS)"
+files = [
+    "Library/Preferences/{com.operasoftware.Opera.plist,com.operasoftware.OperaDeveloper.plist,com.operasoftware.OperaNext.plist}",
+]
+
+[when]
+os = "macos"

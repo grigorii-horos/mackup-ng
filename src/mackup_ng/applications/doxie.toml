@@ -2,3 +2,6 @@ name = "Doxie"
 files = [
     "Library/Preferences/com.getdoxie.doxie.plist",
 ]
+
+[when]
+os = "macos"

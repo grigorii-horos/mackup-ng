@@ -408,10 +408,6 @@ def main() -> None:
         for source, dests in groups.items():
             groups_by_slot.setdefault(owners[source], []).append((source, dests))
 
-        groups_by_owner: dict[str, list[tuple[str, list[str]]]] = {}
-        for (app_key, _slot), owned_groups in groups_by_slot.items():
-            groups_by_owner.setdefault(app_key, []).extend(owned_groups)
-
         log_entries: dict[str, dict] = {}
         for app_name in sorted(app_db.get_app_names()):
             if not app_db.config_enabled(app_name):
@@ -423,44 +419,59 @@ def main() -> None:
                     )
                 continue
             env_files = app_db.get_env_files(app_name)
-            cfg_blocks = app_db.get_blocks(app_name)
             pretty_name = app_db.get_name(app_name)
+            units = app_db.get_units(app_name)
 
-            tally = blocks.apply_blocks(cfg_blocks, "pre", env_files, dry_run)
-            tally += blocks.apply_blocks(cfg_blocks, "during", env_files, dry_run)
-
+            tally: Counter = Counter()
+            pending_starts: set[str] = set()
             stats: dict[str, int] | None = None
-            owned = groups_by_owner.get(app_name)
-            if app_name in to_backup and app_db.app_has_sync(app_name):
+            syncing = app_name in to_backup and app_db.app_has_sync(app_name)
+            if syncing:
                 stats = ApplicationProfile.new_stats()
-                if owned:
-                    # The config being synced adds its own ignores on top of
-                    # the global ignore files.
-                    app = ApplicationProfile(
-                        mckp,
-                        dry_run,
-                        verbose,
-                        ignore.load_globs()
-                        + tuple(app_db.get_ignore_patterns(app_name)),
-                    )
-                    print_app_header(app_name, pretty_name)
-                    for source, dests in owned:
-                        group_stats = app.sync_group(source, dests)
-                        for key, value in group_stats.items():
-                            stats[key] += value
-                        # What `mackup info` reports as the last sync of a
-                        # destination: the outcome of the group it belongs to.
-                        group_label = get_action_label(group_stats)
-                        if group_label is not None:
-                            now = time.time()
-                            for dest in dests:
-                                log_entries[dest] = {
-                                    "ts": now,
-                                    "action": group_label,
-                                    "source": source,
-                                }
+                # The config being synced adds its own ignores on top of the
+                # global ignore files.
+                app = ApplicationProfile(
+                    mckp,
+                    dry_run,
+                    verbose,
+                    ignore.load_globs() + tuple(app_db.get_ignore_patterns(app_name)),
+                )
+                header_printed = False
 
-            tally += blocks.apply_blocks(cfg_blocks, "post", env_files, dry_run)
+            try:
+                for unit in units:
+                    if not unit.passed:
+                        continue
+                    owned = groups_by_slot.get((app_name, unit.slot), [])
+                    if syncing and owned and stats is not None:
+                        if not header_printed:
+                            print_app_header(app_name, pretty_name)
+                            header_printed = True
+                        for source, dests in owned:
+                            group_stats = app.sync_group(source, dests)
+                            for key, value in group_stats.items():
+                                stats[key] += value
+                            # What `mackup info` reports as the last sync of a
+                            # destination: the outcome of the group it belongs to.
+                            group_label = get_action_label(group_stats)
+                            if group_label is not None:
+                                now = time.time()
+                                for dest in dests:
+                                    log_entries[dest] = {
+                                        "ts": now,
+                                        "action": group_label,
+                                        "source": source,
+                                    }
+                    if unit.block is not None:
+                        tally += blocks.apply_unit_action(
+                            unit.block,
+                            env_files,
+                            dry_run,
+                            pending_starts,
+                        )
+            finally:
+                blocks.flush_pending_starts(pending_starts)
+
             report_config(pretty_name, stats, tally)
 
         if deletion_stats["deleted"]:

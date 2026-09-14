@@ -35,7 +35,7 @@ Backup and keep your application settings in sync.
   - [Can you support application X](#can-you-support-application-x)
   - [Personalization \& configuration](#personalization--configuration)
   - [Fork Additions](#fork-additions)
-  - [Why did you do this](#why-did-you-do-this)
+  - [Why this fork exists](#why-this-fork-exists)
   - [What platforms are supported](#what-platforms-are-supported)
   - [What's up with the weird name](#whats-up-with-the-weird-name)
   - [Architecture](#architecture)
@@ -1120,33 +1120,50 @@ so it silently stops syncing mackup's own configuration.
 
 Requires Python 3.12+.
 
-## Why did you do this
+## Why this fork exists
 
-Yesterday, I had a talk with [Zach Zaro](http://zacharyzaro.com/), complaining
-about the pain it is to reconfigure our Macbook each time we get a new one or
-install from scratch. That's a talk we have already had months ago.
+[Mackup](https://github.com/lra/mackup) was written by Laurent Raufaste on a
+premise worth keeping: application config files are small, portable, and the
+most annoying thing to lose when you reinstall a machine. A tool that moves
+them between a workstation and a folder saves hours every time.
 
-I change my workstation every X months. Each time I either lose my apps'
-configurations, or I just waste a bunch of hours getting setup like I was on my
-old box. I also spend a lot of time reconfiguring the same stuff again on all my
-workstations (home, work).
+mackup-ng keeps that premise and rebuilds nearly everything around it.
 
-Boring...
+**One two-way sync instead of three one-way commands.** Upstream has `backup`,
+`restore` and `uninstall`, each moving files in one direction, and it links
+the originals into place with symlinks. mackup-ng has a single `sync` that
+reconciles both sides by modification time and **copies** — no symlinks, so a
+broken link cannot silently detach your home directory from the folder. `rm`
+records a tombstone, so deleting a managed file removes it from both sides and
+stays deleted instead of reappearing on the next run.
 
-Some people tried to solve the problem on the application layer, like
-[Github's Boxen](https://boxen.github.com/),
-but it solves a different problem, from my point of view. I don't spend a lot
-of time installing or downloading stuff. I spend time configuring it.
+**Application definitions are a small language, not just a file list.** They
+are flat TOML with brace expansion (`{settings.json,keybindings.json}`),
+platform selectors (`[mac:Blender,blender]`), XDG variables, and a
+`[mapped_files]` table for paths that differ between machines.
 
-For years, I've used a personal shell script that was copying known config
-files into Subversion, Git or Dropbox, and linked them into my home. But I felt
-a lot of us had the same problem: Making a more generic tool could help others
-and I could get help from others to support more apps in the tool.
+**Configs can do things, not only be copied.** A definition may carry action
+blocks — `[run]`, `[copy]`, `[chmod]`, `[xml]`, `[systemd]` — gated by a
+`[when]` table on OS, architecture, GUI presence, an installed command, or a
+machine-local marker. `mackup apply` runs them without touching any files.
 
-So here comes Mackup, the little tool that will sync all your application
-configs to Dropbox (or Google Drive, or anything).
+**Machines differ, and the tool knows it.** Markers such as `backup`,
+`low-resource`, `no-dconf` or `no-linger` are set per machine, never synced,
+and decide which side is the source of truth and which behaviour is skipped.
 
-And it's [GPL](http://www.gnu.org/licenses/gpl.html), of course.
+**Linux is the first-class target.** dconf paths are dumped on the backup
+machine and loaded on the others; systemd units get drop-ins; the layout
+follows the XDG base directory spec; and a built-in ignore definition keeps
+Syncthing's in-flight files out of your backups.
+
+**No storage backends.** Upstream detects Dropbox, Google Drive and iCloud
+folders. mackup-ng backs up into the one folder you name in `backup_dir`, and
+leaves replication to whatever you already use for it.
+
+The two are **not compatible on disk or on the command line**, which is why
+this is a fork with a different name rather than a set of patches.
+
+It remains [GPL](http://www.gnu.org/licenses/gpl.html), of course.
 
 ## What platforms are supported
 

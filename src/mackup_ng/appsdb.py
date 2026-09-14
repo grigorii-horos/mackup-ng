@@ -9,6 +9,7 @@ import os
 import platform
 import re
 import tomllib
+from dataclasses import dataclass
 from typing import ClassVar
 
 from . import blocks, conditions, constants, dirs, utils
@@ -17,6 +18,22 @@ from .constants import APPS_DIR
 # ${VAR} token; NAME is captured. Reserved names below are the dual-path
 # built-ins; anything else is resolved from the environment / source_env.
 _ENV_VAR_RE = re.compile(r"\$\{(\w+)\}")
+
+
+@dataclass(frozen=True)
+class Unit:
+    """One step of a config's work: files to sync, then an action to run.
+
+    Units are numbered by ``slot`` in final execution order — `pre` blocks,
+    the top-level unit, `during` blocks, `post` blocks — so the sync loop is a
+    plain walk in slot order with no phase logic left at execution time.
+    """
+
+    slot: int
+    when: dict
+    passed: bool
+    mappings: tuple[tuple[str, str], ...]
+    block: dict | None
 
 
 class ApplicationsDatabase:
@@ -391,8 +408,9 @@ class ApplicationsDatabase:
         """Create a ApplicationsDatabase instance."""
         # Build the dict that will contain the properties of each application
         self.apps: dict[str, dict[str, str | list[str]]] = {}
-        self.app_file_mappings: dict[str, list[tuple[str, str]]] = {}
+        self.app_file_mappings: dict[str, list[tuple[str, str, int]]] = {}
         self.app_blocks: dict[str, list[dict]] = {}
+        self.app_units: dict[str, list[Unit]] = {}
         self.app_conditions: dict[str, dict] = {}
         self.app_env_files: dict[str, list[str]] = {}
         self.app_ignores: dict[str, list[str]] = {}
@@ -443,10 +461,8 @@ class ApplicationsDatabase:
                 legacy.get("name", app_name),
             )
 
-            # The whole top level is one block: top-level keys that are not
-            # sync/meta become the top-level implicit block. It counts as a block
-            # only if it carries an action sub-table (xml/copy/chmod/run/systemd);
-            # it is prepended to the [[block]] array (so it runs first).
+            # The whole top level is one unit: top-level keys that are not
+            # sync/meta form its action, if they carry an action sub-table.
             reserved = {
                 "name",
                 "files",
@@ -459,10 +475,27 @@ class ApplicationsDatabase:
                 "application",
             }
             top_block = {k: v for k, v in data.items() if k not in reserved}
-            cfg_blocks = list(data.get("block", []))
-            if blocks.block_action(top_block) is not None:
-                cfg_blocks.insert(0, top_block)
-            self.app_blocks[app_name] = cfg_blocks
+            top_action = top_block if blocks.block_action(top_block) else None
+
+            def _phase_of(block: dict, app: str = app_name) -> str:
+                phase = block.get("phase", "during")
+                if phase not in ("pre", "during", "post"):
+                    print(
+                        utils.colorize_message(
+                            f"Warning: {app}: unknown phase {phase!r},"
+                            ' treating it as "during"',
+                        ),
+                    )
+                    return "during"
+                return str(phase)
+
+            raw_blocks = [b for b in data.get("block", []) if isinstance(b, dict)]
+            ordered: list[dict | None] = [
+                *[b for b in raw_blocks if _phase_of(b) == "pre"],
+                None,  # placeholder for the top-level unit
+                *[b for b in raw_blocks if _phase_of(b) == "during"],
+                *[b for b in raw_blocks if _phase_of(b) == "post"],
+            ]
 
             # Names ignored inside this config's paths, on top of the global
             # ignore files.
@@ -484,11 +517,11 @@ class ApplicationsDatabase:
 
             # Add the configuration files to sync
             config_files: list[str] = []
-            config_mappings: list[tuple[str, str]] = []
+            config_mappings: list[tuple[str, str, int]] = []
             self.apps[app_name]["configuration_files"] = config_files
             self.app_file_mappings[app_name] = config_mappings
 
-            config_paths: list[str] = next(
+            top_paths: list[str] = next(
                 (
                     v
                     for v in (
@@ -501,47 +534,97 @@ class ApplicationsDatabase:
                 ),
                 [],
             )
-            for path in config_paths:
-                try:
-                    local_expr, backup_expr = self._entry_to_exprs(
-                        str(path),
-                        env_files,
-                    )
-                except KeyError as exc:
+
+            units: list[Unit] = []
+            for slot, entry in enumerate(ordered):
+                is_top = entry is None
+                block = top_action if is_top else entry
+                when = {} if entry is None else dict(entry.get("when", {}))
+                if when:
+                    bad_keys = conditions.unrecognized_keys(when)
+                    if bad_keys:
+                        names = ", ".join(sorted(bad_keys))
+                        print(
+                            utils.colorize_message(
+                                f"Warning: {app_name}: unrecognized [when]"
+                                f" key(s) in block: {names}",
+                            ),
+                        )
+                passed = conditions.block_passes({"when": when})
+
+                unit_files: list[str] = []
+                unit_mappings: list[tuple[str, str]] = []
+                raw_paths = top_paths if entry is None else entry.get("files", [])
+                if not isinstance(raw_paths, list):
                     print(
                         utils.colorize_message(
-                            f"Warning: {app_name}: unresolved var {exc} in {path!r}, "
-                            "skipping",
+                            f"Warning: {app_name}: block files must be a list,"
+                            " ignoring them",
                         ),
                     )
-                    continue
-                self._register_exprs(
-                    local_expr,
-                    backup_expr,
-                    config_files,
-                    config_mappings,
-                )
-            for src, dest in data.get("mapped_files", {}).items():
-                try:
-                    local_expr, backup_expr = self._pair_to_exprs(
-                        str(src),
-                        str(dest),
-                        env_files,
+                    raw_paths = []
+                for path in raw_paths:
+                    try:
+                        local_expr, backup_expr = self._entry_to_exprs(
+                            str(path),
+                            env_files,
+                        )
+                    except KeyError as exc:
+                        print(
+                            utils.colorize_message(
+                                f"Warning: {app_name}: unresolved var {exc} in"
+                                f" {path!r}, skipping",
+                            ),
+                        )
+                        continue
+                    self._register_exprs(
+                        local_expr,
+                        backup_expr,
+                        unit_files,
+                        unit_mappings,
                     )
-                except KeyError as exc:
-                    print(
-                        utils.colorize_message(
-                            f"Warning: {app_name}: unresolved var {exc} in {src!r}, "
-                            "skipping",
-                        ),
-                    )
-                    continue
-                self._register_exprs(
-                    local_expr,
-                    backup_expr,
-                    config_files,
-                    config_mappings,
+                if is_top:
+                    for src, dest in data.get("mapped_files", {}).items():
+                        try:
+                            local_expr, backup_expr = self._pair_to_exprs(
+                                str(src),
+                                str(dest),
+                                env_files,
+                            )
+                        except KeyError as exc:
+                            print(
+                                utils.colorize_message(
+                                    f"Warning: {app_name}: unresolved var {exc}"
+                                    f" in {src!r}, skipping",
+                                ),
+                            )
+                            continue
+                        self._register_exprs(
+                            local_expr,
+                            backup_expr,
+                            unit_files,
+                            unit_mappings,
+                        )
+
+                units.append(
+                    Unit(
+                        slot=slot,
+                        when=when,
+                        passed=passed,
+                        mappings=tuple(unit_mappings),
+                        block=block,
+                    ),
                 )
+                if passed:
+                    config_files.extend(unit_files)
+                    config_mappings.extend(
+                        (local, backup, slot) for local, backup in unit_mappings
+                    )
+
+            self.app_units[app_name] = units
+            self.app_blocks[app_name] = [
+                u.block for u in units if u.passed and u.block is not None
+            ]
 
     @staticmethod
     def get_config_files() -> list[str]:
@@ -595,8 +678,15 @@ class ApplicationsDatabase:
         assert isinstance(value, list)
         return list(value)
 
-    def get_file_mappings(self, name: str) -> list[tuple[str, str]]:
-        """Return (local, backup) pairs of an application, in read order."""
+    def get_units(self, name: str) -> list[Unit]:
+        """Return the config's units in slot order, passing or not."""
+        return list(self.app_units.get(name, []))
+
+    def get_file_mappings(self, name: str) -> list[tuple[str, str, int]]:
+        """Return (local, backup, slot) triples of an application, in read order.
+
+        Only units whose conditions hold contribute mappings.
+        """
         return list(self.app_file_mappings[name])
 
     def get_app_order(self) -> list[str]:
@@ -604,7 +694,7 @@ class ApplicationsDatabase:
         return list(self.app_order)
 
     def get_blocks(self, name: str) -> list[dict]:
-        """Return the config's action blocks in order (top-level block first)."""
+        """Return the action blocks of the config's passing units, in slot order."""
         return list(self.app_blocks.get(name, []))
 
     def get_ignore_patterns(self, name: str) -> list[str]:

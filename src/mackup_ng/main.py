@@ -147,7 +147,7 @@ def build_sync_plan(
         if app_name in apps_to_sync
         and app_db.app_has_sync(app_name)
         and app_db.config_enabled(app_name)
-        for local, backup in app_db.get_file_mappings(app_name)
+        for local, backup, _slot in app_db.get_file_mappings(app_name)
     ]
     return mapping.build_pairs(entries)
 
@@ -267,7 +267,7 @@ def main() -> None:
             winners = {pair.dest: pair for pair in pairs}
             fanout = Counter(pair.source for pair in pairs)
             print(bold("Configuration files:"))
-            for local, backup in mappings:
+            for local, backup, _slot in mappings:
                 winner = winners.get(local)
                 if winner is None:
                     # This config is excluded from sync, so the plan holds no
@@ -376,7 +376,7 @@ def main() -> None:
                     continue
                 if app_db.config_enabled(app_name):
                     continue
-                for _local, backup in app_db.get_file_mappings(app_name):
+                for _local, backup, _slot in app_db.get_file_mappings(app_name):
                     if backup in all_groups or backup in reported_orphans:
                         continue
                     reported_orphans.add(backup)
@@ -418,6 +418,7 @@ def main() -> None:
             pretty_name = app_db.get_name(app_name)
 
             tally = blocks.apply_blocks(cfg_blocks, "pre", env_files, dry_run)
+            tally += blocks.apply_blocks(cfg_blocks, "during", env_files, dry_run)
 
             stats: dict[str, int] | None = None
             owned = groups_by_owner.get(app_name)
@@ -525,6 +526,7 @@ def main() -> None:
             env_files = app_db.get_env_files(app_name)
             cfg_blocks = app_db.get_blocks(app_name)
             tally = blocks.apply_blocks(cfg_blocks, "pre", env_files, dry_run)
+            tally += blocks.apply_blocks(cfg_blocks, "during", env_files, dry_run)
             tally += blocks.apply_blocks(cfg_blocks, "post", env_files, dry_run)
             phrase = blocks.summarize(tally)
             if phrase:

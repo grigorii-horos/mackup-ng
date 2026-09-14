@@ -280,8 +280,16 @@ class TestApplicationsDatabaseXDG(unittest.TestCase):
                 assert ".config/app/other.conf" not in files
                 assert "Library/Application Support/app/mac.conf" not in files
                 mappings = db.get_file_mappings("platform-selector-test")
-                assert (".config/app/linux.conf", ".config/app/other.conf") in mappings
-                assert (".config/app/common.conf", ".config/app/other.conf") in mappings
+                assert (
+                    ".config/app/linux.conf",
+                    ".config/app/other.conf",
+                    0,
+                ) in mappings
+                assert (
+                    ".config/app/common.conf",
+                    ".config/app/other.conf",
+                    0,
+                ) in mappings
         finally:
             if old_home is None:
                 os.environ.pop("HOME", None)
@@ -323,6 +331,7 @@ class TestApplicationsDatabaseXDG(unittest.TestCase):
                 assert (
                     ".config/myapp/config.json",
                     ".local/share/shared/myapp-config.json",
+                    0,
                 ) in mappings
 
             with patch("mackup_ng.appsdb.platform.system", return_value="Darwin"):
@@ -334,6 +343,7 @@ class TestApplicationsDatabaseXDG(unittest.TestCase):
                 assert (
                     "Library/Application Support/MyApp/config.json",
                     ".local/share/shared/myapp-config.json",
+                    0,
                 ) in mappings
         finally:
             if old_home is None:

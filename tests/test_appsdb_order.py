@@ -58,9 +58,9 @@ class TestReadOrder(unittest.TestCase):
         )
         db = ApplicationsDatabase()
         assert db.get_file_mappings("ordered") == [
-            (".zshrc", ".zshrc"),
-            (".bashrc", ".bashrc"),
-            (".config/b", ".config/a"),
+            (".zshrc", ".zshrc", 0),
+            (".bashrc", ".bashrc", 0),
+            (".config/b", ".config/a", 0),
         ]
         assert db.get_files("ordered") == [".zshrc", ".bashrc", ".config/b"]
 

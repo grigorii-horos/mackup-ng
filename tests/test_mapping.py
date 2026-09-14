@@ -41,12 +41,13 @@ class TestMappedFiles(unittest.TestCase):
         assert (
             ".config/app/grisa.profile/user.js",
             ".config/app/profile/user.js",
+            0,
         ) in mappings
 
     def test_plain_section_still_direct(self):
         self._write_app("demo", 'files = [".plainfile"]\n')
         mappings = ApplicationsDatabase().get_file_mappings("demo")
-        assert (".plainfile", ".plainfile") in mappings
+        assert (".plainfile", ".plainfile", 0) in mappings
 
     def test_mapping_with_braces_zips(self):
         self._write_app(
@@ -54,8 +55,8 @@ class TestMappedFiles(unittest.TestCase):
             '\n[mapped_files]\n".local/{a,b}.conf" = ".backup/{a,b}.conf"\n',
         )
         mappings = ApplicationsDatabase().get_file_mappings("demo")
-        assert (".local/a.conf", ".backup/a.conf") in mappings
-        assert (".local/b.conf", ".backup/b.conf") in mappings
+        assert (".local/a.conf", ".backup/a.conf", 0) in mappings
+        assert (".local/b.conf", ".backup/b.conf", 0) in mappings
 
     def test_paths_with_spaces_and_dashes(self):
         """Spaces, dashes and arrows in paths survive (only '=' is special)."""
@@ -68,6 +69,7 @@ class TestMappedFiles(unittest.TestCase):
         assert (
             ".config/My App-1/a -> b.conf",
             ".config/shared/a -> b.conf",
+            0,
         ) in mappings
 
     def test_env_var_from_environment(self):
@@ -115,8 +117,8 @@ class TestMappedFiles(unittest.TestCase):
             '[mapped_files]\n".local.conf" = ".stored.conf"\n',
         )
         mappings = ApplicationsDatabase().get_file_mappings("demo")
-        assert (".direct.conf", ".direct.conf") in mappings
-        assert (".local.conf", ".stored.conf") in mappings
+        assert (".direct.conf", ".direct.conf", 0) in mappings
+        assert (".local.conf", ".stored.conf", 0) in mappings
 
 
 if __name__ == "__main__":

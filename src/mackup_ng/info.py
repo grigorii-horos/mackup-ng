@@ -165,7 +165,7 @@ def declarations(app_db: ApplicationsDatabase) -> dict[str, list[tuple[str, str]
     """
     declared: dict[str, list[tuple[str, str]]] = {}
     for app_name in app_db.get_app_order():
-        for local, backup in app_db.get_file_mappings(app_name):
+        for local, backup, _slot in app_db.get_file_mappings(app_name):
             key = ApplicationProfile.normalize_relative_path(local)
             declared.setdefault(key, []).append((app_name, backup))
     return declared

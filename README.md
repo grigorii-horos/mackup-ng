@@ -1005,18 +1005,32 @@ members of a group mirror each other, such a removal is applied to the whole
 group: the file goes from the backup source and from every destination, and
 the tombstone keeps it from coming back on the next sync.
 
-### 8. Action blocks
+### 8. Units of work (action blocks)
 
-A config file can also carry **action blocks** — imperative steps run around its
-file sync (`pre`/`post`). A block has an optional `[when]` conditions sub-table
-and exactly one action sub-table; there is no `type` key. Actions: `[copy]`,
-`[chmod]`, `[run]`, `[xml]` (edit XML), `[systemd]` (user drop-in).
+A config file is not a file list with hooks bolted on either end — it is an
+**ordered sequence of units of work**. A config whose top-level `[when]`
+holds executes, in this order:
+
+1. its `[[block]]` entries with `phase = "pre"`, in declaration order
+2. the **top-level unit** — the config's own `files` and `[mapped_files]`,
+   then its action if the top level carries one
+3. its `[[block]]` entries with `phase = "during"` — **the default phase**
+4. its `[[block]]` entries with `phase = "post"`, in declaration order
+
+Units are numbered by `slot` across that whole final order, not per phase.
+Within one unit, **files sync first, then its action runs**. A block has an
+optional `[when]` conditions sub-table, optional `files`, and at most one
+action sub-table; there is no `type` key. A block may carry `files`, an
+action, or both — `files` on a block work exactly like top-level `files`;
+only the top level also takes `[mapped_files]`. `[when]` on a block gates
+**both** its files and its action. Actions: `[copy]`, `[chmod]`, `[run]`,
+`[xml]` (edit XML), `[systemd]` (user drop-in).
 
 ```toml
 name = "SSH"
 files = [".ssh"]
 
-# after syncing .ssh, fix its permissions (default phase = post)
+# top-level unit: chmod runs right after .ssh syncs, in the same unit
 [when]
 os = ["linux", "macos"]
 [chmod]
@@ -1026,17 +1040,53 @@ dir_mode = "700"
 file_mode = "600"
 ```
 
-`[when]` keys (any-of lists): `os`, `arch`, `marker`, `not_marker`, `command`,
-`gui`, `exists`, `not_exists`, `env`. For more than one block per file use a
-`[[block]]` array with `[block.when]` / `[block.<action>]`. Configs run sorted
-by filename; `mackup apply` runs blocks without syncing. A block-only file (no
-`files`) is a pure hook.
+`[when]` keys (any-of lists): `os`, `not_os`, `arch`, `marker`, `not_marker`,
+`command`, `gui`, `exists`, `not_exists`, `env`. For more than one block per
+file use a `[[block]]` array with `[block.when]` / `[block.<action>]`; an
+array entry defaults to `phase = "during"` unless it says otherwise. Configs
+run sorted by filename; `mackup apply` runs every unit's action without
+syncing files. A block-only file (no top-level `files`) is a pure hook.
+
+The old `<app>-macos` split — a whole second TOML config file, with its own
+application id, gated by a top-level `[when] os = "macos"` — is gone. Put
+both variants in one config instead, as two blocks:
+
+```toml
+name = "AppCode 3.1"
+
+[[block]]
+files = [
+    "${MACKUP_XDG_CONFIG}/appCode31",
+]
+[block.when]
+not_os = "macos"
+
+[[block]]
+files = [
+    "Library/Preferences/appCode31",
+]
+[block.when]
+os = "macos"
+```
+
+Use `not_os = "macos"` rather than `os = ["linux", "windows"]` for
+"everywhere but macOS": `hooks.os_kind()` reports `android` as its own value
+(distinct from `linux`), so a hardcoded OS list silently drops an Android
+machine's XDG paths, while `not_os` only excludes what it names.
+
+`mackup-ng show <app>` prints the resolved file mappings and then a `Units:`
+section naming every unit that carries an action or was skipped by its
+conditions — `slot N: <action>`, or `slot N: <action> — conditions not met
+(...)` when it didn't run (`files only` stands in for `<action>` when a
+skipped unit had none). A unit that simply synced files with nothing else to
+report isn't listed — this is how a unit dropped by `[when]` shows up
+instead of silently vanishing.
 
 Conditions written at the top level of a config gate the **whole** config —
-its synced files as well as its actions. A config whose conditions do not hold
-on this machine declares nothing, so a mapping from another config keeps the
-destination. That is how one machine can take a different source for the same
-local file:
+its synced files as well as its units' actions. A config whose conditions do
+not hold on this machine declares nothing, so a mapping from another config
+keeps the destination. That is how one machine can take a different source
+for the same local file:
 
 ```toml
 # ~/.config/mackup/applications/zz-termux-colors-eink.toml
@@ -1049,9 +1099,9 @@ marker = ["eink"]
 ```
 
 Run `mackup show <app>` to see whether a config's conditions hold here, and
-`mackup sync -v` to list the configs skipped for that reason. To gate a single
-action instead of the config, put the condition inside `[[block]]` as
-`[block.when]`.
+`mackup sync -v` to list the configs skipped for that reason. To gate a
+single unit's files and/or action instead of the whole config, put the
+condition inside `[[block]]` as `[block.when]`.
 
 Top-level keys (`files`, `mapped_files`, etc.) must come **before** the
 `[when]` header in the file. TOML assigns a bare `key = value` line to
@@ -1101,17 +1151,22 @@ so it silently stops syncing mackup's own configuration.
 - **dconf** (Linux/GNOME): the backup-role machine dumps tracked paths before the
   file sync; other machines load them after. Opt out with the `no-dconf` marker;
   register paths with `dconf-add`.
-- **Action blocks** (in `applications/*.toml`, applied during `sync` / via
-  `apply`): each config file may carry blocks — a top-level implicit block
-  and/or a `[[block]]` array. A block = base scalars + a `[when]` conditions
-  sub-table + exactly one **action sub-table** whose name is the action
-  (`[copy]` / `[chmod]` / `[run]` / `[xml]` / `[systemd]`); no `type` key. Base
-  scalars: `phase` (`pre`/`post`, relative to that config's file sync) and
-  optional `restart_service`. `[when]` holds short-keyed conditions (`os`,
-  `arch`, `marker`, `not_marker`, `command`, `gui`, `exists`, `not_exists`,
-  `env`). In a `[[block]]` array the sub-tables are `[block.when]` /
-  `[block.<action>]`; at the top level `[when]` / `[<action>]`. Configs apply
-  sorted by filename — cross-cutting hooks use numeric prefixes (`10-`, `40-`).
+- **Units of work** (in `applications/*.toml`, applied during `sync` / via
+  `apply`): a config is an ordered sequence of units — `pre` blocks, the
+  top-level unit (its `files`/`[mapped_files]`, then its action), `during`
+  blocks (the **default** phase), `post` blocks — numbered by `slot` across
+  that final order. A block = base scalars, a `[when]` conditions sub-table,
+  optional `files`, and at most one **action sub-table** whose name is the
+  action (`[copy]` / `[chmod]` / `[run]` / `[xml]` / `[systemd]`); no `type`
+  key. Within a unit, files sync first, then its action runs. Base scalars:
+  `phase` (`pre`/`during`/`post`, default `during`) and optional
+  `restart_service`. `[when]` gates both a block's files and its action, with
+  short-keyed conditions (`os`, `not_os`, `arch`, `marker`, `not_marker`,
+  `command`, `gui`, `exists`, `not_exists`, `env`). In a `[[block]]` array the
+  sub-tables are `[block.when]` / `[block.<action>]`; at the top level
+  `[when]` / `[<action>]` (plus `files` / `[mapped_files]`, top-level only).
+  Configs apply sorted by filename — cross-cutting hooks use numeric prefixes
+  (`10-`, `40-`).
 - **Environment contract**: `[run]` blocks receive a `MACKUP_*` environment
   (`MACKUP_PHASE`, `MACKUP_ROLE`, `MACKUP_OS`, `MACKUP_ARCH`, `MACKUP_HAS_GUI`,
   `MACKUP_CONFIG_DIR`, `MACKUP_DATA_DIR`, `MACKUP_STATE_DIR`,

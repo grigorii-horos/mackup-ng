@@ -6,7 +6,7 @@ This fork of `mackup` adds path templating in application config definitions
 (`src/mackup_ng/applications/*.toml`). App definitions are **flat TOML** (not the
 upstream INI `.cfg`, and no `[application]` wrapper): top-level `name` and a
 `files` array, plus an optional `[mapped_files]` table and action
-blocks (see "Action blocks"):
+blocks (see "Units of work"):
 
 ```toml
 name = "Code"
@@ -183,7 +183,7 @@ $XDG_STATE_HOME/mackup/      (~/.local/state/mackup)  NOT synced
 There is no separate `sets/` or `backup.d/` directory: everything imperative is
 an action block inside an `applications/*.toml` config (a file may be sync-only,
 block-only, or both). A pre-sync executable is just a `[run]` block with
-`phase = "pre"`. See "Action blocks" below.
+`phase = "pre"`. See "Units of work" below.
 
 Marker **state** (which markers are on) is the only machine-local part of this
 layout; it lives in `$XDG_STATE_HOME/mackup/markers/` (default
@@ -208,14 +208,17 @@ directory in `blocks.py`). `constants.py` holds the dir/file names
 `DCONF_DIRNAME`, `CONFIG_FILENAME`) plus the two pre-XDG names kept only to
 reject them (`LEGACY_CONFIG_FILE`, `LEGACY_HOME_DIR` — see `constants.py`).
 
-### `mackup sync` phases
+### `mackup sync` order
 
 1. dconf dump (backup-role machine).
-2. per config (sorted by id): `blocks.apply_blocks(phase="pre")` → file sync →
-   `blocks.apply_blocks(phase="post")`.
+2. per config (sorted by id): walk its units in `slot` order — `pre` blocks,
+   the top-level unit, `during` blocks (the default phase), `post` blocks —
+   syncing each unit's files, then running its action; one summary line per
+   config.
 3. dconf load (restore-role machines).
 
-`mackup apply` runs every config's blocks (pre+post) without syncing files.
+`mackup apply` walks every config's units the same way but only runs their
+actions — it never syncs files.
 
 `[run]` blocks receive a `MACKUP_*` environment contract (`hooks.hook_env`):
 `MACKUP_PHASE`, `MACKUP_ROLE` (backup if the `backup` marker exists, else
@@ -245,15 +248,31 @@ no-linger, no-apikey, no-dconf), local ones live in
 name. Loaded by `hooks.load_marker_defs()`; `markers_report()` lists them
 sorted by `order` then name.
 
-### Action blocks (`blocks.py`, `conditions.py`)
+### Units of work (`blocks.py`, `conditions.py`, `appsdb.Unit`)
 
-Action blocks live in `applications/*.toml` config files (parsed by `appsdb`,
-executed by `blocks.apply_blocks`). A **block** = base keys (phase, conditions,
-`restart_service`) + exactly **one action sub-table** whose name selects the
-action — there is no `type` key. A config's blocks are: the top-level implicit
-block (base keys + one action table at the top level — being top-level, they
-must precede any `[mapped_files]`/`[[block]]` table, per TOML) then the
-`[[block]]` array entries, in that order.
+A config is not a file list with hooks bracketing it — it is an **ordered
+sequence of units of work**. `appsdb.ApplicationsDatabase` parses each config
+into a list of `Unit`s (`slot`, `when`, `passed`, `mappings`, `block`), and a
+config that passes its top-level `[when]` executes them in this order:
+
+1. `[[block]]` entries with `phase = "pre"`, in declaration order
+2. the **top-level unit** — the config's own `files` and `[mapped_files]`,
+   then its action if the top level carries one
+3. `[[block]]` entries with `phase = "during"` — **this is the default
+   phase** (changed from `post`)
+4. `[[block]]` entries with `phase = "post"`, in declaration order
+
+Units are numbered by `slot` across that whole final order, not per phase, so
+the sync loop in `main.py` is a plain walk in slot order with no phase logic
+left at execution time. Within one unit, **files sync first, then its action
+runs** (`main.py` syncs the unit's owned file groups, then calls
+`blocks.apply_unit_action`). A **block** = base keys (`phase`,
+`restart_service`) + a `[when]` conditions sub-table + optional `files` + at
+most **one action sub-table** whose name selects the action — there is no
+`type` key. A block may carry `files`, an action, or both. `files` on a
+`[[block]]` entry work exactly like top-level `files`; only the top level
+also takes `[mapped_files]` — blocks take `files` only. `[when]` on a block
+gates **both** its files and its action.
 
 Full example — a hybrid config (syncs `.ssh`, then fixes its perms; plus a
 marker-gated extra block):
@@ -262,7 +281,7 @@ marker-gated extra block):
 name = "SSH"
 files = [".ssh"]
 
-# top-level block: chmod the just-synced .ssh (default phase = post)
+# top-level unit: chmod runs right after .ssh syncs, in the same unit
 [when]
 os = ["linux", "macos"]
 [chmod]
@@ -271,7 +290,7 @@ recursive = true
 dir_mode = "700"
 file_mode = "600"
 
-# a second block (array form): only with the `paranoid` marker
+# a second unit (array form, default phase "during"): only with the `paranoid` marker
 [[block]]
 [block.when]
 marker = ["paranoid"]
@@ -281,24 +300,31 @@ commands = ["ssh-add -l"]
 
 Base scalars (on the block itself):
 
-- `phase` — `pre` | `post` (default `post`): before / after this config's file
-  sync.
+- `phase` — `pre` | `during` | `post` (default `during`, **changed from
+  `post`**): the block's position among `[[block]]` entries, relative to the
+  top-level unit's file sync + action.
 - `restart_service` — user service bracketed around this block's action
   (**systemctl --user** on linux, **brew services** on macOS; only if active).
 
 Conditions sub-table `[when]` (`conditions.block_passes`; any-of lists; short
-keys — the section supplies the context). A block runs only if every condition
+keys — the section supplies the context). A unit runs only if every condition
 in its `[when]` passes (no file-level inheritance — the top level is itself a
-block):
+unit):
 
-- `os`, `arch` — current OS / `platform.machine()` in list.
+- `os`, `not_os` — current OS in / not in the list (`hooks.os_kind()`:
+  `linux`, `macos`, `windows`, or `android` — a Termux/Android machine is its
+  own value, distinct from `linux`). Prefer `not_os = "macos"` over
+  `os = ["linux", "windows"]` for "everywhere but macOS": a hardcoded list
+  silently drops paths on any OS kind you forgot to enumerate (Android, say),
+  while `not_os` only ever excludes what it names.
+- `arch` — `platform.machine()` in list.
 - `marker`, `not_marker` — every / none of the listed markers set.
 - `command` — every listed binary on PATH.
 - `gui` — `true` and `MACKUP_HAS_GUI`.
 - `exists`, `not_exists` — every / none of the listed paths exist.
 - `env` — list → every var set; table → every var equals its value.
 
-Action sub-tables (exactly one per block; the key is the action):
+Action sub-tables (at most one per block; the key is the action):
 
 - `[copy]` — `from`, `to` (honor `~`, `$VAR`/`${VAR}` from the `MACKUP_*` env, so
   `$MACKUP_BACKUP_DIR/...`, `~/.apps/$MACKUP_ARCH`). File source idempotent
@@ -317,20 +343,60 @@ Action sub-tables (exactly one per block; the key is the action):
   `Nice`). Gate with `[when]` `os = ["linux"]`.
 
 In the `[[block]]` array, sub-tables are written `[block.when]` /
-`[block.<action>]`; at the top level they are just `[when]` / `[<action>]`.
+`[block.<action>]`; at the top level they are just `[when]` / `[<action>]`
+(plus `files` / `[mapped_files]`, which only the top level takes).
 
 Configs are processed **sorted by filename** — cross-cutting hooks use numeric
 prefixes (`10-`, `40-`). `${VAR}` (non-`MACKUP_*`) in block values resolves from
 the environment / a top-level `source_env` list. (The former `~/.bin/.sync-sets`
 script and the separate `sets/` directory are superseded by this model.)
 
+**The `<app>-macos` split is gone.** It used to give the macOS variant of an
+application its own TOML config file and its own application id, gated by a
+top-level `[when] os = "macos"`. All 120 such files were folded back into a
+single config with two blocks — one for macOS, one for everything else —
+using `not_os` rather than `os = ["linux", "windows"]`:
+
+```toml
+# src/mackup_ng/applications/appcode-31.toml
+name = "AppCode 3.1"
+
+[[block]]
+files = [
+    "${MACKUP_XDG_CONFIG}/appCode31",
+]
+[block.when]
+not_os = "macos"
+
+[[block]]
+files = [
+    "Library/Preferences/appCode31",
+]
+[block.when]
+os = "macos"
+```
+
+`os = ["linux", "windows"]` would have worked too, until an Android machine
+ran the config: `hooks.os_kind()` reports `android` as its own value, not
+`linux`, so a hardcoded list quietly drops that machine's XDG paths while
+`not_os = "macos"` still matches it correctly.
+
+`mackup show <app>` prints the resolved file mappings and then a `Units:`
+section naming every unit that carries an action or was skipped by its
+conditions — `slot N: <action>`, or `slot N: <action> — conditions not met
+(...)` when it didn't run (`files only` in place of `<action>` when a
+skipped unit had none). A unit that only synced files, with nothing else to
+report, is left off the list; this is how a unit dropped by `[when]` shows
+up instead of silently vanishing.
+
 ### Config-level conditions (top-level `[when]`)
 
 A top-level `[when]` table is the **config's** condition, evaluated with the
-same keys as a block's `[when]` (`os`, `arch`, `marker`, `not_marker`,
-`command`, `gui`, `exists`, `not_exists`, `env`). When it does not hold on
-this machine the config contributes nothing: no `files`, no `[mapped_files]`,
-and no blocks — not the implicit top-level block, not any `[[block]]` entry.
+same keys as a block's `[when]` (`os`, `not_os`, `arch`, `marker`,
+`not_marker`, `command`, `gui`, `exists`, `not_exists`, `env`). When it does
+not hold on this machine the config contributes nothing: no `files`, no
+`[mapped_files]`, and no blocks — not the top-level unit's files or action,
+not any `[[block]]` entry's files or action.
 
 That is what lets a machine-specific mapping decline to claim its
 destination, so an earlier config keeps it:
@@ -345,8 +411,8 @@ marker = ["eink"]
 ".termux/colors.properties" = ".termux/colors-eink.properties"
 ```
 
-To gate a single action rather than the whole config, put the condition in
-the block instead:
+To gate a single unit's files and/or action rather than the whole config, put
+the condition in a `[[block]]` instead:
 
 ```toml
 [[block]]

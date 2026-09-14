@@ -77,11 +77,16 @@ files = [
 ]
 ```
 
-A config may also carry **action blocks** (parsed by `appsdb`, run by
-`blocks.py` around the file sync): each block has an optional `[when]`
-conditions sub-table and exactly one action sub-table (`[copy]` / `[chmod]` /
-`[run]` / `[xml]` / `[systemd]`); use `[[block]]` + `[block.<action>]` for more
-than one. See AGENTS.md for the full block reference.
+A config is not just a file list — it's an **ordered sequence of units of
+work**: `pre`-phase `[[block]]` entries, the top-level unit (its own `files`
+sync, then its action), `during`-phase blocks (the **default** phase), then
+`post`-phase blocks, numbered by `slot` in that final order. A block (parsed
+by `appsdb`, run by `blocks.py`) is base scalars (`phase`, `restart_service`),
+an optional `[when]` conditions sub-table, optional `files`, and at most one
+action sub-table (`[copy]` / `[chmod]` / `[run]` / `[xml]` / `[systemd]`);
+within a unit, files sync before the action runs. Use `[[block]]` and
+`[block.<action>]` for more than the top-level unit. See AGENTS.md for the
+full reference.
 
 ```toml
 name = "SSH"

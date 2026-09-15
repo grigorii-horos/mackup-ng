@@ -5,6 +5,7 @@ An Application Profile contains all the information about an application in
 Mackup. Name, files, ...
 """
 
+import math
 import os
 from collections.abc import Callable
 
@@ -23,6 +24,7 @@ class ApplicationProfile:
         dry_run: bool,
         verbose: bool,
         ignore_globs: ignore.Globs = (),
+        prefer_backup: bool = False,
     ) -> None:
         """Create an ApplicationProfile bound to a Mackup storage folder.
 
@@ -30,15 +32,37 @@ class ApplicationProfile:
         the profile itself carries no file list. ``ignore_globs`` are the names
         this profile must leave alone in both directions: the global ignore
         files plus whatever the config being synced adds.
+
+        ``prefer_backup`` gives the backup side authority over every contest,
+        whatever the timestamps say. ``mackup init`` needs it: on a fresh
+        machine the applications you just installed have written their default
+        configs with today's timestamp, so the ordinary newest-wins rule would
+        let those defaults beat the real settings in the backup — and then
+        propagate them to every other machine on the next sync.
         """
         assert isinstance(mackup, Mackup)
         self.mackup: Mackup = mackup
         self.dry_run: bool = dry_run
         self.verbose: bool = verbose
         self.ignore_globs: ignore.Globs = tuple(ignore_globs)
+        self.prefer_backup: bool = prefer_backup
+        # Trailing separator so a sibling folder whose name merely starts with
+        # the backup folder's name is not mistaken for a path inside it.
+        self.backup_root: str = os.path.join(mackup.mackup_folder, "")
 
     def effective_mtime(self, path: str) -> float:
-        """This profile's :meth:`get_effective_mtime`, ignores applied."""
+        """This profile's :meth:`get_effective_mtime`, ignores applied.
+
+        Under ``prefer_backup`` a path inside the backup folder reports an
+        infinite mtime. Every contest in this engine — newest member wins, and
+        the "not older than the winner" skip that follows it — resolves through
+        this one comparison, so making the backup unbeatable here makes it
+        unbeatable everywhere, with no second rule to keep in step. A path the
+        backup does not hold is simply not a candidate, so the local side still
+        reaches the backup on its own.
+        """
+        if self.prefer_backup and path.startswith(self.backup_root):
+            return math.inf
         return self.get_effective_mtime(path, self.ignore_globs)
 
     def copytree_ignore(self) -> Callable[[str, list[str]], set[str]]:

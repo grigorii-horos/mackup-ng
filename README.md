@@ -75,6 +75,22 @@ You can find more detailed instructions in [INSTALL.md](INSTALL.md).
 
 ## Usage
 
+`mackup-ng init <path>`
+
+Set up this machine: write the config pointing at `<path>` as the backup
+folder, then run the first sync.
+
+That first sync is not an ordinary one. The backup side wins every contest,
+whatever the timestamps say, because on a fresh machine the applications you
+have just installed have already written their default configs — with today's
+timestamp. Under the ordinary newest-wins rule those defaults would beat the
+real settings in the backup folder, and the next sync would spread them to
+every other machine.
+
+A path inside your home folder is recorded relative to it, so the config stays
+correct on a machine whose home lives elsewhere. `init` refuses if a config
+already exists; it sets up a new machine rather than repointing a working one.
+
 `mackup-ng sync`
 
 Synchronize your application files between your home folder and the Mackup folder.

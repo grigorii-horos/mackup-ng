@@ -8,6 +8,7 @@ Usage:
   mackup-ng [options] list
   mackup-ng [options] show <application>
   mackup-ng [options] info <path>...
+  mackup-ng [options] init <path>
   mackup-ng [options] sync
   mackup-ng [options] rm <path>...
   mackup-ng [options] mark <marker>
@@ -32,6 +33,10 @@ Modes of action:
  - mackup-ng show: display the details for a supported application.
  - mackup-ng info: report how a path is synced: config, backup copy, last sync
        and whether the two sides still agree.
+ - mackup-ng init: set up this machine — write the config pointing at <path>,
+       then sync. The backup side wins every contest during this first sync,
+       so the default configs of applications you just installed cannot beat
+       the settings already in the backup folder.
  - mackup-ng sync: synchronize local and remote config files in both directions.
        Runs each config's action blocks (pre before / post after its file sync).
  - mackup-ng rm: remove a managed config file locally and from the remote folder.
@@ -73,6 +78,9 @@ from . import (
     synclog,
     update,
     utils,
+)
+from . import (
+    init as init_cmd,
 )
 from .application import ApplicationProfile
 from .appsdb import ApplicationsDatabase
@@ -182,6 +190,25 @@ def main() -> None:
         die("Options --force and --force-no are mutually exclusive.")
 
     config_file: str | None = args.get("--config-file")
+
+    if args["init"]:
+        # Must run before Mackup(), which reads a config that does not exist
+        # yet on the machine `init` is setting up.
+        requested = args["<path>"]
+        target = requested[0] if isinstance(requested, list) else requested
+        init_cmd.write_config(target, args["--dry-run"])
+        if args["--dry-run"]:
+            # Nothing was written, so there is no config to sync against and
+            # no honest preview to give. Say so rather than syncing with
+            # whatever a half-built Config would have guessed.
+            print(
+                utils.colorize_message(
+                    "Dry run: nothing written, so the first sync is not"
+                    " previewed. Run without -n to set up and sync.",
+                ),
+            )
+            return
+
     mckp: Mackup = Mackup(config_file)
     app_db: ApplicationsDatabase = ApplicationsDatabase()
 
@@ -364,7 +391,7 @@ def main() -> None:
             sys.exit(1)
 
     # mackup sync
-    elif args["sync"]:
+    elif args["sync"] or args["init"]:
         mckp.check_for_usable_backup_env()
 
         role = hooks.machine_role()
@@ -463,6 +490,10 @@ def main() -> None:
                     dry_run,
                     verbose,
                     ignore.load_globs() + tuple(app_db.get_ignore_patterns(app_name)),
+                    # `init` is the first sync on this machine: the backup
+                    # outranks whatever the freshly installed applications
+                    # have just written into $HOME.
+                    prefer_backup=bool(args["init"]),
                 )
                 header_printed = False
 

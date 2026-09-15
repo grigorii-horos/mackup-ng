@@ -20,6 +20,19 @@ absolute or relative to your home directory, and must lie inside it.
 mackup-ng --config-file=~/.config/mackup-custom.toml sync
 ```
 
+## Setting up a machine
+
+```sh
+mackup-ng init ~/Sync/Configs/Mackup
+```
+
+writes `config.toml` for you and runs the first sync, with the backup folder
+outranking whatever is already in your home folder. Use it once per machine;
+on a machine that already has a config it refuses rather than repointing it.
+
+The rest of this page describes that config file, which you can also write by
+hand.
+
 ## Storage
 
 Mackup backs your configuration files up into one folder, and restores them

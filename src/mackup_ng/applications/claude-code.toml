@@ -2,3 +2,5 @@ name = "Claude Code"
 files = [
     ".claude/{agents,CLAUDE.md,commands,hooks,keybindings.json,settings.json,skills,statusline.sh}",
 ]
+# Skills from the claude.ai account; Claude Code downloads them itself.
+ignore = ["synced"]

@@ -110,7 +110,11 @@ def confirm(question: str) -> bool:
         return False
 
     while True:
-        answer: str = input(question + " <Yes|No> ").lower()
+        try:
+            answer: str = input(question + " <Yes|No> ").lower()
+        except EOFError:
+            # No terminal to answer from (a timer, a pipe): the safe answer.
+            return False
 
         if answer in {"yes", "y"}:
             confirmed: bool = True

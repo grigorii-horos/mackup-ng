@@ -159,130 +159,143 @@ class TestCLI(unittest.TestCase):
         with open(backed_up_file) as f:
             assert f.read() == "local_newer_value\n"
 
-    def test_rm_deletes_local_and_backup_and_records_tombstone(self):
-        """Test rm deletes a managed path and records it in backup storage."""
-        with patch("sys.argv", ["mackup", "sync"]):
+    def _sync(self, *extra):
+        with patch("sys.argv", ["mackup", *extra, "sync"]):
             main()
 
+    def _switch_machine(self):
+        """Become a second computer: new $HOME and state, same backup folder."""
+        other_home = tempfile.mkdtemp(prefix="mackup_test_home_b_")
+        self.addCleanup(shutil.rmtree, other_home, True)
+        shutil.copytree(
+            os.path.join(self.test_home, ".config", "mackup"),
+            os.path.join(other_home, ".config", "mackup"),
+        )
+        os.environ["HOME"] = other_home
+        os.environ["XDG_CONFIG_HOME"] = os.path.join(other_home, ".config")
+        os.environ["XDG_CACHE_HOME"] = os.path.join(other_home, ".cache")
+        os.environ["XDG_STATE_HOME"] = os.path.join(other_home, ".local", "state")
+        return other_home
+
+    def test_sync_propagates_a_local_deletion_to_the_backup(self):
         backed_up_file = os.path.join(self.mackup_folder, self.test_file_name)
-        assert os.path.exists(self.test_file_path)
+        self._sync()
         assert os.path.exists(backed_up_file)
 
-        with patch("sys.argv", ["mackup", "rm", self.test_file_name]):
-            main()
+        os.remove(self.test_file_path)
+        self._sync()
 
         assert not os.path.exists(self.test_file_path)
         assert not os.path.exists(backed_up_file)
+        trash = os.path.join(self.mackup_folder, ".mackup-trash")
+        assert any(
+            self.test_file_name in files for _root, _dirs, files in os.walk(trash)
+        )
+        assert os.listdir(os.path.join(self.mackup_folder, ".mackup-tombstones"))
 
-        deletions_file = os.path.join(self.mackup_folder, ".mackup-deletions")
-        with open(deletions_file) as f:
-            assert f.read().splitlines() == [self.test_file_name]
+    def test_deletion_on_one_machine_reaches_another(self):
+        self._sync()
+        machine_b = self._switch_machine()
+        self._sync()
+        b_file = os.path.join(machine_b, self.test_file_name)
+        assert os.path.exists(b_file)
 
-    def test_rm_deletes_multiple_paths_from_current_directory(self):
-        """Test rm accepts multiple paths relative to the current directory."""
-        nested_dir = os.path.join(self.test_home, ".ssh")
-        os.makedirs(nested_dir, exist_ok=True)
-        first_name = "config.bak.codex-20260430"
-        second_name = "config.d"
-        first_path = os.path.join(nested_dir, first_name)
-        second_path = os.path.join(nested_dir, second_name)
-        with open(first_path, "w") as f:
-            f.write("first\n")
-        os.makedirs(second_path, exist_ok=True)
-        with open(os.path.join(second_path, "host"), "w") as f:
-            f.write("second\n")
+        # Back on machine A: delete and sync.
+        self._switch_back_to(self.test_home)
+        os.remove(self.test_file_path)
+        self._sync()
 
-        with open(self.custom_app_config, "w") as f:
-            f.write("[application]\n")
-            f.write(f'name = "{self.test_app_name}"\n')
-            f.write("files = [\n")
-            f.write(f'    ".ssh/{first_name}",\n')
-            f.write(f'    ".ssh/{second_name}",\n')
-            f.write("]\n")
+        # Machine B follows instead of resurrecting the file.
+        self._switch_back_to(machine_b)
+        self._sync()
+        assert not os.path.exists(b_file)
+        assert not os.path.exists(
+            os.path.join(self.mackup_folder, self.test_file_name),
+        )
 
-        with patch("sys.argv", ["mackup", "sync"]):
-            main()
+    def _switch_back_to(self, home):
+        os.environ["HOME"] = home
+        os.environ["XDG_CONFIG_HOME"] = os.path.join(home, ".config")
+        os.environ["XDG_STATE_HOME"] = os.path.join(home, ".local", "state")
 
-        original_cwd = os.getcwd()
-        os.chdir(nested_dir)
+    def test_dry_run_sync_does_not_delete(self):
+        backed_up_file = os.path.join(self.mackup_folder, self.test_file_name)
+        self._sync()
+        os.remove(self.test_file_path)
+
+        self._sync("--dry-run")
+
+        assert os.path.exists(backed_up_file)
+        self._sync()
+        assert not os.path.exists(backed_up_file)
+
+    def test_mass_deletion_needs_confirmation(self):
+        folder = os.path.join(self.test_home, ".many")
+        os.makedirs(folder)
+        for index in range(25):
+            with open(os.path.join(folder, f"f{index}"), "w") as handle:
+                handle.write("x\n")
+        self._write_custom_app("many", 'files = [".many"]\n')
+        self._sync()
+        shutil.rmtree(folder)
+
+        utils.FORCE_YES = False
+        utils.FORCE_NO = True
+        with pytest.raises(SystemExit):
+            self._sync()
+
+        assert len(os.listdir(os.path.join(self.mackup_folder, ".many"))) == 25
+
+        utils.FORCE_NO = False
+        utils.FORCE_YES = True
+        self._sync()
+        assert not os.path.exists(os.path.join(self.mackup_folder, ".many"))
+
+    def test_sync_reports_failed_deletions(self):
+        """A deletion that cannot be carried out is not swallowed by the summary."""
+        if os.geteuid() == 0:
+            self.skipTest("root ignores permission bits")
+        locked_dir = os.path.join(self.test_home, ".locked")
+        os.makedirs(locked_dir, exist_ok=True)
+        with open(os.path.join(locked_dir, "rc"), "w") as handle:
+            handle.write("locked\n")
+        self._write_custom_app("locked", 'files = [".locked/rc"]\n')
+        self._sync()
+
+        os.remove(os.path.join(locked_dir, "rc"))
+        backup_dir = os.path.join(self.mackup_folder, ".locked")
+        os.chmod(backup_dir, 0o500)
+        buffer = io.StringIO()
         try:
-            with patch("sys.argv", ["mackup", "rm", first_name, second_name]):
-                main()
+            with patch("sys.stdout", buffer):
+                self._sync()
         finally:
-            os.chdir(original_cwd)
+            os.chmod(backup_dir, 0o700)
 
-        assert not os.path.exists(first_path)
-        assert not os.path.exists(second_path)
-        assert not os.path.exists(os.path.join(self.mackup_folder, ".ssh", first_name))
-        assert not os.path.exists(os.path.join(self.mackup_folder, ".ssh", second_name))
+        assert "Failed to delete 1 file(s)" in buffer.getvalue()
 
-        deletions_file = os.path.join(self.mackup_folder, ".mackup-deletions")
-        with open(deletions_file) as f:
-            assert f.read().splitlines() == [
-                f".ssh/{first_name}",
-                f".ssh/{second_name}",
-            ]
-
-    def test_rm_deletes_file_inside_managed_directory_from_current_directory(self):
-        """Test rm accepts nested files when their parent directory is managed."""
-        nested_dir = os.path.join(self.test_home, ".ssh")
-        os.makedirs(nested_dir, exist_ok=True)
-        nested_name = "config.bak.codex-20260430"
-        nested_path = os.path.join(nested_dir, nested_name)
-        with open(nested_path, "w") as f:
-            f.write("nested\n")
-
-        with open(self.custom_app_config, "w") as f:
-            f.write("[application]\n")
-            f.write(f'name = "{self.test_app_name}"\n')
-            f.write("files = [\n")
-            f.write('    ".ssh",\n')
-            f.write("]\n")
-
-        with patch("sys.argv", ["mackup", "sync"]):
-            main()
-
-        original_cwd = os.getcwd()
-        os.chdir(nested_dir)
-        try:
-            stdout = io.StringIO()
-            with (
-                patch("sys.argv", ["mackup", "rm", nested_name]),
-                patch(
-                    "sys.stdout",
-                    stdout,
-                ),
-            ):
-                main()
-        finally:
-            os.chdir(original_cwd)
-
-        assert not os.path.exists(nested_path)
-        assert not os.path.exists(os.path.join(self.mackup_folder, ".ssh", nested_name))
-
-        deletions_file = os.path.join(self.mackup_folder, ".mackup-deletions")
-        with open(deletions_file) as f:
-            assert f.read().splitlines() == [f".ssh/{nested_name}"]
-        assert f"Deleted .ssh/{nested_name} ({self.test_app_name})" in stdout.getvalue()
-
-    def test_sync_applies_deletion_tombstone(self):
-        """Test sync deletes files listed in the backup-side deletion log."""
+    def test_sync_migrates_the_legacy_deletion_log(self):
+        """`.mackup-deletions` left by `mackup rm` becomes tombstones."""
         os.makedirs(self.mackup_folder, exist_ok=True)
-        backed_up_file = os.path.join(self.mackup_folder, self.test_file_name)
-        with open(backed_up_file, "w") as f:
-            f.write("backup_config=value\n")
-        with open(os.path.join(self.mackup_folder, ".mackup-deletions"), "w") as f:
+        legacy = os.path.join(self.mackup_folder, ".mackup-deletions")
+        with open(legacy, "w") as f:
             f.write(f"{self.test_file_name}\n")
+        os.utime(self.test_file_path, (100, 100))
 
-        assert os.path.exists(self.test_file_path)
-        assert os.path.exists(backed_up_file)
-
-        with patch("sys.argv", ["mackup", "sync"]):
-            main()
+        self._sync()
 
         assert not os.path.exists(self.test_file_path)
-        assert not os.path.exists(backed_up_file)
+        assert not os.path.exists(legacy)
+        assert not os.path.exists(
+            os.path.join(self.mackup_folder, self.test_file_name),
+        )
 
+    def test_rm_command_is_gone(self):
+        with (
+            patch("sys.argv", ["mackup", "rm", self.test_file_name]),
+            pytest.raises(SystemExit),
+        ):
+            main()
     def test_sync_with_folder(self):
         """Test that mackup sync works with folders, not just files."""
         # Create a test folder with a file inside
@@ -436,29 +449,6 @@ class TestCLI(unittest.TestCase):
         with open(os.path.join(self.mackup_folder, ".overridden")) as handle:
             assert handle.read() == "base\n"
 
-    def test_tombstoned_destination_stays_removed_but_group_survives(self):
-        self._write_custom_app(
-            "fanout",
-            '[mapped_files]\n".work.rc" = ".shared.rc"\n".home.rc" = ".shared.rc"\n',
-        )
-        os.makedirs(self.mackup_folder, exist_ok=True)
-        with open(os.path.join(self.mackup_folder, ".shared.rc"), "w") as handle:
-            handle.write("shared=1\n")
-        with open(os.path.join(self.test_home, ".work.rc"), "w") as handle:
-            handle.write("local-work=1\n")
-        with open(
-            os.path.join(self.mackup_folder, ".mackup-deletions"),
-            "w",
-        ) as handle:
-            handle.write(".work.rc\n")
-
-        with patch("sys.argv", ["mackup", "sync"]):
-            main()
-
-        assert not os.path.exists(os.path.join(self.test_home, ".work.rc"))
-        assert os.path.exists(os.path.join(self.test_home, ".home.rc"))
-        assert os.path.exists(os.path.join(self.mackup_folder, ".shared.rc"))
-
     def test_verbose_sync_reports_evictions_and_orphans(self):
         self._write_custom_app("aaa-base", 'files = [".overridden"]\n')
         self._write_custom_app(
@@ -525,34 +515,6 @@ class TestCLI(unittest.TestCase):
             assert os.path.exists(os.path.join(self.test_home, name))
         assert "Restored zzz-last" in output
         assert "Skipped aaa-first" in output
-
-    def test_sync_reports_failed_tombstone_deletions(self):
-        """A tombstone that cannot be deleted is not swallowed by the summary."""
-        if os.geteuid() == 0:
-            self.skipTest("root ignores permission bits")
-        locked_dir = os.path.join(self.test_home, ".locked")
-        os.makedirs(locked_dir, exist_ok=True)
-        with open(os.path.join(locked_dir, "rc"), "w") as handle:
-            handle.write("locked\n")
-        self._write_custom_app("locked", 'files = [".locked/rc"]\n')
-
-        with patch("sys.argv", ["mackup", "sync"]):
-            main()
-        with open(
-            os.path.join(self.mackup_folder, ".mackup-deletions"),
-            "w",
-        ) as handle:
-            handle.write(".locked/rc\n")
-
-        os.chmod(locked_dir, 0o500)
-        buffer = io.StringIO()
-        try:
-            with patch("sys.stdout", buffer), patch("sys.argv", ["mackup", "sync"]):
-                main()
-        finally:
-            os.chmod(locked_dir, 0o700)
-
-        assert "Failed to delete 1 tombstoned path(s)" in buffer.getvalue()
 
     def test_sync_survives_a_file_directory_type_clash(self):
         """A type clash resolves in place instead of aborting the whole run."""

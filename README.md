@@ -11,14 +11,14 @@ Backup and keep your application settings in sync.
 
 > **mackup-ng** is a maintained fork of [mackup](https://github.com/lra/mackup)
 > by Laurent Raufaste. It replaces the backup/restore/link commands with a
-> single two-way `sync` plus an `rm` command, while keeping the same on-disk
+> single two-way `sync`, while keeping the same on-disk
 > conventions (`config.toml`, the `Mackup` storage folder).
 >
 > ⚠️ **Incompatible with the original `mackup`.** This package installs a
 > `mackup` command (and a `mackup-ng` alias) that **shadows the upstream
 > `mackup`** — do not install both in the same environment, or the last one
 > installed wins. The on-disk format also diverges: mackup-ng records deletion
-> tombstones (`.mackup-deletions`) and syncs by modification time, so a folder
+> tombstones (`.mackup-tombstones/`) and syncs by modification time, so a folder
 > written by mackup-ng is not meant to be managed by the original mackup.
 
 ## Table of contents
@@ -95,11 +95,6 @@ already exists; it sets up a new machine rather than repointing a working one.
 
 Synchronize your application files between your home folder and the Mackup folder.
 
-`mackup-ng rm <path>`
-
-Remove a managed config path locally and from the Mackup folder, and record the
-deletion so future syncs remove it on other machines too.
-
 `mackup-ng info <path>...`
 
 Report how a path relates to the backup: the config that manages it, whether it
@@ -159,15 +154,39 @@ mackup-ng uses sync mode.
 Sync mode is used to synchronize your files.
 The files are stored in the one folder you set as `storage.backup_dir`.
 
-It is covered by the commands:
+It is covered by `mackup-ng sync`, which reconciles every managed file in
+both directions by modification time.
 
-- `mackup-ng sync`
-- `mackup-ng rm <path>`
+### Deleting files
 
-`sync` reconciles every managed file in both directions by modification time.
-To drop a single managed path everywhere, use `mackup-ng rm <path>`: it removes
-the file locally and from the Mackup folder, and records a deletion tombstone so
-future syncs remove it on your other machines too.
+To drop a managed file everywhere, delete it and run `mackup-ng sync`. Each
+machine remembers what it saw at its last sync
+(`$XDG_STATE_HOME/mackup/sync-snapshot.json`), so it can tell a file you
+deleted from one that has not arrived yet:
+
+- A file this machine had at its last sync and no longer has is deleted from
+  the Mackup folder too (and from the other destinations of its group), and a
+  tombstone is written to `.mackup-tombstones/<host>.json` in the Mackup folder.
+- On your other machines, a file the Mackup folder lacks and a tombstone
+  covers is deleted as well — but only if their copy is unchanged since their
+  own last sync.
+- An edit always beats a deletion: if any copy changed, the file is synced
+  back instead.
+
+Nothing is ever unlinked outright: every deleted file is moved to
+`.mackup-trash/<date>-<host>/` inside the Mackup folder, where you can restore
+it from. A file missing from the Mackup folder *without* a tombstone is never
+deleted locally (the storage backend may not have finished downloading).
+
+A machine with no snapshot yet (the first sync, a fresh install) detects no
+deletions of its own. A destination whose parent directory is gone (a removed
+Firefox profile, say) counts as unavailable, not deleted. When one sync would
+delete more than 20 files it asks first; `--force` answers yes, while
+`--force-no` or a run without a terminal aborts the sync before anything is
+touched. `mackup-ng info <path>` reports which machine deleted a file and when.
+
+The `mackup rm` command of earlier versions is gone. Its `.mackup-deletions`
+log is converted to tombstones on the first sync.
 
 ### Ignored files
 
@@ -1010,16 +1029,12 @@ overwrite a stock config with your own. Configs are read stock first, then
 are left without a destination.
 
 An orphaned backup file (no destination maps to it) is left untouched; it is
-only reported by `mackup sync -v`, never deleted on its own. `mackup rm <path>`
-removes one destination and tombstones it — the shared backup source survives
-as long as another destination still feeds from it, and is only deleted once
-the last destination is removed. Re-declaring a destination with the *same*
-backup file is not an override and is not reported.
+only reported by `mackup sync -v`, never deleted on its own. Re-declaring a
+destination with the *same* backup file is not an override and is not reported.
 
-`mackup rm` also accepts a path *inside* a managed directory. Because the
-members of a group mirror each other, such a removal is applied to the whole
-group: the file goes from the backup source and from every destination, and
-the tombstone keeps it from coming back on the next sync.
+Because the members of a group mirror each other, deleting a file from one
+destination deletes it from the whole group: from the backup source and from
+every other destination (see [Deleting files](#deleting-files)).
 
 ### 8. Units of work (action blocks)
 
@@ -1145,6 +1160,7 @@ $XDG_DATA_HOME/mackup/       (~/.local/share/mackup)  synced
 $XDG_STATE_HOME/mackup/      (~/.local/state/mackup)  NOT synced
     markers/                  marker STATE flags, machine-local
     sync-log.json             per-machine record of the last sync
+    sync-snapshot.json        what the last sync saw, to detect deletions
 ```
 
 Marker *state* (which markers are on) is the only part of this that is
@@ -1206,9 +1222,9 @@ mackup-ng keeps that premise and rebuilds nearly everything around it.
 `restore` and `uninstall`, each moving files in one direction, and it links
 the originals into place with symlinks. mackup-ng has a single `sync` that
 reconciles both sides by modification time and **copies** — no symlinks, so a
-broken link cannot silently detach your home directory from the folder. `rm`
-records a tombstone, so deleting a managed file removes it from both sides and
-stays deleted instead of reappearing on the next run.
+broken link cannot silently detach your home directory from the folder. It
+also remembers what it saw at the last sync, so a file you delete is deleted
+on your other machines too instead of reappearing on the next run.
 
 **Application definitions are a small language, not just a file list.** They
 are flat TOML with brace expansion (`{settings.json,keybindings.json}`),
@@ -1248,7 +1264,7 @@ It remains [GPL](http://www.gnu.org/licenses/gpl.html), of course.
 Mackup is a portmanteau of Mac and Backup. It is simple, short, and easy to
 remember, and it corresponds with the whole idea: the simpler – the better!
 The `-ng` suffix ("next generation") marks this maintained fork, which
-streamlines Mackup down to a single two-way `sync` plus `rm`.
+streamlines Mackup down to a single two-way `sync`.
 
 ## Architecture
 

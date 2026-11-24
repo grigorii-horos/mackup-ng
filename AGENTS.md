@@ -123,11 +123,21 @@ path is the source. Two consequences:
   configs (alphabetical), then `$XDG_CONFIG_HOME/mackup/applications`; within
   a file, `files` then `[mapped_files]` in declaration order. A backup file
   left with no destination is untouched and reported by `mackup sync -v`.
-- `mackup rm <path>` removes one destination and tombstones it; the backup
-  source is deleted only when no destination is left. Removing a path *inside*
-  a managed directory removes it from every member of that directory's group
-  (source and sibling destinations), otherwise the next merge would copy it
-  back from a sibling.
+- **Deletions** propagate on their own (`deletions.py`; there is no
+  `mackup rm`). Before the file sync, every file of every group this run
+  syncs is compared with the machine-local snapshot of the last sync
+  (`$XDG_STATE_HOME/mackup/sync-snapshot.json`) and the per-host tombstones
+  in the backup folder (`.mackup-tombstones/<host>.json`, keyed by backup
+  path). Deleted here (in the snapshot, gone locally, no copy changed) →
+  deleted from the backup source and every sibling destination, and
+  tombstoned. Tombstoned and absent from the backup → the stale local copies
+  are deleted. An edit always beats a deletion; absence from the backup
+  without a tombstone never deletes. Victims are moved to
+  `.mackup-trash/<date>-<host>/`, more than `CONFIRM_THRESHOLD` (20) of them
+  needs confirmation, and a destination whose parent directory is missing is
+  unavailable, not deleted. The legacy `.mackup-deletions` log is converted
+  to tombstones on the first sync. Design:
+  `docs/superpowers/specs/2026-11-24-deletion-tracking-design.md`.
 
 ## Processing Order
 
@@ -178,6 +188,8 @@ $XDG_DATA_HOME/mackup/       (~/.local/share/mackup)  synced
     dconf-backup/*.dconf      dconf dumps
 $XDG_STATE_HOME/mackup/      (~/.local/state/mackup)  NOT synced
     markers/                  marker STATE flags, machine-local
+    sync-log.json             what the last sync did, for `mackup info`
+    sync-snapshot.json        what the last sync saw, for deletion tracking
 ```
 
 There is no separate `sets/` or `backup.d/` directory: everything imperative is
@@ -211,11 +223,14 @@ reject them (`LEGACY_CONFIG_FILE`, `LEGACY_HOME_DIR` — see `constants.py`).
 ### `mackup sync` order
 
 1. dconf dump (backup-role machine).
-2. per config (sorted by id): walk its units in `slot` order — `pre` blocks,
+2. deletions: plan against snapshot + tombstones, confirm if large, move
+   victims to the trash (`deletions.py`).
+3. per config (sorted by id): walk its units in `slot` order — `pre` blocks,
    the top-level unit, `during` blocks (the default phase), `post` blocks —
    syncing each unit's files, then running its action; one summary line per
    config.
-3. dconf load (restore-role machines).
+4. snapshot refresh (not on `--dry-run`), then dconf load (restore-role
+   machines).
 
 `mackup apply` walks every config's units the same way but only runs their
 actions — it never syncs files.

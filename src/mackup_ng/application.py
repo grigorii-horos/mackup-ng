@@ -12,8 +12,6 @@ from collections.abc import Callable
 from . import ignore, utils
 from .mackup import Mackup
 
-DELETIONS_FILENAME = ".mackup-deletions"
-
 
 class ApplicationProfile:
     """Instantiate this class with application specific data."""
@@ -313,10 +311,6 @@ class ApplicationProfile:
             stats["skipped"] += 1
         return stats
 
-    def get_deletions_filepath(self) -> str:
-        """Return the backup-side file that records explicit removals."""
-        return os.path.join(self.mackup.mackup_folder, DELETIONS_FILENAME)
-
     @staticmethod
     def normalize_relative_path(path: str) -> str:
         """Normalize a user/log path to a relative Mackup config path."""
@@ -331,188 +325,6 @@ class ApplicationProfile:
         while normalized.startswith(f".{os.sep}"):
             normalized = normalized[2:]
         return normalized
-
-    def read_deleted_files(self) -> set[str]:
-        """Read explicit deletion tombstones from backup storage."""
-        deletions_filepath = self.get_deletions_filepath()
-        if not os.path.exists(deletions_filepath):
-            return set()
-
-        deleted_files: set[str] = set()
-        with open(deletions_filepath, encoding="utf-8") as f:
-            for line in f:
-                path = line.strip()
-                if path:
-                    deleted_files.add(self.normalize_relative_path(path))
-        return deleted_files
-
-    def write_deleted_files(self, deleted_files: set[str]) -> None:
-        """Write explicit deletion tombstones to backup storage."""
-        deletions_filepath = self.get_deletions_filepath()
-        os.makedirs(os.path.dirname(deletions_filepath), exist_ok=True)
-        with open(deletions_filepath, "w", encoding="utf-8") as f:
-            f.writelines(f"{path}\n" for path in sorted(deleted_files))
-
-    def record_deleted_file(self, local_filename: str) -> None:
-        """Persist an explicit deletion tombstone for a managed path."""
-        deleted_files = self.read_deleted_files()
-        deleted_files.add(self.normalize_relative_path(local_filename))
-        self.write_deleted_files(deleted_files)
-
-    def read_tombstones(self) -> set[str]:
-        """Normalized destinations recorded as explicitly removed."""
-        return self.read_deleted_files()
-
-    @staticmethod
-    def relative_tombstone(tombstone: str, root: str) -> str | None:
-        """The part of ``tombstone`` below ``root``, or None if not below it."""
-        prefix = root + os.sep
-        if tombstone.startswith(prefix) and len(tombstone) > len(prefix):
-            return tombstone[len(prefix) :]
-        return None
-
-    def group_tombstoned_relatives(
-        self,
-        live_dests: list[str],
-        tombstoned: set[str],
-    ) -> list[str]:
-        """Relative paths tombstoned *inside* one of the group's destinations.
-
-        `mackup rm ~/.work.d/foo` tombstones `.work.d/foo`, a path below a
-        managed destination rather than a destination itself. Group members
-        mirror each other, so such a removal applies to the whole group.
-        """
-        relatives: list[str] = []
-        ordered = sorted(tombstoned)
-        for dest in live_dests:
-            root = self.normalize_relative_path(dest)
-            for tombstone in ordered:
-                relative = self.relative_tombstone(tombstone, root)
-                if relative is not None and relative not in relatives:
-                    relatives.append(relative)
-        return relatives
-
-    def apply_tombstones(
-        self,
-        groups: dict[str, list[str]],
-        tombstoned: set[str],
-    ) -> dict[str, int]:
-        """Delete tombstoned destinations, and sources left with no destination.
-
-        ``groups`` is the unfiltered plan: it still contains the tombstoned
-        destinations, so a source can tell whether any live destination
-        remains before it is deleted.
-
-        A tombstone recorded *below* a destination (a single file inside a
-        managed directory) is enforced across every member of the group — the
-        source and each sibling destination — so the directory merge that runs
-        afterwards finds no copy left to resurrect.
-        """
-        stats = self.new_stats()
-        if not tombstoned:
-            return stats
-        for source, dests in groups.items():
-            dead = [
-                dest
-                for dest in dests
-                if self.normalize_relative_path(dest) in tombstoned
-            ]
-            live = [dest for dest in dests if dest not in dead]
-            victims = [os.path.join(os.environ["HOME"], dest) for dest in dead]
-            if dead and not live:
-                victims.append(os.path.join(self.mackup.mackup_folder, source))
-            for relative in self.group_tombstoned_relatives(live, tombstoned):
-                victims.extend(
-                    os.path.join(os.environ["HOME"], dest, relative) for dest in live
-                )
-                victims.append(
-                    os.path.join(self.mackup.mackup_folder, source, relative),
-                )
-            for filepath in victims:
-                if not os.path.lexists(filepath):
-                    continue
-                if self.verbose:
-                    self._print(f"Deleting\n  {filepath} ...")
-                if self.dry_run:
-                    stats["deleted"] += 1
-                    continue
-                try:
-                    utils.delete(filepath)
-                    stats["deleted"] += 1
-                except OSError as e:
-                    self._print(
-                        f"Error: Unable to delete file {filepath}: {e}",
-                    )
-                    stats["errors"] += 1
-        return stats
-
-    def remove_paths(
-        self,
-        targets: list[str],
-        tombstone_dest: str,
-    ) -> dict[str, int]:
-        """Delete every path in ``targets`` and record one tombstone."""
-        stats = self.new_stats()
-        if self.verbose:
-            for filepath in targets:
-                self._print(f"Deleting\n  {filepath} ...")
-
-        if self.dry_run:
-            stats["deleted"] += 1
-            return stats
-
-        for filepath in targets:
-            if not os.path.lexists(filepath):
-                continue
-            try:
-                utils.delete(filepath)
-            except OSError as e:
-                self._print(
-                    f"Error: Unable to delete file {filepath}: {e}",
-                )
-                stats["errors"] += 1
-
-        if stats["errors"] == 0:
-            self.record_deleted_file(tombstone_dest)
-            stats["deleted"] += 1
-        return stats
-
-    def remove_destination(
-        self,
-        source: str,
-        dest: str,
-        siblings: int,
-    ) -> dict[str, int]:
-        """Remove one destination; drop the source only when nothing else uses it.
-
-        ``siblings`` is the number of other live destinations fed by ``source``.
-        """
-        targets = [os.path.join(os.environ["HOME"], dest)]
-        if siblings == 0:
-            targets.append(os.path.join(self.mackup.mackup_folder, source))
-        return self.remove_paths(targets, dest)
-
-    def remove_group_descendant(
-        self,
-        source_root: str,
-        dest_roots: list[str],
-        relative_path: str,
-        tombstone_dest: str,
-    ) -> dict[str, int]:
-        """Remove one path inside a managed directory, from every group member.
-
-        The members of a fanout group mirror each other, so a file removed
-        from one of them must go from the source and the siblings too —
-        otherwise the next directory merge copies it straight back.
-        """
-        targets = [
-            os.path.join(os.environ["HOME"], dest_root, relative_path)
-            for dest_root in dest_roots
-        ]
-        targets.append(
-            os.path.join(self.mackup.mackup_folder, source_root, relative_path),
-        )
-        return self.remove_paths(targets, tombstone_dest)
 
     @staticmethod
     def get_effective_mtime(path: str, globs: ignore.Globs = ()) -> float:

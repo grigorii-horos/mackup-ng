@@ -23,8 +23,6 @@ Sync mode is used for synchronizing files:
 
 - **`mackup-ng sync`**: Synchronizes configuration files between your home
   directory and the Mackup folder
-- **`mackup-ng rm <path>`**: Removes a managed configuration path locally and from
-  the Mackup folder, and records the deletion for other machines
 
 This is used when setting up a new machine and for ongoing synchronization.
 
@@ -152,50 +150,26 @@ configs whose top-level [when] does not hold are dropped — no pairs, no blocks
 mapping.py resolves (source, destination) pairs — later pairs win the
 destination, sources group into fanout groups
     ↓
-application.py once, globally, before any group is synced:
-    - apply_tombstones() deletes every destination listed in
-      .mackup-deletions, plus any source left with no live destination,
-      plus any path tombstoned *inside* a live destination (from every
-      member of its group, so the merge below cannot resurrect it)
+deletions.py once, globally, before any group is synced:
+    - plan_group() compares every file of every group this run syncs with
+      the machine-local snapshot (sync-snapshot.json) and the tombstones
+      (.mackup-tombstones/<host>.json): deleted here -> delete from the
+      backup and the siblings, tombstone it; tombstoned and absent from the
+      backup -> delete the stale local copies. An edit beats a deletion.
+    - more than CONFIRM_THRESHOLD files -> confirm, or abort the sync
+    - execute() moves every victim to .mackup-trash/<date>-<host>/
     ↓
 application.py for each remaining group, in the slot of the config that
-won the group's last live destination:
+won the group's last destination:
     - Resolves a file/directory type clash first: the newest member
       replaces every member of the other type wholesale
     - Picks the newest member and copies it to the others
     - Merges directory members entry by entry
     ↓
+deletions.refresh_snapshot() records what every synced group now holds
+(skipped on --dry-run)
+    ↓
 Files now in: the configured backup folder
-```
-
-### Remove Flow
-
-```text
-User runs: mackup-ng rm <path>
-    ↓
-main.py parses command
-    ↓
-config.py loads config.toml
-    ↓
-appsdb.py loads application definitions
-    ↓
-mapping.py resolves the same plan `sync` uses, minus tombstoned pairs
-    ↓
-main.py matches <path> against the plan:
-
-  a destination of a group          a path inside a managed directory
-    ↓                                 ↓
-  application.py:                   application.py:
-    - Deletes that ONE destination    - Deletes that relative path from
-      in home                           every destination of the group
-    - Deletes the shared backup         and from the backup source
-      source only when no other       - Records the requested destination
-      destination still feeds           path in .mackup-deletions
-      from it
-    - Records the destination in
-      .mackup-deletions
-    ↓
-Future syncs remove the same path on other machines
 ```
 
 ## Key Design Decisions
@@ -203,7 +177,8 @@ Future syncs remove the same path on other machines
 ### 1. Sync Mode
 
 - Sync mode is more reliable across platforms
-- Explicit removals are propagated with `mackup-ng rm <path>`
+- Deletions are propagated by comparing each file against a machine-local
+  snapshot of the last sync, plus per-host tombstones in the backup folder
 
 ### 2. Application Database
 

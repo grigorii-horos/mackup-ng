@@ -10,7 +10,6 @@ Usage:
   mackup-ng [options] info <path>...
   mackup-ng [options] init <path>
   mackup-ng [options] sync
-  mackup-ng [options] rm <path>...
   mackup-ng [options] mark <marker>
   mackup-ng [options] unmark <marker>
   mackup-ng [options] markers
@@ -39,7 +38,6 @@ Modes of action:
        the settings already in the backup folder.
  - mackup-ng sync: synchronize local and remote config files in both directions.
        Runs each config's action blocks (pre before / post after its file sync).
- - mackup-ng rm: remove a managed config file locally and from the remote folder.
  - mackup-ng mark: set a machine-local marker (e.g. backup, low-resource).
  - mackup-ng unmark: remove a machine-local marker.
  - mackup-ng markers: list known and active markers.
@@ -70,11 +68,11 @@ from . import (
     blocks,
     conditions,
     dconf,
+    deletions,
     hooks,
     ignore,
     info,
     mapping,
-    paths,
     synclog,
     update,
     utils,
@@ -370,7 +368,7 @@ def main() -> None:
     elif args["info"]:
         mckp.check_for_usable_environment()
         info_pairs, _ = build_sync_plan(app_db, mckp.get_apps_to_backup())
-        info_tombstones = ApplicationProfile(mckp, dry_run, verbose).read_tombstones()
+        info_tombstones = deletions.load_tombstones(mckp.mackup_folder)
         info_ctx = info.build_context(
             mckp,
             app_db,
@@ -409,7 +407,7 @@ def main() -> None:
         # can displace a pair declared by another.
         to_backup = mckp.get_apps_to_backup()
         pairs, evictions = build_sync_plan(app_db, to_backup)
-        all_groups, orphans = mapping.group_by_source(pairs, evictions)
+        groups, orphans = mapping.group_by_source(pairs, evictions)
 
         if verbose:
             for eviction in evictions:
@@ -437,7 +435,7 @@ def main() -> None:
                 if app_db.config_enabled(app_name):
                     continue
                 for _local, backup, _slot in app_db.get_file_mappings(app_name):
-                    if backup in all_groups or backup in reported_orphans:
+                    if backup in groups or backup in reported_orphans:
                         continue
                     reported_orphans.add(backup)
                     print(
@@ -446,22 +444,75 @@ def main() -> None:
                         ),
                     )
 
-        planner = ApplicationProfile(mckp, dry_run, verbose)
-        tombstoned = planner.read_tombstones()
-        deletion_stats = planner.apply_tombstones(all_groups, tombstoned)
-
-        live_pairs = [
-            pair
-            for pair in pairs
-            if ApplicationProfile.normalize_relative_path(pair.dest) not in tombstoned
-        ]
-        groups, _ = mapping.group_by_source(live_pairs)
-        # A group is synced in the slot of the config that won its last live
+        # A group is synced in the slot of the config that won its last
         # destination — the config whose declaration actually decided it.
-        owners = mapping.group_owners(live_pairs)
+        owners = mapping.group_owners(pairs)
         groups_by_slot: dict[tuple[str, int], list[tuple[str, list[str]]]] = {}
         for source, dests in groups.items():
             groups_by_slot.setdefault(owners[source], []).append((source, dests))
+
+        # Deletions are decided before any file moves, against what this
+        # machine saw at its last sync, for exactly the groups this run syncs.
+        passing_slots = {
+            (app_name, unit.slot)
+            for app_name in to_backup
+            if app_db.app_has_sync(app_name) and app_db.config_enabled(app_name)
+            for unit in app_db.get_units(app_name)
+            if unit.passed
+        }
+        base_globs = ignore.load_globs()
+        active_groups = {
+            source: (
+                dests,
+                base_globs + tuple(app_db.get_ignore_patterns(owners[source][0])),
+            )
+            for source, dests in groups.items()
+            if owners[source] in passing_slots
+        }
+        home = os.environ["HOME"]
+        backup_root = mckp.mackup_folder
+        tombstones = deletions.load_tombstones(backup_root)
+        tombstones.update(
+            deletions.migrate_legacy(
+                backup_root,
+                groups,
+                ApplicationProfile.normalize_relative_path,
+                dry_run,
+            ),
+        )
+        snapshot = deletions.load_snapshot()
+        deletion_plan = [
+            deletion
+            for source, (dests, globs) in active_groups.items()
+            for deletion in deletions.plan_group(
+                backup_root,
+                home,
+                source,
+                dests,
+                snapshot=snapshot,
+                tombstones=tombstones,
+                globs=globs,
+                prefer_backup=bool(args["init"]),
+            )
+        ]
+        doomed = deletions.victim_count(deletion_plan)
+        if doomed > deletions.CONFIRM_THRESHOLD:
+            for deletion in deletion_plan:
+                print(utils.colorize_message(deletions.describe(deletion)))
+            if not utils.confirm(
+                f"{doomed} file(s) were deleted on this or another machine and "
+                "will be moved to the backup trash. Continue?",
+            ):
+                die(
+                    "Sync aborted, nothing was changed. Restore the files, or "
+                    "re-run with --force to delete them.",
+                )
+        deletion_stats = deletions.execute(
+            deletion_plan,
+            backup_root,
+            dry_run,
+            verbose,
+        )
 
         log_entries: dict[str, dict] = {}
         for app_name in sorted(app_db.get_app_names()):
@@ -536,21 +587,32 @@ def main() -> None:
         if deletion_stats["deleted"]:
             print(
                 utils.colorize_message(
-                    f"Deleted {deletion_stats['deleted']} tombstoned path(s)",
+                    f"Deleted {deletion_stats['deleted']} file(s), moved to "
+                    f"{os.path.join(backup_root, deletions.TRASH_DIRNAME)}",
                 ),
             )
         if deletion_stats["errors"]:
-            # Without this the run would report success while a tombstoned
-            # path is still sitting on disk.
+            # Without this the run would report success while a deleted file
+            # is still sitting on disk.
             print(
                 utils.colorize_message(
-                    f"Failed to delete {deletion_stats['errors']} tombstoned path(s)",
+                    f"Failed to delete {deletion_stats['errors']} file(s)",
                 ),
             )
 
         # A dry run reports what would happen, so it records nothing.
         if not dry_run:
             synclog.record(log_entries)
+            for source, (dests, globs) in active_groups.items():
+                deletions.refresh_snapshot(
+                    snapshot,
+                    backup_root,
+                    home,
+                    source,
+                    dests,
+                    globs=globs,
+                )
+            deletions.save_snapshot(snapshot)
 
         # On consumer machines, load the synced dconf dumps into dconf.
         if role == "restore" and dconf_enabled:
@@ -622,131 +684,5 @@ def main() -> None:
                 print(
                     utils.colorize_message(
                         f"Applied {app_db.get_name(app_name)} ({phrase})",
-                    ),
-                )
-
-    # mackup rm <path>...
-    elif args["rm"]:
-        mckp.check_for_usable_backup_env()
-
-        rm_pairs, _ = build_sync_plan(app_db, mckp.get_apps_to_backup())
-        managed_paths: dict[str, tuple[str, tuple[str, str]]] = {}
-        for pair in rm_pairs:
-            managed_paths.setdefault(
-                ApplicationProfile.normalize_relative_path(pair.dest),
-                (pair.owner_app, (pair.dest, pair.source)),
-            )
-
-        # Siblings are recomputed against the *live* (non-tombstoned) pairs on
-        # every iteration, since an earlier <path> argument in this same `rm`
-        # invocation may have just tombstoned the last other destination
-        # feeding a shared source.
-        rm_tombstones = ApplicationProfile(mckp, dry_run, verbose)
-        tombstoned = rm_tombstones.read_tombstones()
-
-        def find_descendant(
-            requested_paths: list[str],
-        ) -> tuple[str, str, str, str] | None:
-            """(app, local root, backup root, relative) for a managed child."""
-            for path in requested_paths:
-                for app_name, (
-                    local_root,
-                    backup_root,
-                ) in managed_paths.values():
-                    relative = paths.managed_descendant_relative(
-                        mckp.mackup_folder,
-                        path,
-                        local_root,
-                        backup_root,
-                    )
-                    if relative is not None:
-                        return app_name, local_root, backup_root, relative
-            return None
-
-        for requested_arg in args["<path>"]:
-            requested_paths = paths.candidates(requested_arg)
-            if any(paths.escapes_home(path) for path in requested_paths):
-                die(f"Refusing to remove unmanaged path: {requested_arg}")
-
-            match = next(
-                (
-                    managed_paths[path]
-                    for path in requested_paths
-                    if path in managed_paths
-                ),
-                None,
-            )
-            # (local root, backup root, relative) when the requested path is a
-            # file *inside* a managed directory rather than a destination.
-            descendant: tuple[str, str, str] | None = None
-            if match is None:
-                found = find_descendant(requested_paths)
-                if found is None:
-                    die(f"Unsupported or unmanaged path: {requested_arg}")
-                app_name, local_root, backup_root, relative = found
-                descendant = (local_root, backup_root, relative)
-                match = (
-                    app_name,
-                    (
-                        os.path.normpath(os.path.join(local_root, relative)),
-                        os.path.normpath(os.path.join(backup_root, relative)),
-                    ),
-                )
-
-            matching_app_name, matching_mapping = match
-            local_filename, backup_filename = matching_mapping
-            pretty_name = app_db.get_name(matching_app_name)
-            live_pairs = [
-                pair
-                for pair in rm_pairs
-                if ApplicationProfile.normalize_relative_path(pair.dest)
-                not in tombstoned
-            ]
-            rm_groups, _ = mapping.group_by_source(live_pairs)
-            app = ApplicationProfile(mckp, dry_run, verbose)
-            print_app_header(matching_app_name, pretty_name)
-            if descendant is not None:
-                # Members of a fanout group mirror each other, so the file has
-                # to go from every destination of the group and from the
-                # shared source; leaving a sibling copy behind would let the
-                # next directory merge resurrect it.
-                local_root, backup_root, relative = descendant
-                siblings = []
-                app_stats = app.remove_group_descendant(
-                    backup_root,
-                    rm_groups.get(backup_root) or [local_root],
-                    relative,
-                    local_filename,
-                )
-            else:
-                normalized_local = ApplicationProfile.normalize_relative_path(
-                    local_filename,
-                )
-                siblings = [
-                    dest
-                    for dest in rm_groups.get(backup_filename, [])
-                    if ApplicationProfile.normalize_relative_path(dest)
-                    != normalized_local
-                ]
-                app_stats = app.remove_destination(
-                    backup_filename,
-                    local_filename,
-                    len(siblings),
-                )
-            if app_stats["errors"] == 0 and app_stats["deleted"]:
-                tombstoned.add(
-                    ApplicationProfile.normalize_relative_path(local_filename),
-                )
-            rm_action = get_action_label(app_stats)
-            if rm_action is not None:
-                print(
-                    utils.colorize_message(
-                        f"{rm_action} {local_filename} ({pretty_name})",
-                    ),
-                )
-            if siblings:
-                print(
-                    utils.colorize_message(
-                        f"{backup_filename} still feeds {len(siblings)} destination(s)",
                     ),
                 )

@@ -13,7 +13,7 @@ import os
 import time
 from typing import TYPE_CHECKING, NamedTuple
 
-from . import ignore, paths, synclog, utils
+from . import deletions, ignore, paths, synclog, utils
 from .application import ApplicationProfile
 
 if TYPE_CHECKING:
@@ -33,7 +33,7 @@ class Context(NamedTuple):
     pairs: list[Pair]
     winners: dict[str, Pair]  # destination -> the pair sync will run
     declared: dict[str, list[tuple[str, str]]]  # destination -> [(app, source)]
-    tombstoned: set[str]
+    tombstones: dict[str, dict]  # backup path -> {"ts", "host"}
     journal: dict[str, dict]
 
 
@@ -216,8 +216,12 @@ def find_match(requested: str, ctx: Context) -> Match | None:
 def sync_status(match: Match, ctx: Context) -> str:
     """Whether the path takes part in `mackup sync`, and why not when it doesn't."""
     app_db = ctx.app_db
-    if match.group_dest in ctx.tombstoned or match.dest in ctx.tombstoned:
-        return "no — removed by mackup rm (tombstoned)"
+    tombstone = deletions.tombstone_for(match.source, ctx.tombstones)
+    if tombstone is not None and not os.path.lexists(
+        os.path.join(ctx.mckp.mackup_folder, match.source),
+    ):
+        when = time.strftime(TIME_FORMAT, time.localtime(tombstone["ts"]))
+        return f"no — deleted on {tombstone['host']} at {when}"
     if not app_db.config_enabled(match.app):
         unmet = ", ".join(
             f"{key}={value}"
@@ -237,7 +241,7 @@ def build_context(
     mckp: Mackup,
     app_db: ApplicationsDatabase,
     pairs: list[Pair],
-    tombstoned: set[str],
+    tombstones: dict[str, dict],
     journal: dict[str, dict],
 ) -> Context:
     """Resolve the plan and the declarations once, for every reported path."""
@@ -250,7 +254,7 @@ def build_context(
         pairs=pairs,
         winners=winners,
         declared=declarations(app_db),
-        tombstoned=tombstoned,
+        tombstones=tombstones,
         journal=journal,
     )
 

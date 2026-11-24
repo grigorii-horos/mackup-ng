@@ -203,14 +203,14 @@ class TestInfo(unittest.TestCase):
         assert "dir-app" in output
         assert "inside .config/app" in output
 
-    def test_info_reports_a_tombstoned_path_as_removed(self):
+    def test_info_reports_a_deleted_path(self):
         self.sync()
-        with patch("sys.argv", ["mackup", "rm", self.test_file_name]):
-            main()
+        os.remove(os.path.join(self.test_home, self.test_file_name))
+        self.sync()
 
         output = self.run_cli("info", self.test_file_name)
 
-        assert "removed by mackup rm" in output
+        assert "deleted on" in output
 
     def test_info_reports_a_config_excluded_from_sync(self):
         self.write_config(["other-app"])

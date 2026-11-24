@@ -215,7 +215,7 @@ class TestRemoteDeletion(DeletionTestCase):
     def test_without_snapshot_an_older_copy_is_deleted(self):
         write(self.b.path(".app/gone"), mtime=OLD)
         os.makedirs(os.path.join(self.backup, ".app"))
-        self.tombstone(".app/gone", time.time() + 5)
+        self.tombstone(".app/gone", time.time() + deletions.CLOCK_SKEW_MARGIN + 5)
 
         plan = self.b.sync(*self.group)
 
@@ -259,7 +259,14 @@ class TestRemoteDeletion(DeletionTestCase):
     def test_directory_tombstone_covers_files_below_it(self):
         write(self.b.path(".app/sub/file"), mtime=OLD)
         os.makedirs(os.path.join(self.backup, ".app"))
-        self.tombstone(".app/sub", time.time() + 5)
+        self.tombstone(".app/sub", time.time() + deletions.CLOCK_SKEW_MARGIN + 5)
+
+    def test_a_deleter_clock_running_ahead_does_not_trash_a_fresh_edit(self):
+        write(self.b.path(".app/file"), mtime=None)
+        os.makedirs(os.path.join(self.backup, ".app"))
+        self.tombstone(".app/file", time.time() + 600)
+
+        assert self.b.plan(*self.group) == []
 
     def test_copy_restored_with_an_old_mtime_after_the_deletion_is_kept(self):
         """`cp -p` / an archive keeps the mtime but not the inode change time."""

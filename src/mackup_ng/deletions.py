@@ -47,6 +47,10 @@ LEGACY_HOST: str = "mackup rm (legacy)"
 
 # A tombstone only has to outlive the slowest machine's next sync.
 TOMBSTONE_TTL: float = 90 * 24 * 3600
+# A tombstone is dated by the deleting machine's clock. Without a snapshot
+# entry, a local copy must predate it by this much to count as stale, so a
+# clock running ahead elsewhere cannot get a fresh local edit trashed.
+CLOCK_SKEW_MARGIN: float = 3600
 # More files than this in one run, and the sync asks before deleting any.
 CONFIRM_THRESHOLD: int = 20
 
@@ -371,7 +375,8 @@ def _stale(
     It may when it is unchanged since this machine's last sync. With no
     snapshot entry, it may when nothing about it changed after the deletion:
     the inode change time counts as well as the mtime, so a file restored with
-    an old mtime (``cp -p``, an archive) is still recognized as new. Under
+    an old mtime (``cp -p``, an archive) is still recognized as new, and it
+    must predate the deletion by :data:`CLOCK_SKEW_MARGIN`. Under
     ``prefer_backup`` the backup is authoritative and any copy may go.
     """
     if previous is not None:
@@ -381,7 +386,7 @@ def _stale(
     if prefer_backup:
         return True
     stat = os.stat(path)
-    return max(stat.st_mtime, stat.st_ctime) <= deleted_at
+    return max(stat.st_mtime, stat.st_ctime) <= deleted_at - CLOCK_SKEW_MARGIN
 
 
 def _victims(members: list[Member], rel: str) -> list[Victim]:

@@ -281,7 +281,7 @@ class TestCLI(unittest.TestCase):
         legacy = os.path.join(self.mackup_folder, ".mackup-deletions")
         with open(legacy, "w") as f:
             f.write(f"{self.test_file_name}\n")
-        future = time.time() + 60
+        future = time.time() + 2 * 3600
         os.utime(legacy, (future, future))
 
         self._sync()

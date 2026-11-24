@@ -36,7 +36,8 @@ backup path of the file, which is the namespace shared by every machine.
    every local copy is stale: unchanged since the snapshot, or — with no
    snapshot entry — neither its mtime nor its ctime is newer than the
    tombstone, so a copy restored with an old mtime (`cp -p`, an archive)
-   still counts as new (under `init`, the backup is
+   still counts as new. It must predate the tombstone by an hour, since the
+   tombstone carries another machine's clock (under `init`, the backup is
    authoritative and any local copy is stale). Move the local copies to the
    trash. A tombstone does nothing while the backup holds `K`, so a file
    re-created anywhere simply wins and nothing needs clearing.
@@ -67,4 +68,6 @@ The log is never written or deleted, so machines still on an older version
 keep honoring it, and an aborted sync has written nothing. A legacy entry on a
 fanout destination whose siblings were kept no longer excludes that
 destination: it is synced again. Likewise a file an application re-created
-after the `mackup rm` is now synced instead of being kept out.
+after the `mackup rm` is now synced instead of being kept out — unless it
+predates the log's mtime (the *last* removal), in which case it is moved to
+the trash. The old version deleted such files outright, on every sync.

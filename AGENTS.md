@@ -135,8 +135,11 @@ path is the source. Two consequences:
   without a tombstone never deletes. Victims are moved to
   `.mackup-trash/<date>-<host>/`, more than `CONFIRM_THRESHOLD` (20) of them
   needs confirmation, and a destination whose parent directory is missing is
-  unavailable, not deleted. The legacy `.mackup-deletions` log is converted
-  to tombstones on the first sync. Design:
+  unavailable, not deleted (and keeps its snapshot entries). With no
+  snapshot entry, a local copy is stale only if neither its mtime nor its
+  ctime is newer than the tombstone. The legacy `.mackup-deletions` log is
+  read as tombstones dated by the log's mtime and never written or deleted
+  (`legacy_tombstones`), so older mackup-ng versions keep working. Design:
   `docs/superpowers/specs/2026-11-24-deletion-tracking-design.md`.
 
 ## Processing Order

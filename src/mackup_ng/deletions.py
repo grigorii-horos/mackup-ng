@@ -40,9 +40,10 @@ if TYPE_CHECKING:
 SNAPSHOT_FILENAME: str = "sync-snapshot.json"
 TOMBSTONES_DIRNAME: str = ".mackup-tombstones"
 TRASH_DIRNAME: str = ".mackup-trash"
-# The explicit-removal log `mackup rm` used to write. Converted to tombstones
-# on the first sync, then deleted.
+# The explicit-removal log `mackup rm` used to write. Read as tombstones,
+# never written or deleted.
 LEGACY_DELETIONS_FILENAME: str = ".mackup-deletions"
+LEGACY_HOST: str = "mackup rm (legacy)"
 
 # A tombstone only has to outlive the slowest machine's next sync.
 TOMBSTONE_TTL: float = 90 * 24 * 3600
@@ -299,11 +300,7 @@ def plan_group(  # noqa: PLR0913
     backup = members[0]
     # A destination whose parent directory is gone (a removed Firefox profile,
     # say) is unavailable, not deleted: it neither reports nor gets a deletion.
-    available = [
-        member
-        for member in members
-        if member.side == BACKUP or os.path.isdir(os.path.dirname(member.path))
-    ]
+    available = [member for member in members if _available(member)]
 
     rels: set[str] = set()
     for member in available:
@@ -356,6 +353,11 @@ def plan_group(  # noqa: PLR0913
     return plan
 
 
+def _available(member: Member) -> bool:
+    """The backup always is; a destination is when its parent directory exists."""
+    return member.side == BACKUP or os.path.isdir(os.path.dirname(member.path))
+
+
 def _stale(
     path: str,
     current: list[int] | str | None,
@@ -366,9 +368,11 @@ def _stale(
 ) -> bool:
     """Whether a local copy of a file deleted elsewhere may go too.
 
-    It may when it is unchanged since this machine's last sync; with no
-    snapshot entry, when it is not newer than the deletion — or always, under
-    ``prefer_backup``, where the backup is authoritative.
+    It may when it is unchanged since this machine's last sync. With no
+    snapshot entry, it may when nothing about it changed after the deletion:
+    the inode change time counts as well as the mtime, so a file restored with
+    an old mtime (``cp -p``, an archive) is still recognized as new. Under
+    ``prefer_backup`` the backup is authoritative and any copy may go.
     """
     if previous is not None:
         return current == previous
@@ -376,7 +380,8 @@ def _stale(
         return False
     if prefer_backup:
         return True
-    return os.path.getmtime(path) <= deleted_at
+    stat = os.stat(path)
+    return max(stat.st_mtime, stat.st_ctime) <= deleted_at
 
 
 def _victims(members: list[Member], rel: str) -> list[Victim]:
@@ -478,8 +483,14 @@ def refresh_snapshot(  # noqa: PLR0913
     *,
     globs: ignore.Globs = (),
 ) -> None:
-    """Replace one group's snapshot entries with what is on disk now."""
+    """Replace one group's snapshot entries with what is on disk now.
+
+    An unavailable destination keeps its old entries, so a file deleted after
+    its parent directory comes back is still recognized as a deletion.
+    """
     for member in group_members(backup_root, home, source, dests):
+        if not _available(member):
+            continue
         prefix = _snapshot_key(member.side, member.rel)
         below = prefix + os.sep
         for key in [k for k in snapshot if k == prefix or k.startswith(below)]:
@@ -493,39 +504,39 @@ def refresh_snapshot(  # noqa: PLR0913
 # --- migration ----------------------------------------------------------------
 
 
-def migrate_legacy(
+def legacy_tombstones(
     backup_root: str,
     groups: dict[str, list[str]],
     normalize: Callable[[str], str],
-    dry_run: bool = False,
-    now: float | None = None,
 ) -> dict[str, dict]:
-    """Turn the old ``mackup rm`` log into tombstones; delete the log.
+    """Read the old ``mackup rm`` log as tombstones, without touching it.
 
     Each line names a destination or a path below one; it is mapped to the
-    backup path it stands for. Lines that match nothing are dropped. Returns
-    the tombstones created, so a dry run can still honor them.
+    backup path it stands for, and lines that match nothing are dropped. The
+    log carries no timestamps, so every entry is dated by the log's own mtime
+    — the time of the last removal. The log is left in place: machines still
+    running an older mackup-ng depend on it, so delete it by hand once every
+    machine is upgraded.
     """
     legacy = os.path.join(backup_root, LEGACY_DELETIONS_FILENAME)
     try:
+        deleted_at = os.path.getmtime(legacy)
         with open(legacy, encoding="utf-8") as handle:
             lines = [line.strip() for line in handle if line.strip()]
     except OSError:
         return {}
 
-    keys: list[str] = []
+    found: dict[str, dict] = {}
     for line in lines:
         dest = normalize(line)
         for source, group_dests in groups.items():
             for group_dest in group_dests:
                 root = os.path.normpath(group_dest)
                 if dest == root:
-                    keys.append(os.path.normpath(source))
+                    key = os.path.normpath(source)
                 elif dest.startswith(root + os.sep):
-                    keys.append(os.path.join(source, dest[len(root) + 1 :]))
-    now = time.time() if now is None else now
-    if not dry_run:
-        if keys:
-            record_tombstones(backup_root, keys, now)
-        os.remove(legacy)
-    return {key: {"ts": now, "host": host_name()} for key in keys}
+                    key = os.path.join(source, dest[len(root) + 1 :])
+                else:
+                    continue
+                found[key] = {"ts": deleted_at, "host": LEGACY_HOST}
+    return found

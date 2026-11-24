@@ -2,6 +2,7 @@ import io
 import os
 import shutil
 import tempfile
+import time
 import unittest
 from unittest.mock import patch
 
@@ -274,22 +275,40 @@ class TestCLI(unittest.TestCase):
 
         assert "Failed to delete 1 file(s)" in buffer.getvalue()
 
-    def test_sync_migrates_the_legacy_deletion_log(self):
-        """`.mackup-deletions` left by `mackup rm` becomes tombstones."""
+    def test_sync_honors_the_legacy_deletion_log(self):
+        """`.mackup-deletions` left by `mackup rm` still deletes stale copies."""
         os.makedirs(self.mackup_folder, exist_ok=True)
         legacy = os.path.join(self.mackup_folder, ".mackup-deletions")
         with open(legacy, "w") as f:
             f.write(f"{self.test_file_name}\n")
-        os.utime(self.test_file_path, (100, 100))
+        future = time.time() + 60
+        os.utime(legacy, (future, future))
 
         self._sync()
 
         assert not os.path.exists(self.test_file_path)
-        assert not os.path.exists(legacy)
+        assert os.path.exists(legacy)
         assert not os.path.exists(
             os.path.join(self.mackup_folder, self.test_file_name),
         )
 
+    def test_aborted_sync_writes_nothing_to_the_backup(self):
+        folder = os.path.join(self.test_home, ".many")
+        os.makedirs(folder)
+        for index in range(25):
+            with open(os.path.join(folder, f"f{index}"), "w") as handle:
+                handle.write("x\n")
+        self._write_custom_app("many", 'files = [".many"]\n')
+        self._sync()
+        shutil.rmtree(folder)
+        before = sorted(os.listdir(self.mackup_folder))
+
+        utils.FORCE_YES = False
+        utils.FORCE_NO = True
+        with pytest.raises(SystemExit):
+            self._sync()
+
+        assert sorted(os.listdir(self.mackup_folder)) == before
     def test_rm_command_is_gone(self):
         with (
             patch("sys.argv", ["mackup", "rm", self.test_file_name]),

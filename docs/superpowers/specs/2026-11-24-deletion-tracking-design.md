@@ -34,7 +34,9 @@ backup path of the file, which is the namespace shared by every machine.
    over the deletion: the normal sync then restores the file.
 2. **Deleted elsewhere.** The backup lacks `K`, a tombstone for `K` exists, and
    every local copy is stale: unchanged since the snapshot, or — with no
-   snapshot entry — not newer than the tombstone (under `init`, the backup is
+   snapshot entry — neither its mtime nor its ctime is newer than the
+   tombstone, so a copy restored with an old mtime (`cp -p`, an archive)
+   still counts as new (under `init`, the backup is
    authoritative and any local copy is stale). Move the local copies to the
    trash. A tombstone does nothing while the backup holds `K`, so a file
    re-created anywhere simply wins and nothing needs clearing.
@@ -58,9 +60,11 @@ a backend that has not finished downloading.
 
 ## Migration
 
-`mackup rm` and the explicit `.mackup-deletions` file are removed. On the
-first sync the legacy file is converted: each line (a destination, or a path
-below one) is mapped to its backup path and tombstoned with the current time,
-then the legacy file is deleted. A legacy tombstone on a fanout destination
-whose siblings were kept no longer excludes that destination: it is synced
-again.
+`mackup rm` is removed. Its `.mackup-deletions` log is read on every sync as
+extra tombstones: each line (a destination, or a path below one) is mapped to
+its backup path and dated by the log's mtime (the log has no per-line times).
+The log is never written or deleted, so machines still on an older version
+keep honoring it, and an aborted sync has written nothing. A legacy entry on a
+fanout destination whose siblings were kept no longer excludes that
+destination: it is synced again. Likewise a file an application re-created
+after the `mackup rm` is now synced instead of being kept out.

@@ -471,15 +471,12 @@ def main() -> None:
         }
         home = os.environ["HOME"]
         backup_root = mckp.mackup_folder
-        tombstones = deletions.load_tombstones(backup_root)
-        tombstones.update(
-            deletions.migrate_legacy(
-                backup_root,
-                groups,
-                ApplicationProfile.normalize_relative_path,
-                dry_run,
-            ),
+        tombstones = deletions.legacy_tombstones(
+            backup_root,
+            groups,
+            ApplicationProfile.normalize_relative_path,
         )
+        tombstones.update(deletions.load_tombstones(backup_root))
         snapshot = deletions.load_snapshot()
         deletion_plan = [
             deletion
@@ -585,9 +582,10 @@ def main() -> None:
             report_config(pretty_name, stats, tally)
 
         if deletion_stats["deleted"]:
+            verb = "Would delete" if dry_run else "Deleted"
             print(
                 utils.colorize_message(
-                    f"Deleted {deletion_stats['deleted']} file(s), moved to "
+                    f"{verb} {deletion_stats['deleted']} file(s), moved to "
                     f"{os.path.join(backup_root, deletions.TRASH_DIRNAME)}",
                 ),
             )

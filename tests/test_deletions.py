@@ -156,6 +156,22 @@ class TestLocalDeletion(DeletionTestCase):
         assert not os.path.exists(os.path.join(self.backup, ".app"))
         assert not os.path.exists(self.a.path(".app"))
 
+    def test_deletion_after_the_parent_comes_back_is_still_seen(self):
+        group = (".mozilla/user.js", [".mozilla/profile/user.js"])
+        write(self.a.path(".mozilla/profile/user.js"))
+        self.a.sync(*group)
+        shutil.rmtree(self.a.path(".mozilla/profile"))
+        # A run that could not restore the destination still refreshes.
+        deletions.refresh_snapshot(
+            self.a.snapshot, self.backup, self.a.home, *group,
+        )
+
+        os.makedirs(self.a.path(".mozilla/profile"))
+        plan = self.a.sync(*group)
+
+        assert [d.key for d in plan] == [".mozilla/user.js"]
+        assert not os.path.exists(self.a.path(".mozilla/profile/user.js"))
+
     def test_unavailable_destination_is_not_a_deletion(self):
         group = (".mozilla/user.js", [".mozilla/profile/user.js"])
         write(self.a.path(".mozilla/profile/user.js"))
@@ -199,7 +215,7 @@ class TestRemoteDeletion(DeletionTestCase):
     def test_without_snapshot_an_older_copy_is_deleted(self):
         write(self.b.path(".app/gone"), mtime=OLD)
         os.makedirs(os.path.join(self.backup, ".app"))
-        self.tombstone(".app/gone", OLD + 100)
+        self.tombstone(".app/gone", time.time() + 5)
 
         plan = self.b.sync(*self.group)
 
@@ -243,7 +259,18 @@ class TestRemoteDeletion(DeletionTestCase):
     def test_directory_tombstone_covers_files_below_it(self):
         write(self.b.path(".app/sub/file"), mtime=OLD)
         os.makedirs(os.path.join(self.backup, ".app"))
-        self.tombstone(".app/sub", OLD + 100)
+        self.tombstone(".app/sub", time.time() + 5)
+
+    def test_copy_restored_with_an_old_mtime_after_the_deletion_is_kept(self):
+        """`cp -p` / an archive keeps the mtime but not the inode change time."""
+        os.makedirs(os.path.join(self.backup, ".app"))
+        self.tombstone(".app/file", time.time() - 5)
+        write(self.b.path(".app/file"), mtime=OLD)
+
+        plan = self.b.sync(*self.group)
+
+        assert plan == []
+        assert os.path.exists(os.path.join(self.backup, ".app/file"))
 
         self.b.sync(*self.group)
 
@@ -297,36 +324,39 @@ class TestExecute(DeletionTestCase):
         assert list(self.a.snapshot) == ["home:" + os.path.join(".app", "file")]
 
 
-class TestLegacyMigration(DeletionTestCase):
-    def test_legacy_log_becomes_tombstones_and_is_removed(self):
-        os.makedirs(self.backup, exist_ok=True)
-        legacy = os.path.join(self.backup, deletions.LEGACY_DELETIONS_FILENAME)
-        with open(legacy, "w") as handle:
-            handle.write(".work.d/foo\n.rc\n.unknown\n")
+class TestLegacyLog(DeletionTestCase):
+    def legacy(self, text: str, mtime: float) -> str:
+        path = os.path.join(self.backup, deletions.LEGACY_DELETIONS_FILENAME)
+        write(path, text, mtime)
+        return path
 
-        created = deletions.migrate_legacy(
+    def test_legacy_log_is_read_as_tombstones_dated_by_its_mtime(self):
+        path = self.legacy(".work.d/foo\n.rc\n.unknown\n", OLD + 10)
+
+        found = deletions.legacy_tombstones(
             self.backup,
             {".d": [".work.d"], ".rc": [".rc"]},
             ApplicationProfile.normalize_relative_path,
-            now=123.0,
         )
 
-        assert set(created) == {os.path.join(".d", "foo"), ".rc"}
-        assert set(deletions.load_tombstones(self.backup)) == set(created)
-        assert not os.path.exists(legacy)
-
-    def test_dry_run_keeps_the_legacy_log(self):
-        legacy = os.path.join(self.backup, deletions.LEGACY_DELETIONS_FILENAME)
-        with open(legacy, "w") as handle:
-            handle.write(".rc\n")
-
-        created = deletions.migrate_legacy(
-            self.backup,
-            {".rc": [".rc"]},
-            ApplicationProfile.normalize_relative_path,
-            dry_run=True,
-        )
-
-        assert set(created) == {".rc"}
-        assert os.path.exists(legacy)
+        assert set(found) == {os.path.join(".d", "foo"), ".rc"}
+        assert {entry["ts"] for entry in found.values()} == {OLD + 10}
+        # Left in place for machines still running the old version.
+        assert os.path.exists(path)
         assert deletions.load_tombstones(self.backup) == {}
+
+    def test_a_copy_recreated_after_the_legacy_removal_is_kept(self):
+        self.legacy(".app/new\n", OLD)
+        write(self.b.path(".app/new"), mtime=OLD - 100)  # ctime is now
+        os.makedirs(os.path.join(self.backup, ".app"))
+        found = deletions.legacy_tombstones(
+            self.backup, {".app": [".app"]},
+            ApplicationProfile.normalize_relative_path,
+        )
+
+        plan = deletions.plan_group(
+            self.backup, self.b.home, ".app", [".app"],
+            snapshot={}, tombstones=found,
+        )
+
+        assert plan == []

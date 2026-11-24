@@ -186,7 +186,9 @@ delete more than 20 files it asks first; `--force` answers yes, while
 touched. `mackup-ng info <path>` reports which machine deleted a file and when.
 
 The `mackup rm` command of earlier versions is gone. Its `.mackup-deletions`
-log is converted to tombstones on the first sync.
+log is still honored as tombstones (dated by the log's modification time) and
+is left untouched, so machines on an older version keep working; delete it by
+hand once every machine is upgraded.
 
 ### Ignored files
 
